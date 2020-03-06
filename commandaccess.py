@@ -21,6 +21,8 @@ class CommandAccess:
 
 		self.AddCommand(CommandConnect())
 		self.AddCommand(CommandDisconnect())
+		self.AddCommand(CommandRegister())
+		self.AddCommand(CommandLogin())
 		# Disabled until server support is implemented
 		# self.AddCommand(CommandUpload())
 

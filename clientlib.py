@@ -98,7 +98,7 @@ def quit(sock):
 
 # Exists
 #	Requires: one or more names to describe the path desired
-#	Returns: [dict] "exists" : bool, "error" : string, "errorcode" : string
+#	Returns: [dict] "exists" : bool, "errorcode" : string, "error" : string
 def exists(sock, path):
 	try:
 		sock.send(("EXISTS %s\r\n" % path).encode())
@@ -107,22 +107,41 @@ def exists(sock, path):
 			tokens = data.strip().split()
 			if tokens[0] == '200':
 				return { 'exists' : True, 'error' : '', 'errorcode' : '200' }
-			else:
-				return {
-					'exists' : False,
-					'error' : ' '.join(tokens[1:]),
-					'errorcode' : '200'
-				}
 	
 	except Exception as e:
 		return { 'exists' : False, 'error' : "Failure checking path %s: %s" % (path, e)) }
 	
-	return { 'exists' : False, 'error' : '' }
+	return {
+		'exists' : False,
+		'error' : ' '.join(tokens[1:]),
+		'errorcode' : tokens[0]
+	}
+
+# TODO: Implement login()
+# Login
+#	Requires: numeric workspace ID
+#	Returns: [dict] "errorcode" : string, "error" : string
+def login(wid):
+	return {
+		'error' : 'Unimplemented',
+		'errorcode' : '301'
+	}
 
 
 # callback for upload() which just prints what it's given
 def progress_stdout(value):
 	sys.stdout.write("Progress: %s\r" % value)
+
+
+# TODO: Implement register()
+# Register
+#	Requires: Nothing
+#	Returns: [dict] "devid" : string, "errorcode" : string, "error" : string
+def register():
+	return {
+		'error' : 'Unimplemented',
+		'errorcode' : '301'
+	}
 
 
 # Upload

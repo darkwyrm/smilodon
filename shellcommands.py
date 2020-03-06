@@ -264,6 +264,30 @@ class CommandDisconnect(BaseCommand):
 		return ''
 
 
+class CommandLogin(BaseCommand):
+	def __init__(self, rawInput=None, pTokenList=None):
+		BaseCommand.Set(self, rawInput, pTokenList)
+		self.name = 'login'
+		self.helpInfo = 'Usage: login <profilename>\n' + \
+						'Log into the connected server.'
+		self.description = 'Log into the connected server'
+
+	def Execute(self, pShellState):
+		return 'Unimplemented'
+
+
+class CommandRegister(BaseCommand):
+	def __init__(self, rawInput=None, pTokenList=None):
+		BaseCommand.Set(self, rawInput, pTokenList)
+		self.name = 'register'
+		self.helpInfo = 'Usage: register <profilename>\n' + \
+						'Create a new profile.'
+		self.description = 'Create a new login profile.'
+
+	def Execute(self, pShellState):
+		return 'Unimplemented'
+
+
 class CommandUpload(BaseCommand):
 	def __init__(self, rawInput=None, pTokenList=None):
 		BaseCommand.Set(self, rawInput, pTokenList)
