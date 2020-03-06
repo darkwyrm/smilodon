@@ -1,5 +1,4 @@
 import clientlib as clib
-from errorcodes import ERR_OK, ERR_BAD_DATA, ERR_CUSTOM, ERR_UNKNOWN_COMMAND
 from shellbase import BaseCommand, gShellCommands
 
 import collections
@@ -26,10 +25,10 @@ class CommandUnrecognized(BaseCommand):
 		self.name = 'unrecognized'
 
 	def IsValid(self):
-		return ERR_UNKNOWN_COMMAND
+		return "Unknown command"
 
 	def Execute(self, pShellState):
-		return ERR_UNKNOWN_COMMAND
+		return "Unknown command"
 
 
 class CommandChDir(BaseCommand):
@@ -56,13 +55,12 @@ class CommandChDir(BaseCommand):
 			try:
 				os.chdir(newDir)
 			except Exception as e:
-				ERR_CUSTOM.string = e.__str__()
-				return ERR_CUSTOM
+				return e.__str__()
 
 		pShellState.oldpwd = pShellState.pwd
 		pShellState.pwd = os.getcwd()
 
-		return ERR_OK
+		return ''
 
 	def Autocomplete(self, pTokens):
 		if len(pTokens) == 1:
@@ -113,7 +111,7 @@ class CommandListDir(BaseCommand):
 			tokens = ['ls','--color=auto']
 			tokens.extend(self.tokenList)
 			subprocess.call(tokens)
-		return ERR_OK
+		return ''
 
 	def Autocomplete(self, pTokens):
 		if len(pTokens) == 1:
@@ -190,7 +188,7 @@ class CommandHelp(BaseCommand):
 				print_formatted_text(HTML(
 					"<gray><b>%s</b>\t%s</gray>" % (name, item.GetDescription())
 				))
-		return ERR_OK
+		return ''
 
 
 class CommandShell(BaseCommand):
@@ -207,29 +205,37 @@ class CommandShell(BaseCommand):
 
 	def Execute(self, pShellState):
 		os.system(' '.join(self.tokenList))
-		return ERR_OK
+		return ''
 
 
 class CommandConnect(BaseCommand):
 	def __init__(self, rawInput=None, pTokenList=None):
 		BaseCommand.Set(self, rawInput, pTokenList)
 		self.name = 'connect'
-		self.helpInfo = 'Usage: connect <host>\n' + \
-						'Open a connection to a host on port 2001.\n' + \
+		self.helpInfo = 'Usage: connect <host> [port=2001]\n' + \
+						'Open a connection to a host, optionally specifying a port.\n' + \
 						'Aliases: con'
 		self.description = 'Connect to a host'
 
 	def Execute(self, pShellState):
-		if (len(self.tokenList) != 1):
+		if (len(self.tokenList) > 2):
 			print(self.helpInfo)
-			return ERR_OK
+			return ''
 
 		if pShellState.socket:
 			clib.quit(pShellState.sock)
 			pShellState.sock = None
 		
-		out_data = clib.connect(self.tokenList[0])
-		if out_data['error'] == ERR_OK:
+		if len(self.tokenList) == 2:
+			try:
+				port_num = int(self.tokenList[1])
+			except:
+				print("Bad port number %s" % self.tokenList[1])
+		else:
+			port_num = 2001
+		
+		out_data = clib.connect(self.tokenList[0], port_num)
+		if out_data['error'] == '':
 			pShellState.sock = out_data['socket']
 			if out_data['version']:
 				print("Connected to %s, version %s" % (self.tokenList[0], \
@@ -237,7 +243,7 @@ class CommandConnect(BaseCommand):
 			else:
 				print('Connected to host')
 		else:
-			print(out_data['errorstring'])
+			print(out_data['error'])
 
 		return out_data['error']
 
@@ -255,8 +261,7 @@ class CommandDisconnect(BaseCommand):
 
 	def Execute(self, pShellState):
 		clib.quit(pShellState.sock)
-		print("Use 'exit' to quit the application.")
-		return ERR_OK
+		return ''
 
 
 class CommandUpload(BaseCommand):
@@ -271,11 +276,11 @@ class CommandUpload(BaseCommand):
 	def Execute(self, pShellState):
 		if (len(self.tokenList) < 2):
 			print(self.helpInfo)
-			return ERR_OK
+			return ''
 
 		path_string = ' '.join(self.tokenList[1:])
-		if (clib.exists(pShellState.sock, path_string)) != ERR_OK:
+		if (clib.exists(pShellState.sock, path_string)) != '':
 			print("Unable to find path %s on server" % path_string)
 
-		return ERR_OK
+		return ''
 

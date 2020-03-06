@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 from commandaccess import CommandAccess, gCommandAccess
-from errorcodes import ERR_OK
 from shellbase import ShellState
 
 import getopt
@@ -48,8 +47,7 @@ class Shell:
 		while True:
 			try:
 				rawInput = session.prompt(HTML(
-					'<darkgreen>:)= | </darkgreen><yellow><b>' + \
-						' > </b></yellow>' ),
+					'<darkgreen>:)= | </darkgreen><yellow><b> > </b></yellow>' ),
 					completer=commandCompleter)
 			except KeyboardInterrupt:
 				break
@@ -69,8 +67,8 @@ class Shell:
 				cmd.Set(rawInput)
 
 				returnCode = cmd.Execute(self.state)
-				if (returnCode.code != ERR_OK.code):
-					print(returnCode.string + '\n')
+				if returnCode:
+					print(returnCode + '\n')
 
 
 # ------------------------------------------------------------------------------

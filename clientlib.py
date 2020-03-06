@@ -2,9 +2,6 @@
 # communications and map pretty much 1-to-1 to the commands outlined in the
 # spec
 
-from errorcodes import ERR_OK, ERR_CONNECTION, ERR_NO_SOCKET, \
-						ERR_HOST_NOT_FOUND, ERR_ENTRY_MISSING
-
 import os
 import socket
 import sys
@@ -26,7 +23,7 @@ def write_text(sock, text):
 		sock.close()
 		return None
 
-# Read TExt
+# Read Text
 #	Requires: valid socket
 #	Returns: string
 def read_text(sock):
@@ -43,13 +40,10 @@ def read_text(sock):
 	
 	return out_string
 
-
 # Connect
 #	Requires: host (hostname or IP)
 #	Optional: port number
-#	Returns: [dict]	socket
-#					error code
-#					error string
+#	Returns: [dict] socket, IP address, server version (if given), error string
 #					
 def connect(host, port=2001):
 	out_data = dict()
@@ -59,26 +53,20 @@ def connect(host, port=2001):
 		# which is the expectation as soon as a client connects.
 		sock.settimeout(10.0)
 	except:
-		out_data['socket'] = None
-		out_data['error'] = ERR_NO_SOCKET
-		out_data['error_string'] = "Couldn't create a socket"
-		return out_data
+		return { 'socket' : None, 'error' : "Couldn't create a socket" }
+	
 	out_data['socket'] = sock
-
+	
 	try:
 		host_ip = socket.gethostbyname(host)
 	except socket.gaierror:
 		sock.close()
-		out_data['socket'] = None
-		out_data['error'] = ERR_HOST_NOT_FOUND
-		out_data['error_string'] = "Couldn't locate host %s" % host
-		return out_data
+		return { 'socket' : None, 'error' : "Couldn't locate host %s" % host }
 	
 	out_data['ip'] = host_ip
 	try:
 		sock.connect((host_ip, port))
-		out_data['error'] = ERR_OK
-		out_data['error_string'] = "OK"
+		out_data['error'] = ''
 		
 		hello = read_text(sock)
 		if hello:
@@ -90,12 +78,10 @@ def connect(host, port=2001):
 
 	except Exception as e:
 		sock.close()
-		out_data['socket'] = None
-		out_data['error'] = ERR_CONNECTION
-		out_data['error_string'] = "Couldn't connect to host %s: %s" % (host, e)
+		return { 'socket' : None, 'error' : "Couldn't connect to host %s: %s" % (host, e) }
 
-	# Set a timeout of 15 minutes
-	sock.settimeout(900.0)
+	# Set a timeout of 30 minutes
+	sock.settimeout(1800.0)
 	return out_data
 	
 # Quit
@@ -119,7 +105,7 @@ def exists(sock, path):
 		data = sock.recv(8192).decode()
 		if (data):
 			tokens = data.strip().split()
-			if tokens[0] == '+OK':
+			if tokens[0] == '200':
 				return ERR_OK
 
 	except Exception as e:

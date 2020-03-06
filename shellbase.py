@@ -6,8 +6,6 @@ import re
 import shlex
 import sys
 
-from errorcodes import ERR_OK, ERR_BAD_VALUE
-
 # This global is needed for meta commands, such as Help. Do not access
 # this list directly unless there is literally no other option.
 gShellCommands = dict()
@@ -81,12 +79,12 @@ class BaseCommand:
 		return self.name
 	
 	def IsValid(self):
-		# Subclasses validate their information and return an error object
-		return ERR_OK
+		# Subclasses validate their information and return an error string
+		return ''
 	
 	def Execute(self, pShellState):
 		# The base class purposely does nothing. To be implemented by subclasses
-		return ERR_OK
+		return ''
 	
 	def Autocomplete(self, pTokens):
 		# Subclasses implement whatever is needed for their specific
