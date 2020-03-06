@@ -86,19 +86,19 @@ def connect(host, port=2001):
 	
 # Quit
 #	Requires: socket
-#	Returns: nothing
+#	Returns: error string
 def quit(sock):
 	if (sock):
 		try:
 			sock.send('QUIT\r\n'.encode())
-			print('Disconnected from host.')
 		except Exception as e:
 			sock.close()
-			print("Error quitting from host: %s" % e)
+			return e.__str__()
+	return ''
 
 # Exists
 #	Requires: one or more names to describe the path desired
-#	Returns: error code - OK if exists, error if not
+#	Returns: [dict] "exists" : bool, "error" : string, "errorcode" : string
 def exists(sock, path):
 	try:
 		sock.send(("EXISTS %s\r\n" % path).encode())
@@ -106,12 +106,18 @@ def exists(sock, path):
 		if (data):
 			tokens = data.strip().split()
 			if tokens[0] == '200':
-				return ERR_OK
-
-	except Exception as e:
-		print("Failure checking path %s: %s" % (path, e))
+				return { 'exists' : True, 'error' : '', 'errorcode' : '200' }
+			else:
+				return {
+					'exists' : False,
+					'error' : ' '.join(tokens[1:]),
+					'errorcode' : '200'
+				}
 	
-	return ERR_ENTRY_MISSING
+	except Exception as e:
+		return { 'exists' : False, 'error' : "Failure checking path %s: %s" % (path, e)) }
+	
+	return { 'exists' : False, 'error' : '' }
 
 
 # callback for upload() which just prints what it's given
