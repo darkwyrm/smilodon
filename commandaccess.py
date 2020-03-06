@@ -21,7 +21,8 @@ class CommandAccess:
 
 		self.AddCommand(CommandConnect())
 		self.AddCommand(CommandDisconnect())
-		self.AddCommand(CommandUpload())
+		# Disabled until server support is implemented
+		# self.AddCommand(CommandUpload())
 
 		self.allNames.sort()
 
