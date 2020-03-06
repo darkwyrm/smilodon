@@ -48,7 +48,7 @@ class Shell:
 		while True:
 			try:
 				rawInput = session.prompt(HTML(
-					'<darkgreen>AOCPTester | </darkgreen><yellow><b>' + \
+					'<darkgreen>:)= | </darkgreen><yellow><b>' + \
 						' > </b></yellow>' ),
 					completer=commandCompleter)
 			except KeyboardInterrupt:
