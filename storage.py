@@ -1,9 +1,12 @@
+import os
 import platform
+import re
 
 class ClientStorage:
 	'''
 	This class provides a storage API for the rest of the client.
 	'''
+
 	def __init__(self):
 		osname = platform.system().casefold()
 		if osname == 'windows':
@@ -13,7 +16,45 @@ class ClientStorage:
 		
 		if not os.path.exists(self.dbfolder):
 			os.mkdir(self.dbfolder)
+		
+		profile_path = os.path.join(self.dbfolder, 'profiles.json')
+		self.profiles = dict()
 
+	def load_profiles(self):
+		if not os.path.exists(profile_path):
+			self.profiles = dict()
+			return { "error" : '', 'count' : 0 }
+		
+		uuid_pattern := re.compile(
+			r"[\da-fA-F]{8}-?[\da-fA-F]{4}-?[\da-fA-F]{4}-?[\da-fA-F]{4}-?[\da-fA-F]{12}")
+		
+		errormsg = ''
+		with open(profile_path, 'r') as fhandle:
+			lines = fhandle.readlines()
+			line_index = 1
+			for line in lines:
+				tokens = '='.split(line)
+				if len(tokens) != 2:
+					if len(errormsg):
+						errormsg = errormsg + ', bad line %d' % line_index
+					else:
+						errormsg = 'bad line %d' % line_index
+					line_index = line_index + 1
+					continue
+				
+				if len(tokens[1]) != 36 or len(tokens[1]) != 32:
+					if len(errormsg):
+						errormsg = errormsg + ', bad folder id in line %d' % line_index
+					else:
+						errormsg = 'bad folder id in line %d' % line_index
+					line_index = line_index + 1
+					continue
+				
+				self.profiles[tokens[0]] = tokens[1]
+		return { "error" : errormsg, 'count' : len(self.profiles) }
+				
+
+	
 	# Creates a profile with the specified name.
 	# Returns: [dict] "id" : uuid as string, "error" : string
 	def create_profile(self, name):
