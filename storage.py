@@ -1,6 +1,8 @@
 import os
 import platform
 import re
+import shutil
+import uuid
 
 class ClientStorage:
 	'''
@@ -10,16 +12,38 @@ class ClientStorage:
 	def __init__(self):
 		osname = platform.system().casefold()
 		if osname == 'windows':
-			self.dbfolder = os.path.join(os.getenv('LOCALAPPDATA'), 'anselus')
+			self.profile_folder = os.path.join(os.getenv('LOCALAPPDATA'), 'anselus')
 		else:
-			self.dbfolder = os.path.join(os.getenv('HOME'), '.config','anselus')
+			self.profile_folder = os.path.join(os.getenv('HOME'), '.config','anselus')
 		
-		if not os.path.exists(self.dbfolder):
-			os.mkdir(self.dbfolder)
+		if not os.path.exists(self.profile_folder):
+			os.mkdir(self.profile_folder)
 		
 		self.profiles = dict()
 		self.default_profile = ''
+		self.active_profile = ''
+	
+	def _save_profiles(self):
+		'''
+		Exports the current list of profiles to the profile list file.
 
+		Returns:
+		"error" : error state - string
+		'''
+		profile_list_path = os.path.join(self.profile_folder, 'profiles.txt')
+		
+		if not os.path.exists(self.profile_folder):
+			os.mkdir(self.profile_folder)
+
+		try:
+			with open(profile_list_path, 'w') as fhandle:
+				for k,v in self.profiles.items():
+					fhandle.write("%s=%s%s" % (k,v,os.linesep))
+				fhandle.write("default=%s%s" % (self.default_profile,os.linesep))
+		except Exception as e:
+			return { "error" : e.__str__() }
+
+		return { "error" : '' }
 
 	def load_profiles(self):
 		'''
@@ -31,12 +55,12 @@ class ClientStorage:
 		"count" : number of profiles loaded - int
 		'''
 		self.profiles = dict()
-		profile_path = os.path.join(self.dbfolder, 'profiles.txt')
-		if not os.path.exists(profile_path):
+		profile_list_path = os.path.join(self.profile_folder, 'profiles.txt')
+		if not os.path.exists(profile_list_path):
 			return { "error" : '', 'count' : 0 }
 		
 		errormsg = ''
-		with open(profile_path, 'r') as fhandle:
+		with open(profile_list_path, 'r') as fhandle:
 			lines = fhandle.readlines()
 			line_index = 1
 			for line in lines:
@@ -57,19 +81,80 @@ class ClientStorage:
 					line_index = line_index + 1
 					continue
 				
-				self.profiles[tokens[0]] = tokens[1]
+				if tokens[0] == 'default':
+					self.default_profile = tokens[1]
+				else:
+					self.profiles[tokens[0]] = tokens[1]
+			
+			if self.default_profile not in self.profiles.keys():
+				if len(self.profiles) == 1:
+					for k in self.profiles.keys():
+						self.profiles['default'] = k
+				else:
+					self.default_profile = ''
+				
 		return { "error" : errormsg, 'count' : len(self.profiles) }
 				
 
 	# Creates a profile with the specified name.
 	# Returns: [dict] "id" : uuid as string, "error" : string
 	def create_profile(self, name):
-		return { 'error' : 'Unimplemented' }
+		'''
+		Creates a profile with the specified name.
+
+		Returns:
+		"error" : string
+		"id" : uuid of folder for new profile
+		'''
+		if name == 'default':
+			return { 'error' : "Name 'default' is reserved", 'id' : '' }
+		
+		if name in self.profiles.keys():
+			return { 'error' : 'Name exists' }
+
+		id = ''
+		while len(id) < 1 and id in self.profiles.values():
+			id = uuid.uuid4().__str__()
+		
+		status = self._save_profiles()
+		if status['error']:
+			return status
+		
+		self.profiles[name] = id
+		if len(self.profiles) == 1:
+			for k in self.profiles.keys():
+				self.profiles['default'] = k
+		return status
 	
-	# Deletes the specified profile.
-	# Returns: [dict] "error" : string
 	def delete_profile(self, name):
-		return { 'error' : 'Unimplemented' }
+		'''
+		Deletes the named profile and all files on disk contained in it.
+
+		Returns:
+		"error" : string
+		'''
+		if name == 'default':
+			return { 'error' : "Name 'default' is reserved" }
+		
+		if name not in self.profiles.keys():
+			return { 'error' : 'Name not found' }
+
+		id = self.profiles[name]
+		profile_path = os.path.join(self.profile_folder, id)
+		if os.path.exists(profile_path):
+			try:
+				shutil.rmtree(profile_path)
+			except Exception as e:
+				return { 'error' : e.__str__() }
+		
+		del self.profiles[name]
+		if self.profiles['default'] == name:
+			if len(self.profiles) == 1:
+				for k in self.profiles.keys():
+					self.profiles['default'] = k
+			else:
+				self.profiles['default'] = ''
+		return { 'error' : '' }
 
 	# Renames the specified profile. The UUID of the storage folder remains unchanged.
 	# Returns: [dict] "error" : string
@@ -90,12 +175,32 @@ class ClientStorage:
 		'''
 		Returns the name of the default profile. If one has not been set, it returns an empty string.
 		'''
-		return self.default_profile
+		return { 'default' : self.default_profile }
 
 	# Set the default profile.
 	# Returns: [dict] "error" : string, "default" : string
 	def set_default_profile(self, name):
-		return { 'error' : 'Unimplemented' }
+		'''
+		Sets the default profile. If there is only one profile -- or none at all -- this call has 
+		no effect.
+		'''
+		if name == 'default':
+			return { 'error' : "Name 'default' is reserved" }
+		
+		if len(self.profiles) == 1:
+			for k in self.profiles.keys():
+				self.profiles['default'] = k
+			return { 'error' : '' }
+		
+		if name:
+			if name in self.profiles.keys():
+				self.default_profile = name
+			else:
+				return { 'error' : 'Name not found' }
+		else:
+			self.default_profile = ''
+			
+		return { 'error' : '' }
 
 	# Loads a profile as the active one
 	# Returns: [dict] "error" : string
