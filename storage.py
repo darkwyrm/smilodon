@@ -18,9 +18,18 @@ class ClientStorage:
 			os.mkdir(self.dbfolder)
 		
 		self.profiles = dict()
+		self.default_profile = ''
 
 
 	def load_profiles(self):
+		'''
+		Loads the list of profiles from disk, which is stored in AppData/Local/anselus/profiles.txt 
+		on Windows and ~/.config/anselus/profiles.txt on POSIX platforms.
+
+		Returns:
+		"error" : error state - string
+		"count" : number of profiles loaded - int
+		'''
 		self.profiles = dict()
 		profile_path = os.path.join(self.dbfolder, 'profiles.txt')
 		if not os.path.exists(profile_path):
@@ -70,12 +79,27 @@ class ClientStorage:
 	def rename_profile(self, oldname, newname):
 		return { 'error' : 'Unimplemented' }
 	
-	# Returns a list of the available profiles and the default profile, if one has been set.
-	# Returns: [dict] "profiles" : dictionary mapping profile names to UUIDs, "error" : string,
-	#			"default" : string (possibly empty)
 	def get_profiles(self):
-		return { 'error' : 'Unimplemented' }
+		'''
+		Returns the list of loaded profile names and the default one, if one has been set.
+
+		Returns:
+		"default" : name of the default profile - string
+		"profiles" : profile names mapped to folder ID names - dict
+		'''
+		return { 'default' : self.default_profile, 'profiles' : self.profiles }
 	
+	def get_default_profile(self):
+		'''
+		Returns the name of the default profile. If one has not been set, it returns an empty string.
+		'''
+		return self.default_profile
+
+	# Set the default profile.
+	# Returns: [dict] "error" : string, "default" : string
+	def set_default_profile(self, name):
+		return { 'error' : 'Unimplemented' }
+
 	# Loads a profile as the active one
 	# Returns: [dict] "error" : string
 	def set_profile(self, name):
