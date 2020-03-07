@@ -2,7 +2,26 @@ class ClientItem():
 	def __init__(self):
 		self.id = ''
 		self.type = ''
+		self.version = 0.0
 		self.attachments = list()
+		self.tags = list()
+
+
+class Event(ClientItem):
+	def __init__(self):
+		ClientItem.__init__(self)
+		self.type = 'event'
+		self.version = 0.1
+		self.name = ''
+		self.description = ''
+		self.start = ''
+		self.end = ''
+		self.showstatus = 'busy'
+		self.location = ''
+		self.reminder = ''
+		self.watchers = list()
+		self.members = list()
+		self.visibility = 'public'
 
 
 class Message(ClientItem):
@@ -30,6 +49,22 @@ class Note(ClientItem):
 		self.notebook = ''
 		self.created = ''
 		self.updated = ''
-		self.tags = list()
+		self.watchers = list()
+		self.members = list()
 
 
+class Task(ClientItem):
+	def __init__(self):
+		ClientItem.__init__(self)
+		self.type = 'task'
+		self.version = 0.1
+		self.title = ''
+		self.description = ''
+		self.created = ''
+		self.due = ''
+		self.status = 'Not started'
+		self.completed = ''	# date of completion
+		self.progress = 0	# Integer percentage of completion (0-100)
+		self.checklist = list()
+		self.watchers = list()
+		self.members = list()
