@@ -1,4 +1,3 @@
-# pylint: disable=no-name-in-module
 import os
 import platform
 import sqlite3
@@ -6,8 +5,6 @@ import time
 import uuid
 
 import note
-
-from PySide2.QtWidgets import QApplication
 
 class DBHandler:
 	def reset_db(self):
