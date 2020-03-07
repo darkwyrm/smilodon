@@ -4,9 +4,9 @@ import sqlite3
 import time
 import uuid
 
-import note
+import items
 
-class DBHandler:
+class sqlite:
 	def reset_db(self):
 		'''
 		Reinitializes the database to empty.
