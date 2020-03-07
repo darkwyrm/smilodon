@@ -39,16 +39,23 @@ class sqlite:
 			self.dbfolder = os.path.join(os.getenv('LOCALAPPDATA'), 'anselus')
 		else:
 			self.dbfolder = os.path.join(os.getenv('HOME'), '.config','anselus')
-		self.dbpath = os.path.join(self.dbfolder, 'storage.db')
-
+		
 		if not os.path.exists(self.dbfolder):
 			os.mkdir(self.dbfolder)
+
+		self.profile_id = ''
+	
+	def connect(self, profile_id):
+		self.dbpath = os.path.join(self.dbfolder, self.profile_id, 'storage.db')
 
 		if os.path.exists(self.dbpath):
 			self.db = sqlite3.connect(self.dbpath)
 		else:
 			self.reset_db()
-	
+
+	def disconnect(self):
+		self.db.close()
+
 	def create_note(self, title='New Note', notebook='default'):
 		'''
 		Creates a new note and returns a note structure
