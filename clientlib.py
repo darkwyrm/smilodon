@@ -109,7 +109,7 @@ def exists(sock, path):
 				return { 'exists' : True, 'error' : '', 'errorcode' : '200' }
 	
 	except Exception as e:
-		return { 'exists' : False, 'error' : "Failure checking path %s: %s" % (path, e)) }
+		return { 'exists' : False, 'error' : "Failure checking path %s: %s" % (path, e) }
 	
 	return {
 		'exists' : False,
