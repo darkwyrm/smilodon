@@ -17,15 +17,16 @@ class ClientStorage:
 		if not os.path.exists(self.dbfolder):
 			os.mkdir(self.dbfolder)
 		
-		profile_path = os.path.join(self.dbfolder, 'profiles.json')
 		self.profiles = dict()
 
+
 	def load_profiles(self):
+		self.profiles = dict()
+		profile_path = os.path.join(self.dbfolder, 'profiles.txt')
 		if not os.path.exists(profile_path):
-			self.profiles = dict()
 			return { "error" : '', 'count' : 0 }
 		
-		uuid_pattern := re.compile(
+		uuid_pattern = re.compile(
 			r"[\da-fA-F]{8}-?[\da-fA-F]{4}-?[\da-fA-F]{4}-?[\da-fA-F]{4}-?[\da-fA-F]{12}")
 		
 		errormsg = ''
@@ -54,7 +55,6 @@ class ClientStorage:
 		return { "error" : errormsg, 'count' : len(self.profiles) }
 				
 
-	
 	# Creates a profile with the specified name.
 	# Returns: [dict] "id" : uuid as string, "error" : string
 	def create_profile(self, name):

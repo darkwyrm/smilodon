@@ -1,10 +1,10 @@
-#!/usr/bin/env python3
-
 from glob import glob
 import os
 import re
 import shlex
 import sys
+
+import storage
 
 # This global is needed for meta commands, such as Help. Do not access
 # this list directly unless there is literally no other option.
@@ -21,6 +21,7 @@ class ShellState:
 		
 		self.aliases = dict()
 		self.socket = None
+		self.fs = storage.ClientStorage()
 
 
 # The main base Command class. Defines the basic API and all tagsh commands

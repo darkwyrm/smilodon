@@ -39,6 +39,11 @@ class ShellCompleter(Completer):
 class Shell:
 	def __init__(self):
 		self.state = ShellState()
+		status = self.state.fs.load_profiles()
+		if status['error']:
+			print("Error loading profile information: %s" % status['error'])
+			sys.exit(1)
+		
 		self.lexer = re.compile(r'"[^"]+"|\S+')
 
 	def Prompt(self):
