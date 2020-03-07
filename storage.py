@@ -35,9 +35,6 @@ class ClientStorage:
 		if not os.path.exists(profile_path):
 			return { "error" : '', 'count' : 0 }
 		
-		uuid_pattern = re.compile(
-			r"[\da-fA-F]{8}-?[\da-fA-F]{4}-?[\da-fA-F]{4}-?[\da-fA-F]{4}-?[\da-fA-F]{12}")
-		
 		errormsg = ''
 		with open(profile_path, 'r') as fhandle:
 			lines = fhandle.readlines()

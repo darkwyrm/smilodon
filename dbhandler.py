@@ -49,7 +49,7 @@ class sqlite:
 		else:
 			self.reset_db()
 	
-	def create_note(self, title='New Note', notebook'default'):
+	def create_note(self, title='New Note', notebook='default'):
 		'''
 		Creates a new note and returns a note structure
 		'''
@@ -68,7 +68,7 @@ class sqlite:
 			(id, title, timestamp, notebook))
 		self.db.commit()
 
-		outData = note.Note()
+		outData = items.Note()
 		outData.id = id
 		outData.title = title
 		outData.notebook = notebook
@@ -108,7 +108,7 @@ class sqlite:
 		if not results or not results[0]:
 			return None
 		
-		out = note.Note()
+		out = items.Note()
 		out.title = results[0]
 		out.body = results[1]
 		out.id = id

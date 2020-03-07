@@ -1,4 +1,4 @@
-class ClientItem(self):
+class ClientItem():
 	def __init__(self):
 		self.id = ''
 		self.type = ''

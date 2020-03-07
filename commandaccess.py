@@ -1,4 +1,4 @@
-from shellcommands import *
+import shellcommands 
 
 import getopt
 import os
@@ -13,23 +13,22 @@ class CommandAccess:
 		self.aliases = dict()
 		self.allNames = list()
 
-		self.AddCommand(CommandChDir())
-		self.AddCommand(CommandListDir())
-		self.AddCommand(CommandExit())
-		self.AddCommand(CommandHelp())
-		self.AddCommand(CommandShell())
+		self.AddCommand(shellcommands.CommandListDir())
+		self.AddCommand(shellcommands.CommandExit())
+		self.AddCommand(shellcommands.CommandHelp())
+		self.AddCommand(shellcommands.CommandShell())
 
-		self.AddCommand(CommandConnect())
-		self.AddCommand(CommandDisconnect())
-		self.AddCommand(CommandRegister())
-		self.AddCommand(CommandLogin())
+		self.AddCommand(shellcommands.CommandConnect())
+		self.AddCommand(shellcommands.CommandDisconnect())
+		self.AddCommand(shellcommands.CommandRegister())
+		self.AddCommand(shellcommands.CommandLogin())
 		# Disabled until server support is implemented
-		# self.AddCommand(CommandUpload())
+		# self.AddCommand(shellcommands.CommandUpload())
 
 		self.allNames.sort()
 
 	def AddCommand(self, pCommand):
-		gShellCommands[pCommand.GetName()] = pCommand
+		shellcommands.gShellCommands[pCommand.GetName()] = pCommand
 		self.allNames.append(pCommand.GetName())
 		for k,v in pCommand.GetAliases().items():
 			if k in self.aliases:
@@ -41,15 +40,15 @@ class CommandAccess:
 
 	def GetCommand(self, pName):
 		if (len(pName) < 1):
-			return CommandEmpty()
+			return shellcommands.CommandEmpty()
 
 		if (pName in self.aliases):
 			pName = self.aliases[pName]
 
-		if (pName in gShellCommands):
-			return gShellCommands[pName]
+		if (pName in shellcommands.gShellCommands):
+			return shellcommands.gShellCommands[pName]
 
-		return CommandUnrecognized()
+		return shellcommands.CommandUnrecognized()
 
 	def GetCommandNames(self):
 		return self.allNames
