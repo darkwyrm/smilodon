@@ -1,3 +1,4 @@
+import dbhandler
 import os
 import platform
 import re
@@ -22,6 +23,7 @@ class ClientStorage:
 		self.profiles = dict()
 		self.default_profile = ''
 		self.active_profile = ''
+		self.db = dbhandler.sqlite()
 	
 	def _save_profiles(self):
 		'''
@@ -95,9 +97,6 @@ class ClientStorage:
 				
 		return { "error" : errormsg, 'count' : len(self.profiles) }
 				
-
-	# Creates a profile with the specified name.
-	# Returns: [dict] "id" : uuid as string, "error" : string
 	def create_profile(self, name):
 		'''
 		Creates a profile with the specified name.
@@ -108,6 +107,9 @@ class ClientStorage:
 		'''
 		if name == 'default':
 			return { 'error' : "Name 'default' is reserved", 'id' : '' }
+		
+		if not name:
+			return { 'error' : "Name parameter may not be empty" }
 		
 		if name in self.profiles.keys():
 			return { 'error' : 'Name exists' }
@@ -136,6 +138,9 @@ class ClientStorage:
 		if name == 'default':
 			return { 'error' : "Name 'default' is reserved" }
 		
+		if not name:
+			return { 'error' : "Name parameter may not be empty" }
+		
 		if name not in self.profiles.keys():
 			return { 'error' : 'Name not found' }
 
@@ -154,12 +159,35 @@ class ClientStorage:
 					self.profiles['default'] = k
 			else:
 				self.profiles['default'] = ''
-		return { 'error' : '' }
+		
+		return self._save_profiles()
 
 	# Renames the specified profile. The UUID of the storage folder remains unchanged.
 	# Returns: [dict] "error" : string
 	def rename_profile(self, oldname, newname):
-		return { 'error' : 'Unimplemented' }
+		'''
+		Renames a profile, leaving the profile ID unchanged.
+
+		Returns:
+		"error" : string
+		'''
+		
+		if oldname == 'default' or newname == 'default':
+			return { 'error' : "Name 'default' is reserved" }
+		
+		if not oldname or not newname:
+			return { 'error' : "Name parameters may not be empty" }
+		
+		if oldname not in self.profiles.keys():
+			return { 'error' : 'Old name not found' }
+
+		if newname in self.profiles.keys():
+			return { 'error' : 'New name already exists' }
+
+		self.profiles[newname] = self.profiles[oldname]
+		del self.profiles[oldname]
+
+		return self._save_profiles()
 	
 	def get_profiles(self):
 		'''
@@ -177,8 +205,6 @@ class ClientStorage:
 		'''
 		return { 'default' : self.default_profile }
 
-	# Set the default profile.
-	# Returns: [dict] "error" : string, "default" : string
 	def set_default_profile(self, name):
 		'''
 		Sets the default profile. If there is only one profile -- or none at all -- this call has 
@@ -186,6 +212,9 @@ class ClientStorage:
 		'''
 		if name == 'default':
 			return { 'error' : "Name 'default' is reserved" }
+		
+		if not name:
+			return { 'error' : "Name parameter may not be empty" }
 		
 		if len(self.profiles) == 1:
 			for k in self.profiles.keys():
@@ -202,7 +231,25 @@ class ClientStorage:
 			
 		return { 'error' : '' }
 
-	# Loads a profile as the active one
-	# Returns: [dict] "error" : string
 	def set_profile(self, name):
-		return { 'error' : 'Unimplemented' }
+		'''
+		Activates the specified profile.
+
+		Returns:
+		"error" : string
+		'''
+		if self.active_profile:
+			self.db.disconnect()
+		
+		if not name:
+			return { 'error' : "Name parameter may not be empty" }
+		
+		if name == 'default':
+			return { 'error' : "Name 'default' is reserved" }
+		
+		if name not in self.profiles:
+			return { 'error' : 'Name not found' }
+		
+		self.db.connect(name)
+		self.active_profile = name
+		return { 'error' : '' }
