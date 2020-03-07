@@ -20,8 +20,8 @@ class CommandAccess:
 
 		self.AddCommand(shellcommands.CommandConnect())
 		self.AddCommand(shellcommands.CommandDisconnect())
-		self.AddCommand(shellcommands.CommandRegister())
 		self.AddCommand(shellcommands.CommandLogin())
+		self.AddCommand(shellcommands.CommandProfile())
 		# Disabled until server support is implemented
 		# self.AddCommand(shellcommands.CommandUpload())
 
