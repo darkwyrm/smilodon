@@ -234,9 +234,9 @@ def register(sock):
 			return response
 		
 		response = read_response(sock)
-		if response['errorcode'] in [ 101, 304, 406 ]:	# Pending, reg closed, payment needed
+		if response['errorcode'] in [ 304, 406 ]:	# Registration closed, Payment required
 			break
-		elif response['errorcode'] == 201:	# Success
+		elif response['errorcode'] in [ 101, 201]:	# Pending, Success
 			tokens = response['error'].split()
 			if len(tokens) != 2 or not utils.validate_uuid(tokens[0]):
 				return { 'errorcode' : 300, 'error' : 'INTERNAL SERVER ERROR' }
