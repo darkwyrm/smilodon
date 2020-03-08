@@ -15,31 +15,34 @@ READ_BUFFER_SIZE = 8192
 # Write Text
 #	Requires: 	valid socket
 #				string
-#	Returns: nothing
+#	Returns: [dict] "error" : string
 def write_text(sock, text):
 	'''Sends a string over a socket'''
 	try:
 		sock.send(text.encode())
-	except:
+	except Exception as exc:
 		sock.close()
+		return { 'error' : exc.__str__() }
+
 
 # Read Text
 #	Requires: valid socket
-#	Returns: string
+#	Returns: [dict] "error" : string, "string" : string
 def read_text(sock):
 	'''Reads a string from the supplied socket'''
 	try:
 		out = sock.recv(READ_BUFFER_SIZE)
-	except:
+	except Exception as exc:
 		sock.close()
-		return None
+		return { 'error' : exc.__str__(), 'string' : '' }
 	
 	try:
 		out_string = out.decode()
-	except:
-		return ''
+	except Exception as exc:
+		return { 'error' : exc.__str__(), 'string' : '' }
 	
-	return out_string
+	return { 'error' : '', 'string' : out_string }
+
 
 # Connect
 #	Requires: host (hostname or IP)
@@ -72,7 +75,7 @@ def connect(host, port=2001):
 		
 		hello = read_text(sock)
 		if hello:
-			hello = hello.strip().split()
+			hello = hello['string'].strip().split()
 			if len(hello) >= 3:
 				out_data['version'] = hello[2]
 			else:
@@ -91,6 +94,7 @@ def connect(host, port=2001):
 #	Returns: error string
 def disconnect(sock):
 	'''Disconnects by sending a QUIT command to the server'''
+	# TODO: rewrite to use read_data() and write_data()
 	if sock:
 		try:
 			sock.send('QUIT\r\n'.encode())
@@ -105,6 +109,7 @@ def disconnect(sock):
 def exists(sock, path):
 	'''Checks to see if a path exists on the server side.'''
 	try:
+		# TODO: rewrite to use read_data() and write_data()
 		sock.send(("EXISTS %s\r\n" % path).encode())
 		data = sock.recv(8192).decode()
 		if data:
@@ -127,6 +132,7 @@ def exists(sock, path):
 #	Returns: [dict] "errorcode" : string, "error" : string
 def login(wid):
 	'''Starts the login process by sending the requested workspace ID.'''
+	
 	return {
 		'error' : 'Unimplemented',
 		'errorcode' : '301'
@@ -167,11 +173,11 @@ def upload(sock, path, serverpath, progress):
 	filesize = os.path.getsize(path)
 	write_text(sock, "UPLOAD %s %s\r\n" % (filesize, serverpath))
 	response = read_text(sock)
-	if not response:
+	if not response['string']:
 		# TODO: Properly handle no server response
 		raise("No response from server")
 	
-	if response.strip().split()[0] != 'PROCEED':
+	if response['string'].strip().split()[0] != 'PROCEED':
 		# TODO: Properly handle not being allowed
 		print("Unable to upload file. Server response: %s" % response)
 		return
