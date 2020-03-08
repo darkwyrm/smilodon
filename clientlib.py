@@ -21,12 +21,12 @@ def write_text(sock, text):
 		sock.send(text.encode())
 	except:
 		sock.close()
-		return None
 
 # Read Text
 #	Requires: valid socket
 #	Returns: string
 def read_text(sock):
+	'''Reads a string from the supplied socket'''
 	try:
 		out = sock.recv(READ_BUFFER_SIZE)
 	except:
@@ -76,34 +76,36 @@ def connect(host, port=2001):
 			else:
 				out_data['version'] = ''
 
-	except Exception as e:
+	except Exception as exc:
 		sock.close()
-		return { 'socket' : None, 'error' : "Couldn't connect to host %s: %s" % (host, e) }
+		return { 'socket' : None, 'error' : "Couldn't connect to host %s: %s" % (host, exc) }
 
 	# Set a timeout of 30 minutes
 	sock.settimeout(1800.0)
 	return out_data
 	
-# Quit
+# Disconnect
 #	Requires: socket
 #	Returns: error string
-def quit(sock):
-	if (sock):
+def disconnect(sock):
+	'''Disconnects by sending a QUIT command to the server'''
+	if sock:
 		try:
 			sock.send('QUIT\r\n'.encode())
-		except Exception as e:
+		except Exception as exc:
 			sock.close()
-			return e.__str__()
+			return exc.__str__()
 	return ''
 
 # Exists
 #	Requires: one or more names to describe the path desired
 #	Returns: [dict] "exists" : bool, "errorcode" : string, "error" : string
 def exists(sock, path):
+	'''Checks to see if a path exists on the server side.'''
 	try:
 		sock.send(("EXISTS %s\r\n" % path).encode())
 		data = sock.recv(8192).decode()
-		if (data):
+		if data:
 			tokens = data.strip().split()
 			if tokens[0] == '200':
 				return { 'exists' : True, 'error' : '', 'errorcode' : '200' }
@@ -122,6 +124,7 @@ def exists(sock, path):
 #	Requires: numeric workspace ID
 #	Returns: [dict] "errorcode" : string, "error" : string
 def login(wid):
+	'''Starts the login process by sending the requested workspace ID.'''
 	return {
 		'error' : 'Unimplemented',
 		'errorcode' : '301'
@@ -138,6 +141,7 @@ def progress_stdout(value):
 #	Requires: Nothing
 #	Returns: [dict] "devid" : string, "errorcode" : string, "error" : string
 def register():
+	'''Creates an account on the server.'''
 	return {
 		'error' : 'Unimplemented',
 		'errorcode' : '301'
@@ -154,6 +158,7 @@ def register():
 #	Returns: [dict] error code
 #				error string
 def upload(sock, path, serverpath, progress):
+	'''Upload a local file to the server.'''
 	chunk_size = 128
 
 	# Check to see if we're allowed to upload
@@ -186,5 +191,5 @@ def upload(sock, path, serverpath, progress):
 			
 			data = handle.read(chunk_size)
 		data.close()
-	except Exception as e:
-		print("Failure uploading %s: %s" % (path, e))
+	except Exception as exc:
+		print("Failure uploading %s: %s" % (path, exc))
