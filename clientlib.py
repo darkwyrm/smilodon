@@ -1,6 +1,6 @@
-# This file contains the functions needed by any Anselus client for 
-# communications and map pretty much 1-to-1 to the commands outlined in the
-# spec
+'''This module contains the functions needed by any Anselus client for 
+communications. Commands largely map 1-to-1 to the commands outlined in the 
+spec.'''
 
 import os
 import socket
@@ -17,6 +17,7 @@ READ_BUFFER_SIZE = 8192
 #				string
 #	Returns: nothing
 def write_text(sock, text):
+	'''Sends a string over a socket'''
 	try:
 		sock.send(text.encode())
 	except:
@@ -46,6 +47,7 @@ def read_text(sock):
 #	Returns: [dict] socket, IP address, server version (if given), error string
 #					
 def connect(host, port=2001):
+	'''Creates a connection to the server.'''
 	out_data = dict()
 	try:
 		sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -110,8 +112,8 @@ def exists(sock, path):
 			if tokens[0] == '200':
 				return { 'exists' : True, 'error' : '', 'errorcode' : '200' }
 	
-	except Exception as e:
-		return { 'exists' : False, 'error' : "Failure checking path %s: %s" % (path, e) }
+	except Exception as exc:
+		return { 'exists' : False, 'error' : "Failure checking path %s: %s" % (path, exc) }
 	
 	return {
 		'exists' : False,
@@ -178,7 +180,7 @@ def upload(sock, path, serverpath, progress):
 		totalsent = 0
 		handle = open(path,'rb')
 		data = handle.read(chunk_size)
-		while (data):
+		while data:
 			write_text(sock, "BINARY [%s/%s]\r\n" % (totalsent, filesize))
 			sent_size = sock.send(data)
 			totalsent = totalsent + sent_size

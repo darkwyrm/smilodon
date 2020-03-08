@@ -1,56 +1,54 @@
+import sys
+
 import shellcommands 
 
-import getopt
-import os
-import re
-import sys
-from prompt_toolkit import print_formatted_text, HTML
-from prompt_toolkit import PromptSession
-from prompt_toolkit.completion import Completer, Completion, WordCompleter
-
 class CommandAccess:
+	'''The CommandAccess houses all available command objects'''
 	def __init__(self):
 		self.aliases = dict()
-		self.allNames = list()
+		self.all_names = list()
 
-		self.AddCommand(shellcommands.CommandListDir())
-		self.AddCommand(shellcommands.CommandExit())
-		self.AddCommand(shellcommands.CommandHelp())
-		self.AddCommand(shellcommands.CommandShell())
+		self.add_command(shellcommands.CommandListDir())
+		self.add_command(shellcommands.CommandExit())
+		self.add_command(shellcommands.CommandHelp())
+		self.add_command(shellcommands.CommandShell())
 
-		self.AddCommand(shellcommands.CommandConnect())
-		self.AddCommand(shellcommands.CommandDisconnect())
-		self.AddCommand(shellcommands.CommandLogin())
-		self.AddCommand(shellcommands.CommandProfile())
+		self.add_command(shellcommands.CommandConnect())
+		self.add_command(shellcommands.CommandDisconnect())
+		self.add_command(shellcommands.CommandLogin())
+		self.add_command(shellcommands.CommandProfile())
 		# Disabled until server support is implemented
-		# self.AddCommand(shellcommands.CommandUpload())
+		# self.add_command(shellcommands.CommandUpload())
 
-		self.allNames.sort()
+		self.all_names.sort()
 
-	def AddCommand(self, pCommand):
+	def add_command(self, pCommand):
+		'''Add a Command instance to the list'''
 		shellcommands.gShellCommands[pCommand.GetName()] = pCommand
-		self.allNames.append(pCommand.GetName())
+		self.all_names.append(pCommand.GetName())
 		for k,v in pCommand.GetAliases().items():
 			if k in self.aliases:
 				print("Error duplicate alias %s. Already exists for %s" %
 						(k, self.aliases[k]) )
 				sys.exit(0)
 			self.aliases[k] = v
-			self.allNames.append(k)
+			self.all_names.append(k)
 
-	def GetCommand(self, pName):
-		if (len(pName) < 1):
+	def get_command(self, pName):
+		'''Retrives a Command instance for the specified name, including alias resolution.'''
+		if len(pName) < 1:
 			return shellcommands.CommandEmpty()
 
-		if (pName in self.aliases):
+		if pName in self.aliases:
 			pName = self.aliases[pName]
 
-		if (pName in shellcommands.gShellCommands):
+		if pName in shellcommands.gShellCommands:
 			return shellcommands.gShellCommands[pName]
 
 		return shellcommands.CommandUnrecognized()
 
-	def GetCommandNames(self):
-		return self.allNames
+	def get_command_names(self):
+		'''Get the names of all available commands'''
+		return self.all_names
 
 gCommandAccess = CommandAccess()

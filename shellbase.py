@@ -1,8 +1,8 @@
+# pylint: disable=unused-argument
+
 from glob import glob
 import os
 import re
-import shlex
-import sys
 
 import storage
 
@@ -12,9 +12,10 @@ gShellCommands = dict()
 
 # Class for storing the state of the shell
 class ShellState:
+	'''Stores the state of the shell'''
 	def __init__(self):
 		self.pwd = os.getcwd()
-		if ('OLDPWD' in os.environ):
+		if 'OLDPWD' in os.environ:
 			self.oldpwd = os.environ['OLDPWD']
 		else:
 			self.oldpwd = ''
@@ -27,85 +28,85 @@ class ShellState:
 # The main base Command class. Defines the basic API and all tagsh commands
 # inherit from it
 class BaseCommand:
-	def ParseInput(self, rawInput):
-		# This tokenizes the raw input from the user
-		if (len(rawInput) < 1):
+	'''Provides the base API for interacting with Command objects'''
+	def parse_input(self, raw_input):
+		'''Tokenize the raw input from the user'''
+		if len(raw_input) < 1:
 			return list()
 		
-		rawTokens = re.findall(r'"[^"]+"|\S+', rawInput.strip())
+		rawTokens = re.findall(r'"[^"]+"|\S+', raw_input.strip())
 		tokens = list()
 		for token in rawTokens:
 			tokens.append(token.strip('"'))
 		return tokens
 	
-	def Set(self, rawInput=None, pTokenList=None):
-		# This method merely sets the input and does some basic parsing
-		if (rawInput == None or len(rawInput) == 0):
+	def set(self, raw_input=None, ptoken_list=None):
+		'''Sets the input and does some basic parsing'''
+		if raw_input is None or len(raw_input) == 0:
 			self.rawCommand = ''
 			self.tokenList = list()
 		else:
-			self.rawCommand = rawInput
+			self.rawCommand = raw_input
 			rawTokens = list()
-			if (pTokenList == None):
-				rawTokens = self.ParseInput(rawInput)
+			if ptoken_list is None:
+				rawTokens = self.parse_input(raw_input)
 			else:
-				rawTokens = pTokenList
+				rawTokens = ptoken_list
 			
-			if (len(rawTokens) > 1):
+			if len(rawTokens) > 1:
 				self.tokenList = rawTokens[1:]
 			else:
 				self.tokenList = list()
 	
-	def __init__(self, rawInput=None, pTokenList=None):
-		self.Set(rawInput,pTokenList)
-		if (len(rawInput) > 0):
-			self.name = rawInput.split(' ')
+	def __init__(self, raw_input=None, ptoken_list=None):
+		self.set(raw_input,ptoken_list)
+		if len(raw_input) > 0:
+			self.name = raw_input.split(' ')
 		self.helpInfo = ''
 		self.description = ''
 	
-	def GetAliases(self):
-		# Returns a dictionary of alternative names for the command
+	def get_aliases(self):
+		'''Returns a dictionary of alternative names for the command'''
 		return dict()
 	
-	def GetHelp(self):
-		# Returns help information for the command
+	def get_help(self):
+		'''Returns help information for the command'''
 		return self.helpInfo
 	
-	def GetDescription(self):
-		# Returns a description of the command
+	def get_description(self):
+		'''Returns a description of the command'''
 		return self.description
 	
-	def GetName(self):
-		# Returns the command's name
+	def get_name(self):
+		'''Returns the command's name'''
 		return self.name
 	
-	def IsValid(self):
-		# Subclasses validate their information and return an error string
+	def is_valid(self):
+		'''Subclasses validate their information and return an error string'''
 		return ''
 	
-	def Execute(self, pShellState):
-		# The base class purposely does nothing. To be implemented by subclasses
+	def execute(self, pshell_state):
+		'''The base class purposely does nothing. To be implemented by subclasses'''
 		return ''
 	
-	def Autocomplete(self, pTokens):
-		# Subclasses implement whatever is needed for their specific
-		# case. pTokens contains all tokens from the raw input except
-		# the name of the command. All double quotes have been stripped.
-		# Subclasses are expected to return a list containing matches
+	def autocomplete(self, ptokens):
+		'''Subclasses implement whatever is needed for their specific case. ptokens 
+contains all tokens from the raw input except the name of the command. All 
+double quotes have been stripped. Subclasses are expected to return a list 
+containing matches.'''
 		return list()
 
 
-# Because many commands operate on a list of file specifiers, 
 class FilespecBaseCommand(BaseCommand):
-	def __init__(self, rawInput=None, pTokenList=None):
-		BaseCommand.Set(self,rawInput,pTokenList)
+	'''Many commands operate on a list of file specifiers'''
+	def __init__(self, raw_input=None, ptoken_list=None):
+		super().__init__(self,raw_input,ptoken_list)
 		self.name = 'FilespecBaseCommand'
 		
-	def ProcessFileList(self, pTokenList):
-		# Convert a list containing filenames and/or wildcards into a list
-		# of file paths
+	def ProcessFileList(self, ptoken_list):
+		'''Converts a list containing filenames and/or wildcards into a list of file paths.'''
 		fileList = list()
-		for index in pTokenList:
+		for index in ptoken_list:
 			item = index
 			
 			if item[0] == '~':
@@ -130,6 +131,10 @@ class FilespecBaseCommand(BaseCommand):
 # which take a filespec. This can be a directory, file, or 
 # wildcard. If a wildcard, we return no results.
 def GetFileSpecCompletions(pFileToken):
+	'''Implements autocompletion for commands which take a filespec. This 
+be a directory, filename, or wildcard. If a wildcard, this method returns no 
+results.'''
+
 	if not pFileToken or '*' in pFileToken:
 		return list()
 	

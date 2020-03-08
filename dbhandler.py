@@ -7,6 +7,7 @@ import uuid
 import items
 
 class sqlite:
+	'''Implements the database API for SQLite3-based storage.'''
 	def reset_db(self):
 		'''
 		Reinitializes the database to empty.
@@ -44,8 +45,11 @@ class sqlite:
 			os.mkdir(self.dbfolder)
 
 		self.profile_id = ''
+		self.db = None
+		self.dbpath = ''
 	
-	def connect(self, profile_id):
+	def connect(self):
+		'''Connects to the user data storage database'''
 		self.dbpath = os.path.join(self.dbfolder, self.profile_id, 'storage.db')
 
 		if os.path.exists(self.dbpath):
@@ -54,46 +58,47 @@ class sqlite:
 			self.reset_db()
 
 	def disconnect(self):
+		'''Closes the connection to the user data storage database'''
 		self.db.close()
 
 	def create_note(self, title='New Note', notebook='default'):
 		'''
 		Creates a new note and returns a note structure
 		'''
-		id = ''
+		item_id = ''
 
 		# This should never iterate, but handle edge cases anyway
 		while True:
-			id = str(uuid.uuid4())
+			item_id = str(uuid.uuid4())
 			cursor = self.db.cursor()
 			cursor.execute("SELECT id FROM notes WHERE id=?", (id,))
-			if cursor.fetchone() == None:
+			if cursor.fetchone() is None:
 				break
 		
 		timestamp = time.strftime('%Y%m%d %H%M%S', time.gmtime())
 		cursor.execute("INSERT INTO	notes(id,title,created,notebook) VALUES(?,?,?,?)",
-			(id, title, timestamp, notebook))
+			(item_id, title, timestamp, notebook))
 		self.db.commit()
 
 		outData = items.Note()
-		outData.id = id
+		outData.id = item_id
 		outData.title = title
 		outData.notebook = notebook
 		outData.created = timestamp
 		
 		return outData
 	
-	def delete_note(self, id):
+	def delete_note(self, item_id):
 		'''
 		Deletes a note with the specified ID. Returns a boolean success code.
 		'''
 		cursor = self.db.cursor()
-		cursor.execute("SELECT id FROM notes WHERE id=?", (id,))
+		cursor.execute("SELECT id FROM notes WHERE id=?", (item_id,))
 		results = cursor.fetchone()
 		if not results or not results[0]:
 			return False
 
-		cursor.execute("DELETE FROM notes WHERE id=?", (id,))
+		cursor.execute("DELETE FROM notes WHERE id=?", (item_id,))
 		self.db.commit()
 		return True
 
@@ -105,12 +110,12 @@ class sqlite:
 		cursor.execute("SELECT title,id,notebook FROM notes")
 		return cursor.fetchall()
 		
-	def get_note(self, id):
+	def get_note(self, item_id):
 		'''
 		Given an ID, returns a note structure or None if not found.
 		'''
 		cursor = self.db.cursor()
-		cursor.execute("SELECT title,body FROM notes WHERE id=?", (id,))
+		cursor.execute("SELECT title,body FROM notes WHERE id=?", (item_id,))
 		results = cursor.fetchone()
 		if not results or not results[0]:
 			return None
@@ -118,7 +123,7 @@ class sqlite:
 		out = items.Note()
 		out.title = results[0]
 		out.body = results[1]
-		out.id = id
+		out.id = item_id
 		return out
 	
 	def update_note(self, n):

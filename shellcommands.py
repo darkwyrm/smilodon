@@ -1,49 +1,50 @@
-import clientlib as clib
-from shellbase import BaseCommand, gShellCommands
-
+# pylint: disable=unused-argument
 import collections
 from glob import glob
 import os
 import platform
-import socket
 import subprocess
 import sys
 
 from prompt_toolkit import print_formatted_text, HTML
 
-# Special class for handling blanks
+import clientlib as clib
+from shellbase import BaseCommand, gShellCommands
+
 class CommandEmpty(BaseCommand):
-	def __init__(self, rawInput=None, pTokenList=None):
-		BaseCommand.Set(self,rawInput,pTokenList)
+	'''Special command just to handle blanks'''
+	def __init__(self, raw_input=None, ptoken_list=None):
+		BaseCommand.__init__(self,raw_input,ptoken_list)
 		self.name = ''
 
 
-# Special class for handling anything the shell doesn't support
 class CommandUnrecognized(BaseCommand):
-	def __init__(self, rawInput=None, pTokenList=None):
-		BaseCommand.Set(self,'unrecognized')
+	'''Special class for handling anything the shell doesn't support'''
+	def __init__(self, raw_input=None, ptoken_list=None):
+		BaseCommand.__init__(self,'unrecognized')
 		self.name = 'unrecognized'
 
-	def IsValid(self):
+	def is_valid(self):
 		return "Unknown command"
 
-	def Execute(self, pShellState):
+	def execute(self, pshell_state):
 		return "Unknown command"
 
 
 class CommandChDir(BaseCommand):
-	def __init__(self, rawInput=None, pTokenList=None):
-		BaseCommand.Set(self,rawInput,pTokenList)
+	'''Change directories'''
+	def __init__(self, raw_input=None, ptoken_list=None):
+		BaseCommand.__init__(self,raw_input,ptoken_list)
 		self.name = 'chdir'
 		self.helpInfo = 'Usage: cd <location>\nChanges to the specified directory\n\n' + \
 						'Aliases: cd'
 		self.description = 'change directory/location'
 
-	def GetAliases(self):
+	def get_aliases(self):
 		return { "cd":"chdir" }
 
-	def Execute(self, pShellState):
-		if (len(self.tokenList) > 0):
+	def execute(self, pshell_state):
+		if len(self.tokenList) > 0:
 			newDir = ''
 			if '~' in self.tokenList[0]:
 				if platform.system().casefold() == 'windows':
@@ -57,24 +58,24 @@ class CommandChDir(BaseCommand):
 			except Exception as e:
 				return e.__str__()
 
-		pShellState.oldpwd = pShellState.pwd
-		pShellState.pwd = os.getcwd()
+		pshell_state.oldpwd = pshell_state.pwd
+		pshell_state.pwd = os.getcwd()
 
 		return ''
 
-	def Autocomplete(self, pTokens):
-		if len(pTokens) == 1:
+	def autocomplete(self, ptokens):
+		if len(ptokens) == 1:
 			outData = list()
 			
-			if pTokens[0][0] == '"':
+			if ptokens[0][0] == '"':
 				quoteMode = True
 			else:
 				quoteMode = False
 			
 			if quoteMode:
-				items = glob(pTokens[0][1:] + '*')
+				items = glob(ptokens[0][1:] + '*')
 			else:
-				items = glob(pTokens[0] + '*')
+				items = glob(ptokens[0] + '*')
 			
 			for item in items:
 				if not os.path.isdir(item):
@@ -88,27 +89,27 @@ class CommandChDir(BaseCommand):
 				outData.append([data,display])
 					
 			return outData
-		else:
-			return list()
+		return list()
 
 
 class CommandConnect(BaseCommand):
-	def __init__(self, rawInput=None, pTokenList=None):
-		BaseCommand.Set(self, rawInput, pTokenList)
+	'''Connect to a server'''
+	def __init__(self, raw_input=None, ptoken_list=None):
+		BaseCommand.__init__(self, raw_input, ptoken_list)
 		self.name = 'connect'
 		self.helpInfo = 'Usage: connect <host> [port=2001]\n' + \
 						'Open a connection to a host, optionally specifying a port.\n' + \
 						'Aliases: con'
 		self.description = 'Connect to a host'
 
-	def Execute(self, pShellState):
-		if (len(self.tokenList) > 2):
+	def execute(self, pshell_state):
+		if len(self.tokenList) > 2:
 			print(self.helpInfo)
 			return ''
 
-		if pShellState.socket:
-			clib.quit(pShellState.sock)
-			pShellState.sock = None
+		if pshell_state.socket:
+			clib.disconnect(pshell_state.sock)
+			pshell_state.sock = None
 		
 		if len(self.tokenList) == 2:
 			try:
@@ -120,7 +121,7 @@ class CommandConnect(BaseCommand):
 		
 		out_data = clib.connect(self.tokenList[0], port_num)
 		if out_data['error'] == '':
-			pShellState.sock = out_data['socket']
+			pshell_state.sock = out_data['socket']
 			if out_data['version']:
 				print("Connected to %s, version %s" % (self.tokenList[0], \
 														out_data['version']))
@@ -133,56 +134,59 @@ class CommandConnect(BaseCommand):
 
 
 class CommandDisconnect(BaseCommand):
-	def __init__(self, rawInput=None, pTokenList=None):
-		BaseCommand.Set(self, rawInput, pTokenList)
+	'''Disconnect from a server'''
+	def __init__(self, raw_input=None, ptoken_list=None):
+		BaseCommand.__init__(self, raw_input, ptoken_list)
 		self.name = 'disconnect'
 		self.helpInfo = 'Usage: disconnect <host>\n' + \
 						'Close the server connection'
 		self.description = 'Disconnect from the host'
 
-	def GetAliases(self):
+	def get_aliases(self):
 		return { "quit":"disconnect" }
 
-	def Execute(self, pShellState):
-		clib.quit(pShellState.sock)
+	def execute(self, pshell_state):
+		clib.disconnect(pshell_state.sock)
 		return ''
 
 
 class CommandExit(BaseCommand):
-	def __init__(self, rawInput=None, pTokenList=None):
-		BaseCommand.Set(self,'exit')
+	'''Exit the program'''
+	def __init__(self, raw_input=None, ptoken_list=None):
+		BaseCommand.__init__(self,'exit')
 		self.name = 'exit'
 		self.helpInfo = 'Usage: exit\nCloses the connection and exits the shell.'
 		self.description = 'Exits the shell'
 
-	def GetAliases(self):
+	def get_aliases(self):
 		return { "x":"exit", "q":"exit" }
 
-	def Execute(self, shellState):
-		if hasattr(shellState,'sock'):
-			clib.quit(shellState.sock)
+	def execute(self, pshell_state):
+		if hasattr(pshell_state,'sock'):
+			clib.disconnect(pshell_state.sock)
 		sys.exit(0)
 
 
 class CommandHelp(BaseCommand):
-	def __init__(self, rawInput=None, pTokenList=None):
-		BaseCommand.Set(self,'help')
+	'''Implements the help system'''
+	def __init__(self, raw_input=None, ptoken_list=None):
+		BaseCommand.__init__(self,'help')
 		self.name = 'help'
 		self.helpInfo = 'Usage: help <command>\nProvides information on a command.\n\n' + \
 						'Aliases: ?'
 		self.description = 'Show help on a command'
 
-	def GetAliases(self):
+	def get_aliases(self):
 		return { "?":"help" }
 
-	def Execute(self, shellState):
-		if (len(self.tokenList) > 0):
+	def execute(self, pshell_state):
+		if len(self.tokenList) > 0:
 			# help <keyword>
 			for cmdName in self.tokenList:
-				if (len(cmdName) < 1):
+				if len(cmdName) < 1:
 					continue
 
-				if (cmdName in gShellCommands):
+				if cmdName in gShellCommands:
 					print(gShellCommands[cmdName].GetHelp())
 				else:
 					print_formatted_text(HTML(
@@ -198,16 +202,17 @@ class CommandHelp(BaseCommand):
 
 
 class CommandListDir(BaseCommand):
-	def __init__(self, rawInput=None, pTokenList=None):
-		BaseCommand.Set(self,rawInput,pTokenList)
+	'''Performs a directory listing by calling the shell'''
+	def __init__(self, raw_input=None, ptoken_list=None):
+		BaseCommand.__init__(self,raw_input,ptoken_list)
 		self.name = 'ls'
 		self.helpInfo = 'Usage: as per bash ls command or Windows dir command'
 		self.description = 'list directory contents'
 
-	def GetAliases(self):
+	def get_aliases(self):
 		return { "dir":"ls" }
 
-	def Execute(self, pShellState):
+	def execute(self, pshell_state):
 		if sys.platform == 'win32':
 			tokens = ['dir','/w']
 			tokens.extend(self.tokenList)
@@ -218,19 +223,19 @@ class CommandListDir(BaseCommand):
 			subprocess.call(tokens)
 		return ''
 
-	def Autocomplete(self, pTokens):
-		if len(pTokens) == 1:
+	def autocomplete(self, ptokens):
+		if len(ptokens) == 1:
 			outData = list()
 			
-			if pTokens[0][0] == '"':
+			if ptokens[0][0] == '"':
 				quoteMode = True
 			else:
 				quoteMode = False
 			
 			if quoteMode:
-				items = glob(pTokens[0][1:] + '*')
+				items = glob(ptokens[0][1:] + '*')
 			else:
-				items = glob(pTokens[0] + '*')
+				items = glob(ptokens[0] + '*')
 			
 			for item in items:
 				if not os.path.isdir(item):
@@ -244,13 +249,13 @@ class CommandListDir(BaseCommand):
 				outData.append([data,display])
 					
 			return outData
-		else:
-			return list()
+		return list()
 
 
 class CommandLogin(BaseCommand):
-	def __init__(self, rawInput=None, pTokenList=None):
-		BaseCommand.Set(self, rawInput, pTokenList)
+	'''Initiates a login.'''
+	def __init__(self, raw_input=None, ptoken_list=None):
+		BaseCommand.__init__(self, raw_input, ptoken_list)
 		self.name = 'login'
 		self.helpInfo = '''Usage: login <address>
 Log into a server once connected. The address used may be the numeric address
@@ -261,13 +266,14 @@ friendly address contains spaces, it must be enclosed in double quotes, as in
 "John Q. Public/example.com" or "John Q. Public".'''
 		self.description = 'Log into the connected server.'
 
-	def Execute(self, pShellState):
+	def execute(self, pshell_state):
 		return 'Unimplemented'
 
 
 class CommandProfile(BaseCommand):
-	def __init__(self, rawInput=None, pTokenList=None):
-		BaseCommand.Set(self, rawInput, pTokenList)
+	'''User profile management command'''
+	def __init__(self, raw_input=None, ptoken_list=None):
+		BaseCommand.__init__(self, raw_input, ptoken_list)
 		self.name = 'profile'
 		self.helpInfo = '''Usage: profile <action> <profilename>
 Manage profiles. Actions are detailed below.
@@ -294,13 +300,14 @@ set <name> - activates the specified profile and deactivates the current one.
 		self.description = 'Manage profiles.'
 			
 
-	def Execute(self, pShellState):
+	def execute(self, pshell_state):
 		return 'Unimplemented'
 
 
 class CommandRegister(BaseCommand):
-	def __init__(self, rawInput=None, pTokenList=None):
-		BaseCommand.Set(self, rawInput, pTokenList)
+	'''Register an account on a server'''
+	def __init__(self, raw_input=None, ptoken_list=None):
+		BaseCommand.__init__(self, raw_input, ptoken_list)
 		self.name = 'register'
 		self.helpInfo = '''Usage: register
 Register a new workspace account. This command requires a connection to a
@@ -312,44 +319,45 @@ created.
 		self.description = 'Register a new account on the connected server.'
 		
 
-	def Execute(self, pShellState):
+	def execute(self, pshell_state):
 		return 'Unimplemented'
 
 
 class CommandShell(BaseCommand):
-	def __init__(self, rawInput=None, pTokenList=None):
-		BaseCommand.Set(self,rawInput,pTokenList)
+	'''Perform shell commands'''
+	def __init__(self, raw_input=None, ptoken_list=None):
+		BaseCommand.__init__(self,raw_input,ptoken_list)
 		self.name = 'shell'
 		self.helpInfo = 'Usage: shell <command>\n' + \
-						'Executes a command directly in the regular user shell.\n' + \
+						'executes a command directly in the regular user shell.\n' + \
 						'Aliases: ` , sh'
 		self.description = 'Run a shell command'
 
-	def GetAliases(self):
+	def get_aliases(self):
 		return { "sh":"shell", "`":"shell" }
 
-	def Execute(self, pShellState):
+	def execute(self, pshell_state):
 		os.system(' '.join(self.tokenList))
 		return ''
 
 
 class CommandUpload(BaseCommand):
-	def __init__(self, rawInput=None, pTokenList=None):
-		BaseCommand.Set(self, rawInput, pTokenList)
+	'''Uploads a file'''
+	def __init__(self, raw_input=None, ptoken_list=None):
+		BaseCommand.__init__(self, raw_input, ptoken_list)
 		self.name = 'upload'
 		self.helpInfo = 'Usage: upload <filepath> <folder list>\n' + \
 						'Upload a file to the specified path'
 		self.description = 'Upload a file from the absolute path on the source side to the ' \
 							'location relative to the workspace root on the server.'
 
-	def Execute(self, pShellState):
-		if (len(self.tokenList) < 2):
+	def execute(self, pshell_state):
+		if len(self.tokenList) < 2:
 			print(self.helpInfo)
 			return ''
 
 		path_string = ' '.join(self.tokenList[1:])
-		if (clib.exists(pShellState.sock, path_string)) != '':
+		if (clib.exists(pshell_state.sock, path_string)) != '':
 			print("Unable to find path %s on server" % path_string)
 
 		return ''
-

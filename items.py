@@ -1,4 +1,5 @@
 class ClientItem():
+	'''Provides a base interface for all client items'''
 	def __init__(self):
 		self.id = ''
 		self.type = ''
@@ -8,6 +9,7 @@ class ClientItem():
 
 
 class Event(ClientItem):
+	'''Represents a calendar event'''
 	def __init__(self):
 		ClientItem.__init__(self)
 		self.type = 'event'
@@ -25,6 +27,7 @@ class Event(ClientItem):
 
 
 class Message(ClientItem):
+	'''Represents a message sent by a user.'''
 	def __init__(self):
 		ClientItem.__init__(self)
 		self.type = 'message'
@@ -40,6 +43,7 @@ class Message(ClientItem):
 
 
 class Note(ClientItem):
+	'''Represents a note document'''
 	def __init__(self):
 		ClientItem.__init__(self)
 		self.type = 'note'
@@ -54,6 +58,7 @@ class Note(ClientItem):
 
 
 class Task(ClientItem):
+	'''Represents a to-do item'''
 	def __init__(self):
 		ClientItem.__init__(self)
 		self.type = 'task'

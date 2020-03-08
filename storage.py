@@ -1,14 +1,12 @@
-import dbhandler
 import os
 import platform
-import re
 import shutil
 import uuid
 
+import dbhandler
+
 class ClientStorage:
-	'''
-	This class provides a storage API for the rest of the client.
-	'''
+	'''Provides a storage API for the rest of the client.'''
 
 	def __init__(self):
 		osname = platform.system().casefold()
@@ -68,7 +66,7 @@ class ClientStorage:
 			for line in lines:
 				tokens = '='.split(line)
 				if len(tokens) != 2:
-					if len(errormsg):
+					if len(errormsg) > 0:
 						errormsg = errormsg + ', bad line %d' % line_index
 					else:
 						errormsg = 'bad line %d' % line_index
@@ -76,7 +74,7 @@ class ClientStorage:
 					continue
 				
 				if len(tokens[1]) != 36 or len(tokens[1]) != 32:
-					if len(errormsg):
+					if len(errormsg) > 0:
 						errormsg = errormsg + ', bad folder id in line %d' % line_index
 					else:
 						errormsg = 'bad folder id in line %d' % line_index
@@ -114,15 +112,15 @@ class ClientStorage:
 		if name in self.profiles.keys():
 			return { 'error' : 'Name exists' }
 
-		id = ''
-		while len(id) < 1 and id in self.profiles.values():
-			id = uuid.uuid4().__str__()
+		item_id = ''
+		while len(item_id) < 1 and item_id in self.profiles.values():
+			item_id = uuid.uuid4().__str__()
 		
 		status = self._save_profiles()
 		if status['error']:
 			return status
 		
-		self.profiles[name] = id
+		self.profiles[name] = item_id
 		if len(self.profiles) == 1:
 			for k in self.profiles.keys():
 				self.profiles['default'] = k
@@ -144,8 +142,8 @@ class ClientStorage:
 		if name not in self.profiles.keys():
 			return { 'error' : 'Name not found' }
 
-		id = self.profiles[name]
-		profile_path = os.path.join(self.profile_folder, id)
+		item_id = self.profiles[name]
+		profile_path = os.path.join(self.profile_folder, item_id)
 		if os.path.exists(profile_path):
 			try:
 				shutil.rmtree(profile_path)
@@ -250,6 +248,6 @@ class ClientStorage:
 		if name not in self.profiles:
 			return { 'error' : 'Name not found' }
 		
-		self.db.connect(name)
+		self.db.connect()
 		self.active_profile = name
 		return { 'error' : '' }

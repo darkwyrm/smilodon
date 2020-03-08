@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
 
-from commandaccess import CommandAccess, gCommandAccess
-from shellbase import ShellState
-
-import getopt
-import os
 import re
 import sys
-from prompt_toolkit import print_formatted_text, HTML
+
+from prompt_toolkit import HTML
 from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import Completer, Completion, ThreadedCompleter
+
+from commandaccess import gCommandAccess
+from shellbase import ShellState
 
 class ShellCompleter(Completer):
 	def __init__(self):
@@ -23,12 +22,12 @@ class ShellCompleter(Completer):
 			commandToken = tokens[0]
 
 			# We have only one token, which is the command name
-			names = gCommandAccess.GetCommandNames()
+			names = gCommandAccess.get_command_names()
 			for name in names:
 				if name.startswith(commandToken):
 					yield Completion(name[len(commandToken):],display=name)
 		elif tokens:
-			cmd = gCommandAccess.GetCommand(tokens[0])
+			cmd = gCommandAccess.get_command(tokens[0])
 			if cmd.GetName() != 'unrecognized':
 				outTokens = cmd.Autocomplete(tokens[1:])
 				for out in outTokens:
@@ -37,6 +36,7 @@ class ShellCompleter(Completer):
 		
 
 class Shell:
+	'''The main shell class for the application.'''
 	def __init__(self):
 		self.state = ShellState()
 		status = self.state.fs.load_profiles()
@@ -47,6 +47,7 @@ class Shell:
 		self.lexer = re.compile(r'"[^"]+"|\S+')
 
 	def Prompt(self):
+		'''Begins the prompt loop.'''
 		session = PromptSession()
 		commandCompleter = ThreadedCompleter(ShellCompleter())
 		while True:
@@ -68,7 +69,7 @@ class Shell:
 				if not tokens:
 					continue
 				
-				cmd = gCommandAccess.GetCommand(tokens[0])
+				cmd = gCommandAccess.get_command(tokens[0])
 				cmd.Set(rawInput)
 
 				returnCode = cmd.Execute(self.state)
