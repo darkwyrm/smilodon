@@ -4,6 +4,7 @@ import shutil
 import uuid
 
 import dbhandler
+import utils
 
 class ClientStorage:
 	'''Provides a storage API for the rest of the client.'''
@@ -73,7 +74,7 @@ class ClientStorage:
 					line_index = line_index + 1
 					continue
 				
-				if len(tokens[1]) != 36 or len(tokens[1]) != 32:
+				if not utils.validate_uuid(tokens[1]):
 					if len(errormsg) > 0:
 						errormsg = errormsg + ', bad folder id in line %d' % line_index
 					else:
