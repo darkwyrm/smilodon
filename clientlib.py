@@ -209,10 +209,10 @@ def password(sock, wid, password):
 
 
 # Register
-#	Requires: valid socket
+#	Requires: valid socket, password
 #	Returns: [dict] "wid": string, "devid" : string, "session" : string, "errorcode" : int,
 # 			"error" : string
-def register(sock):
+def register(sock, password):
 	'''Creates an account on the server.'''
 	
 	# This construct is a little strange, but it is to work around the minute possibility that
@@ -229,7 +229,11 @@ def register(sock):
 			time.sleep(3.0)
 		
 		wid = str(uuid.uuid4())
-		response = write_text(sock, 'REGISTER %s\r\n' % wid)
+		pwhash = nacl.pwhash.argon2id.kdf(nacl.secret.SecretBox.KEY_SIZE,
+								bytes(password, 'utf8'), wid,
+								opslimit=nacl.pwhash.argon2id.OPSLIMIT_INTERACTIVE,
+								memlimit=nacl.pwhash.argon2id.MEMLIMIT_INTERACTIVE)	
+		response = write_text(sock, 'REGISTER %s %s\r\n' % (wid, pwhash))
 		if response['error']:
 			return response
 		
