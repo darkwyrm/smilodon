@@ -320,6 +320,12 @@ created.
 		
 
 	def execute(self, pshell_state):
+		if len(self.tokenList) != 2:
+			print(self.helpInfo)
+			return ''
+		# status = clib.register(pshell_state.sock, self.tokenList[1])
+
+
 		return 'Unimplemented'
 
 
