@@ -121,7 +121,7 @@ def device(sock, devid, session_str):
 	if not utils.validate_uuid(devid):
 		return {
 			'error' : 'BAD REQUEST',
-			'errorcode' : '400'
+			'errorcode' : 400
 		}
 
 	response = write_text(sock, 'DEVICE %s %s\r\n' % (devid, session_str))
@@ -176,7 +176,7 @@ def login(sock, wid):
 	if not utils.validate_uuid(wid):
 		return {
 			'error' : 'BAD REQUEST',
-			'errorcode' : '400'
+			'errorcode' : 400
 		}
 
 	response = write_text(sock, 'LOGIN %s\r\n' % wid)
@@ -188,17 +188,17 @@ def login(sock, wid):
 # Password
 #	Requires: workspace ID, password string
 #	Returns: [dict] "errorcode" : int, "error" : string
-def password(sock, wid, password):
+def password(sock, wid, pword):
 	'''Continues the login process by hashing a password and sending it to the server.'''
 	if not password or not utils.validate_uuid(wid):
 		return {
 			'error' : 'BAD REQUEST',
-			'errorcode' : '400'
+			'errorcode' : 400
 		}
 	
 	# The server will salt the hash we submit, but we'll salt anyway with the WID for extra safety.
 	pwhash = nacl.pwhash.argon2id.kdf(nacl.secret.SecretBox.KEY_SIZE,
-							bytes(password, 'utf8'), wid,
+							bytes(pword, 'utf8'), wid,
 							opslimit=nacl.pwhash.argon2id.OPSLIMIT_INTERACTIVE,
 							memlimit=nacl.pwhash.argon2id.MEMLIMIT_INTERACTIVE)	
 	response = write_text(sock, 'PASSWORD %s\r\n' % pwhash)
@@ -212,7 +212,7 @@ def password(sock, wid, password):
 #	Requires: valid socket, password
 #	Returns: [dict] "wid": string, "devid" : string, "session" : string, "errorcode" : int,
 # 			"error" : string
-def register(sock, password):
+def register(sock, pword):
 	'''Creates an account on the server.'''
 	
 	# This construct is a little strange, but it is to work around the minute possibility that
@@ -230,7 +230,7 @@ def register(sock, password):
 		
 		wid = str(uuid.uuid4())
 		pwhash = nacl.pwhash.argon2id.kdf(nacl.secret.SecretBox.KEY_SIZE,
-								bytes(password, 'utf8'), wid,
+								bytes(pword, 'utf8'), wid,
 								opslimit=nacl.pwhash.argon2id.OPSLIMIT_INTERACTIVE,
 								memlimit=nacl.pwhash.argon2id.MEMLIMIT_INTERACTIVE)	
 		response = write_text(sock, 'REGISTER %s %s\r\n' % (wid, pwhash))
