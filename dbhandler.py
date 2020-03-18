@@ -19,19 +19,37 @@ class sqlite:
 				print('Unable to delete old database %s: %s' % (self.dbpath, e))
 		
 		self.db = sqlite3.connect(self.dbpath)
-		sqlcmd = '''
-			CREATE TABLE "notes" (
-			"id"	TEXT NOT NULL UNIQUE,
-			"title"	TEXT,
-			"body"	TEXT,
-			"notebook"	TEXT,
-			"tags"	TEXT,
-			"created"	TEXT NOT NULL,
-			"updated"	TEXT,
-			"attachments"	TEXT
-		);'''
 		cursor = self.db.cursor()
-		cursor.execute(sqlcmd)
+
+		sqlcmds = [ '''
+			CREATE TABLE workspaces (
+				"id" TEXT NOT NULL UNIQUE,
+				"wid" TEXT NOT NULL UNIQUE,
+				"friendly_address" TEXT,
+				"password" TEXT,
+				"type" TEXT
+			);''', '''
+			CREATE table "folders"(
+				"id" TEXT NOT NULL UNIQUE,
+				"wid" TEXT NOT NULL UNIQUE,
+				"enc_key" TEXT,
+				"path" TEXT
+			);''', '''
+			CREATE TABLE "notes" (
+				"id"	TEXT NOT NULL UNIQUE,
+				"title"	TEXT,
+				"body"	TEXT,
+				"notebook"	TEXT,
+				"tags"	TEXT,
+				"created"	TEXT NOT NULL,
+				"updated"	TEXT,
+				"attachments"	TEXT
+			);'''
+		]
+
+		for sqlcmd in sqlcmds:
+			cursor = self.db.cursor()
+			cursor.execute(sqlcmd)
 		self.db.commit()
 	
 	def __init__(self):
