@@ -27,13 +27,40 @@ class sqlite:
 				"wid" TEXT NOT NULL UNIQUE,
 				"friendly_address" TEXT,
 				"password" TEXT,
+				"pwhashtype" TEXT,
 				"type" TEXT
 			);''', '''
 			CREATE table "folders"(
 				"id" TEXT NOT NULL UNIQUE,
-				"wid" TEXT NOT NULL UNIQUE,
-				"enc_key" TEXT,
-				"path" TEXT
+				"wid" TEXT NOT NULL,
+				"fid" TEXT NOT NULL,
+				"enc_key" TEXT NOT NULL,
+				"path" TEXT NOT NULL,
+				"permissions" TEXT NOT NULL
+			);''', '''
+			CREATE table "sessions"(
+				"id" TEXT NOT NULL UNIQUE,
+				"wid" TEXT NOT NULL,
+				"session_str" TEXT NOT NULL
+			);''', '''
+			CREATE table "messages"(
+				"id" TEXT NOT NULL UNIQUE,
+				"from"  TEXT NOT NULL,
+				"wid" TEXT NOT NULL,
+				"cc"  TEXT,
+				"bcc" TEXT,
+				"date" TEXT NOT NULL,
+				"thread_id" TEXT NOT NULL,
+				"subject" TEXT,
+				"body" TEXT,
+				"attachments" TEXT
+			);''', '''
+			CREATE TABLE "contacts" (
+				"id"	TEXT NOT NULL,
+				"sensitivity"	TEXT NOT NULL,
+				"source"	TEXT NOT NULL,
+				"fieldname"	TEXT,
+				"fieldvalue"	TEXT
 			);''', '''
 			CREATE TABLE "notes" (
 				"id"	TEXT NOT NULL UNIQUE,
@@ -44,6 +71,12 @@ class sqlite:
 				"created"	TEXT NOT NULL,
 				"updated"	TEXT,
 				"attachments"	TEXT
+			);''', '''
+			CREATE TABLE "files" (
+				"id"	TEXT NOT NULL UNIQUE,
+				"name"	TEXT NOT NULL,
+				"type"	TEXT NOT NULL,
+				"path"	TEXT NOT NULL
 			);'''
 		]
 
