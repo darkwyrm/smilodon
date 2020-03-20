@@ -2,7 +2,6 @@
 communications. Commands largely map 1-to-1 to the commands outlined in the 
 spec.'''
 
-from base64 import b85decode
 import os
 import socket
 import sys
@@ -282,7 +281,7 @@ def upload(sock, path, serverpath, progress):
 	response = read_text(sock)
 	if not response['string']:
 		# TODO: Properly handle no server response
-		raise("No response from server")
+		raise "No response from server"
 	
 	if response['string'].strip().split()[0] != 'PROCEED':
 		# TODO: Properly handle not being allowed
