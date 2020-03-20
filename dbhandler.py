@@ -112,6 +112,18 @@ class sqlite:
 		'''Closes the connection to the user data storage database'''
 		self.db.close()
 
+	def add_workspace(self, wid, pwhash, pwhashtype, session_str):
+		'''Adds a workspace to the storage database'''
+
+		cursor = self.db.cursor()
+		cursor.execute('''INSERT INTO workspaces(wid,password,pwhashtype,type)
+			VALUES(?,?,?,?)''', wid, pwhash, pwhashtype, "single")
+		
+		cursor.execute('''INSERT INTO sessions(wid,session_str) VALUES(?,?)''',
+			(wid, session_str))
+		self.db.commit()
+		return True
+
 	def create_note(self, title='New Note', notebook='default'):
 		'''
 		Creates a new note and returns a note structure
