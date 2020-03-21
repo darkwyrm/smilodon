@@ -256,8 +256,8 @@ def register(sock, pword):
 	return response
 
 
-# callback for upload() which just prints what it's given
 def progress_stdout(value):
+	'''callback for upload() which just prints what it's given'''
 	sys.stdout.write("Progress: %s\r" % value)
 
 
