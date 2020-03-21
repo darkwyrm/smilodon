@@ -40,6 +40,11 @@ class ClientStorage:
 			with open(profile_list_path, 'w') as fhandle:
 				for k,v in self.profiles.items():
 					fhandle.write("%s=%s%s" % (k,v,os.linesep))
+
+					item_folder = os.path.join(self.profile_folder,k)
+					if not os.path.exists(item_folder):
+						os.mkdir(item_folder)
+
 				fhandle.write("default=%s%s" % (self.default_profile,os.linesep))
 		except Exception as e:
 			return { "error" : e.__str__() }
