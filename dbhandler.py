@@ -99,14 +99,15 @@ class sqlite:
 		self.db = None
 		self.dbpath = ''
 	
-	def connect(self):
+	def connect(self, profile_id):
 		'''Connects to the user data storage database'''
-		self.dbpath = os.path.join(self.dbfolder, self.profile_id, 'storage.db')
+		self.dbpath = os.path.join(self.dbfolder, profile_id, 'storage.db')
 
 		if os.path.exists(self.dbpath):
 			self.db = sqlite3.connect(self.dbpath)
 		else:
 			self.reset_db()
+		self.profile_id = profile_id
 
 	def disconnect(self):
 		'''Closes the connection to the user data storage database'''
