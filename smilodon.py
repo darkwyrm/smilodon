@@ -11,9 +11,10 @@ from commandaccess import gCommandAccess
 from shellbase import ShellState
 
 class ShellCompleter(Completer):
-	def __init__(self):
+	def __init__(self, pshell_state):
 		Completer.__init__(self)
 		self.lexer = re.compile(r'"[^"]+"|"[^"]+$|[\S\[\]]+')
+		self.shell = pshell_state
 
 	def get_completions(self, document, complete_event):
 		tokens = self.lexer.findall(document.current_line_before_cursor.strip())
@@ -28,8 +29,8 @@ class ShellCompleter(Completer):
 					yield Completion(name[len(commandToken):],display=name)
 		elif tokens:
 			cmd = gCommandAccess.get_command(tokens[0])
-			if cmd.get_name() != 'unrecognized':
-				outTokens = cmd.autocomplete(tokens[1:])
+			if cmd.get_name() != 'unrecognized' and tokens:
+				outTokens = cmd.autocomplete(tokens[1:], self.shell)
 				for out in outTokens:
 					yield Completion(out[0],display=out[1],
 							start_position=-len(tokens[-1]))
@@ -49,7 +50,7 @@ class Shell:
 	def Prompt(self):
 		'''Begins the prompt loop.'''
 		session = PromptSession()
-		commandCompleter = ThreadedCompleter(ShellCompleter())
+		commandCompleter = ThreadedCompleter(ShellCompleter(self.state))
 		while True:
 			try:
 				rawInput = session.prompt(HTML(

@@ -89,7 +89,7 @@ class BaseCommand:
 		'''The base class purposely does nothing. To be implemented by subclasses'''
 		return ''
 	
-	def autocomplete(self, ptokens):
+	def autocomplete(self, ptokens, pshell_state):
 		'''Subclasses implement whatever is needed for their specific case. ptokens 
 contains all tokens from the raw input except the name of the command. All 
 double quotes have been stripped. Subclasses are expected to return a list 

@@ -63,7 +63,7 @@ class CommandChDir(BaseCommand):
 
 		return ''
 
-	def autocomplete(self, ptokens):
+	def autocomplete(self, ptokens, pshell_state):
 		if len(ptokens) == 1:
 			outData = list()
 			
@@ -223,7 +223,7 @@ class CommandListDir(BaseCommand):
 			subprocess.call(tokens)
 		return ''
 
-	def autocomplete(self, ptokens):
+	def autocomplete(self, ptokens, pshell_state):
 		if len(ptokens) == 1:
 			outData = list()
 			
@@ -302,6 +302,11 @@ set <name> - activates the specified profile and deactivates the current one.
 
 	def execute(self, pshell_state):
 		return 'Unimplemented'
+
+	def autocomplete(self, ptokens, pshell_state):
+		if len(ptokens) == 1:
+			return [i for i in pshell_state.fs.get_profiles() if i.startswith(ptokens[1])]
+		return list()
 
 
 class CommandRegister(BaseCommand):
