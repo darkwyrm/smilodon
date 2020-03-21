@@ -22,7 +22,7 @@ class ClientStorage:
 		self.profiles = dict()
 		self.default_profile = ''
 		self.active_profile = ''
-		self.db = dbhandler.sqlite()
+		self.db = dbhandler.sqlite()		
 	
 	def _save_profiles(self):
 		'''
@@ -94,8 +94,8 @@ class ClientStorage:
 			
 			if self.default_profile not in self.profiles.keys():
 				if len(self.profiles) == 1:
-					for k in self.profiles.keys():
-						self.profiles['default'] = k
+					it = iter(self.profiles)
+					self.profiles['default'] = next(it)
 				else:
 					self.default_profile = ''
 				
@@ -128,8 +128,8 @@ class ClientStorage:
 		
 		self.profiles[name] = item_id
 		if len(self.profiles) == 1:
-			for k in self.profiles.keys():
-				self.profiles['default'] = k
+			it = iter(self.profiles)
+			self.profiles['default'] = next(it)
 		return status
 	
 	def delete_profile(self, name):
@@ -159,8 +159,8 @@ class ClientStorage:
 		del self.profiles[name]
 		if self.profiles['default'] == name:
 			if len(self.profiles) == 1:
-				for k in self.profiles.keys():
-					self.profiles['default'] = k
+				it = iter(self.profiles)
+				self.profiles['default'] = next(it)
 			else:
 				self.profiles['default'] = ''
 		
@@ -221,8 +221,8 @@ class ClientStorage:
 			return { 'error' : "Name parameter may not be empty" }
 		
 		if len(self.profiles) == 1:
-			for k in self.profiles.keys():
-				self.profiles['default'] = k
+			it = iter(self.profiles)
+			self.profiles['default'] = next(it)
 			return { 'error' : '' }
 		
 		if name:
@@ -232,10 +232,11 @@ class ClientStorage:
 				return { 'error' : 'Name not found' }
 		else:
 			self.default_profile = ''
-			
+		
+		self._save_profiles()
 		return { 'error' : '' }
 
-	def set_profile(self, name):
+	def activate_profile(self, name):
 		'''
 		Activates the specified profile.
 
@@ -248,12 +249,45 @@ class ClientStorage:
 		if not name:
 			return { 'error' : "Name parameter may not be empty" }
 		
+		# This gives us the ability to easily load the default profile on startup by merely
+		# invoking activate_profile('default')
 		if name == 'default':
-			return { 'error' : "Name 'default' is reserved" }
+			defprof = self.get_default_profile()
+			if defprof:
+				name = defprof
+			else:
+				# Empty string means there's only one profile available
+				name = self.profiles.keys()[0]
 		
 		if name not in self.profiles:
 			return { 'error' : 'Name not found' }
 		
-		self.db.connect()
+		self.db.connect(name)
 		self.active_profile = name
 		return { 'error' : '' }
+
+	def activate_default_profile(self):
+		'''
+		Activates the default profile. If no profile exists, one is created.
+
+		Returns:
+		"error" : string
+		"name" : name of the profile loaded
+		'''
+
+		# Confirm that we really don't have any profiles created on disk.
+		if len(self.profiles) == 0:
+			status = self.load_profiles()
+			if status['error']:
+				return { 'error' : status['error'], 'name' : '' }
+
+		if len(self.profiles) == 0:
+			status = self.create_profile('primary')
+			if status['error']:
+				return { 'error' : status['error'], 'name' : '' }
+		else:
+			status = self.activate_profile('default')
+			if status['error']:
+				return { 'error' : status['error'], 'name' : '' }
+		
+		return { 'error' : '', 'name' : self.active_profile }
