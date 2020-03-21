@@ -17,7 +17,7 @@ class CommandAccess:
 		self.add_command(shellcommands.CommandDisconnect())
 		self.add_command(shellcommands.CommandLogin())
 		self.add_command(shellcommands.CommandProfile())
-		# Disabled until server support is implemented
+		# TODO: enable until server support is implemented
 		# self.add_command(shellcommands.CommandUpload())
 
 		self.all_names.sort()
