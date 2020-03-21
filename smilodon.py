@@ -11,6 +11,7 @@ from commandaccess import gCommandAccess
 from shellbase import ShellState
 
 class ShellCompleter(Completer):
+	'''Class for handling command autocomplete'''
 	def __init__(self, pshell_state):
 		Completer.__init__(self)
 		self.lexer = re.compile(r'"[^"]+"|"[^"]+$|[\S\[\]]+')
