@@ -60,7 +60,7 @@ class BaseCommand:
 	
 	def __init__(self, raw_input=None, ptoken_list=None):
 		self.set(raw_input,ptoken_list)
-		if len(raw_input) > 0:
+		if raw_input and len(raw_input) > 0:
 			self.name = raw_input.split(' ')
 		self.helpInfo = ''
 		self.description = ''

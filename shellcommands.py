@@ -187,7 +187,7 @@ class CommandHelp(BaseCommand):
 					continue
 
 				if cmdName in gShellCommands:
-					print(gShellCommands[cmdName].GetHelp())
+					print(gShellCommands[cmdName].get_help())
 				else:
 					print_formatted_text(HTML(
 						"No help on <gray><b>%s</b></gray>" % cmdName))
@@ -196,7 +196,7 @@ class CommandHelp(BaseCommand):
 			ordered = collections.OrderedDict(sorted(gShellCommands.items()))
 			for name,item in ordered.items():
 				print_formatted_text(HTML(
-					"<gray><b>%s</b>\t%s</gray>" % (name, item.GetDescription())
+					"<gray><b>%s</b>\t%s</gray>" % (name, item.get_description())
 				))
 		return ''
 
@@ -261,7 +261,7 @@ class CommandLogin(BaseCommand):
 Log into a server once connected. The address used may be the numeric address
 (e.g. 557207fd-0a0a-45bb-a402-c38461251f8f) or the friendly address (e.g. 
 CatLover). It is not necessary to give the entire workspace address
-(CatLover/example.com), but it will not cause any errors if it is. If a
+(CatLover/example.com), but it will not cause any errors if used. If a
 friendly address contains spaces, it must be enclosed in double quotes, as in
 "John Q. Public/example.com" or "John Q. Public".'''
 		self.description = 'Log into the connected server.'
@@ -343,7 +343,10 @@ class CommandShell(BaseCommand):
 		return { "sh":"shell", "`":"shell" }
 
 	def execute(self, pshell_state):
-		os.system(' '.join(self.tokenList))
+		try:
+			os.system(' '.join(self.tokenList))
+		except Exception as e:
+			print("Error running command: %s" % e)
 		return ''
 
 

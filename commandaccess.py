@@ -24,9 +24,9 @@ class CommandAccess:
 
 	def add_command(self, pCommand):
 		'''Add a Command instance to the list'''
-		shellcommands.gShellCommands[pCommand.GetName()] = pCommand
-		self.all_names.append(pCommand.GetName())
-		for k,v in pCommand.GetAliases().items():
+		shellcommands.gShellCommands[pCommand.get_name()] = pCommand
+		self.all_names.append(pCommand.get_name())
+		for k,v in pCommand.get_aliases().items():
 			if k in self.aliases:
 				print("Error duplicate alias %s. Already exists for %s" %
 						(k, self.aliases[k]) )

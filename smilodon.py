@@ -28,8 +28,8 @@ class ShellCompleter(Completer):
 					yield Completion(name[len(commandToken):],display=name)
 		elif tokens:
 			cmd = gCommandAccess.get_command(tokens[0])
-			if cmd.GetName() != 'unrecognized':
-				outTokens = cmd.Autocomplete(tokens[1:])
+			if cmd.get_name() != 'unrecognized':
+				outTokens = cmd.autocomplete(tokens[1:])
 				for out in outTokens:
 					yield Completion(out[0],display=out[1],
 							start_position=-len(tokens[-1]))
@@ -70,9 +70,9 @@ class Shell:
 					continue
 				
 				cmd = gCommandAccess.get_command(tokens[0])
-				cmd.Set(rawInput)
+				cmd.set(rawInput)
 
-				returnCode = cmd.Execute(self.state)
+				returnCode = cmd.execute(self.state)
 				if returnCode:
 					print(returnCode + '\n')
 
