@@ -39,13 +39,16 @@ class ClientStorage:
 		try:
 			with open(profile_list_path, 'w') as fhandle:
 				for k,v in self.profiles.items():
-					fhandle.write("%s=%s%s" % (k,v,os.linesep))
+					if k == 'default':
+						continue
+					
+					fhandle.write("%s=%s\n" % (k,v))
 
 					item_folder = os.path.join(self.profile_folder,k)
 					if not os.path.exists(item_folder):
 						os.mkdir(item_folder)
 
-				fhandle.write("default=%s%s" % (self.default_profile,os.linesep))
+				fhandle.write("default=%s\n" % (self.default_profile))
 		except Exception as e:
 			return { "error" : e.__str__() }
 
@@ -70,13 +73,21 @@ class ClientStorage:
 			lines = fhandle.readlines()
 			line_index = 1
 			for line in lines:
-				tokens = '='.split(line)
+				stripped = line.strip()
+				if len(stripped) == 0:
+					continue
+				
+				tokens = stripped.split('=')
 				if len(tokens) != 2:
 					if len(errormsg) > 0:
 						errormsg = errormsg + ', bad line %d' % line_index
 					else:
 						errormsg = 'bad line %d' % line_index
 					line_index = line_index + 1
+					continue
+				
+				if tokens[0] == 'default':
+					self.default_profile = tokens[1]
 					continue
 				
 				if not utils.validate_uuid(tokens[1]):
@@ -86,11 +97,8 @@ class ClientStorage:
 						errormsg = 'bad folder id in line %d' % line_index
 					line_index = line_index + 1
 					continue
+				self.profiles[tokens[0]] = tokens[1]
 				
-				if tokens[0] == 'default':
-					self.default_profile = tokens[1]
-				else:
-					self.profiles[tokens[0]] = tokens[1]
 			
 			if self.default_profile not in self.profiles.keys():
 				if len(self.profiles) == 1:
@@ -119,18 +127,14 @@ class ClientStorage:
 			return { 'error' : 'Name exists' }
 
 		item_id = ''
-		while len(item_id) < 1 and item_id in self.profiles.values():
+		while len(item_id) < 1 or item_id in self.profiles.values():
 			item_id = uuid.uuid4().__str__()
-		
-		status = self._save_profiles()
-		if status['error']:
-			return status
 		
 		self.profiles[name] = item_id
 		if len(self.profiles) == 1:
 			it = iter(self.profiles)
 			self.profiles['default'] = next(it)
-		return status
+		return self._save_profiles()
 	
 	def delete_profile(self, name):
 		'''
@@ -207,7 +211,7 @@ class ClientStorage:
 		'''
 		Returns the name of the default profile. If one has not been set, it returns an empty string.
 		'''
-		return { 'default' : self.default_profile }
+		return self.default_profile
 
 	def set_default_profile(self, name):
 		'''
@@ -259,7 +263,7 @@ class ClientStorage:
 				# Empty string means there's only one profile available
 				name = self.profiles.keys()[0]
 		
-		if name not in self.profiles:
+		if name not in self.profiles.keys():
 			return { 'error' : 'Name not found' }
 		
 		self.db.connect(name)
@@ -285,6 +289,7 @@ class ClientStorage:
 			status = self.create_profile('primary')
 			if status['error']:
 				return { 'error' : status['error'], 'name' : '' }
+			self.set_default_profile('primary')
 		else:
 			status = self.activate_profile('default')
 			if status['error']:
