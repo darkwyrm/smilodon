@@ -118,13 +118,13 @@ class ClientStorage:
 		"id" : uuid of folder for new profile
 		'''
 		if name == 'default':
-			return { 'error' : "Name 'default' is reserved", 'id' : '' }
+			return { 'error' : "the name 'default' is reserved", 'id' : '' }
 		
 		if not name:
-			return { 'error' : "Name parameter may not be empty" }
+			return { 'error' : "BUG: name may not be empty" }
 		
 		if name in self.profiles.keys():
-			return { 'error' : 'Name exists' }
+			return { 'error' : "%s already exists" % name }
 
 		item_id = ''
 		while len(item_id) < 1 or item_id in self.profiles.values():
@@ -144,13 +144,13 @@ class ClientStorage:
 		"error" : string
 		'''
 		if name == 'default':
-			return { 'error' : "Name 'default' is reserved" }
+			return { 'error' : "'default' is reserved" }
 		
 		if not name:
-			return { 'error' : "Name parameter may not be empty" }
+			return { 'error' : "BUG: name may not be empty" }
 		
 		if name not in self.profiles.keys():
-			return { 'error' : 'Name not found' }
+			return { 'error' : "%s doesn't exist" }
 
 		item_id = self.profiles[name]
 		profile_path = os.path.join(self.profile_folder, item_id)
@@ -161,12 +161,13 @@ class ClientStorage:
 				return { 'error' : e.__str__() }
 		
 		del self.profiles[name]
-		if self.profiles['default'] == name:
+		if self.default_profile == name:
 			if len(self.profiles) == 1:
 				it = iter(self.profiles)
-				self.profiles['default'] = next(it)
+				self.default_profile = next(it)
+				self.activate_default_profile()
 			else:
-				self.profiles['default'] = ''
+				self.default_profile = ''
 		
 		return self._save_profiles()
 
@@ -181,16 +182,16 @@ class ClientStorage:
 		'''
 		
 		if oldname == 'default' or newname == 'default':
-			return { 'error' : "Name 'default' is reserved" }
+			return { 'error' : "the name 'default' is reserved" }
 		
 		if not oldname or not newname:
-			return { 'error' : "Name parameters may not be empty" }
+			return { 'error' : "BUG: name may not be empty" }
 		
 		if oldname not in self.profiles.keys():
-			return { 'error' : 'Old name not found' }
+			return { 'error' : "'%s' doesn't exist" % oldname }
 
 		if newname in self.profiles.keys():
-			return { 'error' : 'New name already exists' }
+			return { 'error' : "'%s' already exists" % newname }
 
 		self.profiles[newname] = self.profiles[oldname]
 		del self.profiles[oldname]
@@ -198,15 +199,13 @@ class ClientStorage:
 		return self._save_profiles()
 	
 	def get_profiles(self):
-		'''
-		Returns the list of loaded profile names and the default one, if one has been set.
-
-		Returns:
-		"default" : name of the default profile - string
-		"profiles" : profile names mapped to folder ID names - dict
-		'''
-		return { 'default' : self.default_profile, 'profiles' : self.profiles }
+		'''Returns a list of loaded profiles'''
+		return self.profiles
 	
+	def get_active_profile(self):
+		'''Returns the name of the active profile'''
+		return self.active_profile
+
 	def get_default_profile(self):
 		'''
 		Returns the name of the default profile. If one has not been set, it returns an empty string.
@@ -251,7 +250,7 @@ class ClientStorage:
 			self.db.disconnect()
 		
 		if not name:
-			return { 'error' : "Name parameter may not be empty" }
+			return { 'error' : "BUG: name may not be empty" }
 		
 		# This gives us the ability to easily load the default profile on startup by merely
 		# invoking activate_profile('default')
@@ -264,7 +263,7 @@ class ClientStorage:
 				name = self.profiles.keys()[0]
 		
 		if name not in self.profiles.keys():
-			return { 'error' : 'Name not found' }
+			return { 'error' : "%s doesn't exist" % name }
 		
 		self.db.connect(name)
 		self.active_profile = name

@@ -1,4 +1,4 @@
-# pylint: disable=unused-argument
+# pylint: disable=unused-argument,too-many-branches
 import collections
 from glob import glob
 import os
@@ -298,18 +298,54 @@ profile exists, this action has no effect.
 set <name> - activates the specified profile and deactivates the current one.
 '''
 		self.description = 'Manage profiles.'
-			
-
+	
 	def execute(self, pshell_state):
-		return 'Unimplemented'
+		if len(self.tokenList) == 0:
+			print('Active profile: %s' % pshell_state.fs.get_active_profile())
+			return ''
 
-	def autocomplete(self, ptokens, pshell_state):
-		if len(ptokens) == 1:
-			#outData = [i for i in pshell_state.fs.get_profiles() if i.startswith(ptokens[1])]
-			#if outData:
-			#	return outData
-			print(ptokens)
-		return list()
+		verb = self.tokenList[0].casefold()
+		if len(self.tokenList) == 1:
+			if verb == 'list':
+				print("Profiles:")
+				profiles = pshell_state.fs.get_profiles()
+				for profile in profiles:
+					print(profile)
+			else:
+				print(self.get_help())
+			return ''
+
+		if verb == 'create':
+			status = pshell_state.fs.create_profile(self.tokenList[1])
+			if status['error']:
+				print("Couldn't create profile: %s" % status['error'])
+		elif verb == 'delete':
+			print("This will delete the profile and all of its files. It can't be undone.")
+			choice = input("Really delete profile %s? [y/N] " % self.tokenList[1]).casefold()
+			if choice in [ 'y', 'yes' ]:
+				status = pshell_state.fs.delete_profile(self.tokenList[1])
+				if status['error']:
+					print("Couldn't delete profile: %s" % status['error'])
+				else:
+					print("Profile '%s' has been deleted" % self.tokenList[1])
+		elif verb == 'set':
+			status = pshell_state.fs.activate_profile(self.tokenList[1])
+			if status['error']:
+				print("Couldn't activate profile: %s" % status['error'])
+		elif verb == 'setdefault':
+			status = pshell_state.fs.set_default_profile(self.tokenList[1])
+			if status['error']:
+				print("Couldn't set profile as default: %s" % status['error'])
+		elif verb == 'rename':
+			if len(self.tokenList) != 3:
+				print(self.get_help())
+				return ''
+			status = pshell_state.fs.rename_profile(self.tokenList[1], self.tokenList[2])
+			if status['error']:
+				print("Couldn't rename profile: %s" % status['error'])
+		else:
+			print(self.get_help())
+		return ''
 
 
 class CommandRegister(BaseCommand):
