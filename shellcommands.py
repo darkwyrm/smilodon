@@ -67,11 +67,7 @@ class CommandChDir(BaseCommand):
 		if len(ptokens) == 1:
 			outData = list()
 			
-			if ptokens[0][0] == '"':
-				quoteMode = True
-			else:
-				quoteMode = False
-			
+			quoteMode = bool(ptokens[0][0] == '"')
 			if quoteMode:
 				items = glob(ptokens[0][1:] + '*')
 			else:
@@ -346,6 +342,22 @@ set <name> - activates the specified profile and deactivates the current one.
 		else:
 			print(self.get_help())
 		return ''
+	
+	def autocomplete(self, ptokens, pshell_state):
+		if len(ptokens) < 1:
+			return list()
+
+		verbs = [ 'create', 'delete', 'list', 'rename' ]
+		if len(ptokens) == 1 and ptokens[0] not in verbs:
+			outdata = [i for i in verbs if i.startswith(ptokens[0])]
+			return outdata
+		
+		groups = pshell_state.fs.get_profiles()
+		if len(ptokens) == 2 and ptokens[1] not in groups:
+			outdata = [i for i in groups if i.startswith(ptokens[1])]
+			return outdata
+
+		return list()
 
 
 class CommandRegister(BaseCommand):

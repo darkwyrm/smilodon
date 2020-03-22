@@ -33,7 +33,7 @@ class ShellCompleter(Completer):
 			if cmd.get_name() != 'unrecognized' and tokens:
 				outTokens = cmd.autocomplete(tokens[1:], self.shell)
 				for out in outTokens:
-					yield Completion(out[0],display=out[1],
+					yield Completion(out,display=out,
 							start_position=-len(tokens[-1]))
 		
 
