@@ -9,6 +9,7 @@ class AnselusClient:
 	def __init__(self):
 		self.fs = ClientStorage()
 		self.active_profile = ''
+		self.socket = None
 
 	def activate_profile(self, name):
 		'''Activates the specified profile'''
@@ -80,7 +81,9 @@ class AnselusClient:
 
 	def register_account(self, server):
 		'''Create a new account on the specified server.'''
+		return { 'error':'Unimplemented' }
 	
 	def unregister_account(self, server):
 		'''Remove account from server. This does not delete any local files'''
+		return { 'error':'Unimplemented' }
 		

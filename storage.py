@@ -272,6 +272,7 @@ class ClientStorage:
 		'''
 		Sets the login credentials for the user's workspace in the active profile. 
 		'''
+		return { 'error':'Unimplemented' }
 
 	def get_credentials(self):
 		'''
@@ -282,4 +283,4 @@ class ClientStorage:
 		"wid" : string
 		"pwhash" : string -- empty if password-saving is disabled
 		'''
-		return { 'error':'Unimplemented', 'wid':'', 'pwhash':'' }
+		return { 'error':'Unimplemented' }
