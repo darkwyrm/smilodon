@@ -192,6 +192,8 @@ class ClientStorage:
 
 		self.profiles[newname] = self.profiles[oldname]
 		del self.profiles[oldname]
+		if self.active_profile == oldname:
+			self.active_profile = newname
 
 		return self._save_profiles()
 	
@@ -261,3 +263,23 @@ class ClientStorage:
 		self.db.connect(name)
 		self.active_profile = name
 		return { 'error' : '' }
+
+	def get_active_profile(self):
+		'''Returns the active profile name'''
+		return self.active_profile
+
+	def set_credentials(self, wid, password):
+		'''
+		Sets the login credentials for the user's workspace in the active profile. 
+		'''
+
+	def get_credentials(self):
+		'''
+		Get the login credentials for the user's workspace in the active profile.
+
+		Returns:
+		"error" : string
+		"wid" : string
+		"pwhash" : string -- empty if password-saving is disabled
+		'''
+		return { 'error':'Unimplemented', 'wid':'', 'pwhash':'' }
