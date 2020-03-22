@@ -9,6 +9,7 @@ import sys
 from prompt_toolkit import print_formatted_text, HTML
 
 import clientlib as clib
+import helptext
 from shellbase import BaseCommand, gShellCommands
 
 class CommandEmpty(BaseCommand):
@@ -253,13 +254,7 @@ class CommandLogin(BaseCommand):
 	def __init__(self, raw_input=None, ptoken_list=None):
 		BaseCommand.__init__(self, raw_input, ptoken_list)
 		self.name = 'login'
-		self.helpInfo = '''Usage: login <address>
-Log into a server once connected. The address used may be the numeric address
-(e.g. 557207fd-0a0a-45bb-a402-c38461251f8f) or the friendly address (e.g. 
-CatLover). It is not necessary to give the entire workspace address
-(CatLover/example.com), but it will not cause any errors if used. If a
-friendly address contains spaces, it must be enclosed in double quotes, as in
-"John Q. Public/example.com" or "John Q. Public".'''
+		self.helpInfo = helptext.login_cmd
 		self.description = 'Log into the connected server.'
 
 	def execute(self, pshell_state):
@@ -271,28 +266,7 @@ class CommandProfile(BaseCommand):
 	def __init__(self, raw_input=None, ptoken_list=None):
 		BaseCommand.__init__(self, raw_input, ptoken_list)
 		self.name = 'profile'
-		self.helpInfo = '''Usage: profile <action> <profilename>
-Manage profiles. Actions are detailed below.
-
-create <name> - create a new profile, which is just a name for identification
-by the user. The profile may be named anything other than "default", which is
-reserved. Profile names are case-sensitive, so "Default" is permitted. Note
-that once created, it must be made active and either logging in or
-registration is needed for the profile to be useful.
-
-delete <name> - delete a profile and any files associated with it. Because it
-cannot be undone, this command requires confirmation from the user.
-
-rename <oldname> <newname> - change the name of a profile. Neither name may be
-"default".
-
-list - prints a list of all available profiles
-
-setdefault <name> - sets the profile to be loaded on startup. If only one
-profile exists, this action has no effect.
-
-set <name> - activates the specified profile and deactivates the current one.
-'''
+		self.helpInfo = helptext.profile_cmd
 		self.description = 'Manage profiles.'
 	
 	def execute(self, pshell_state):
@@ -365,13 +339,7 @@ class CommandRegister(BaseCommand):
 	def __init__(self, raw_input=None, ptoken_list=None):
 		BaseCommand.__init__(self, raw_input, ptoken_list)
 		self.name = 'register'
-		self.helpInfo = '''Usage: register
-Register a new workspace account. This command requires a connection to a
-server. Depending on the registration type set on the server, this command may
-return a status other than success or failure. If a server immediately creates
-a new workspace account, this command will print the new numeric address
-created.
-'''
+		self.helpInfo = helptext.register_cmd
 		self.description = 'Register a new account on the connected server.'
 		
 
@@ -390,9 +358,7 @@ class CommandShell(BaseCommand):
 	def __init__(self, raw_input=None, ptoken_list=None):
 		BaseCommand.__init__(self,raw_input,ptoken_list)
 		self.name = 'shell'
-		self.helpInfo = 'Usage: shell <command>\n' + \
-						'executes a command directly in the regular user shell.\n' + \
-						'Aliases: ` , sh'
+		self.helpInfo = helptext.shell_cmd
 		self.description = 'Run a shell command'
 
 	def get_aliases(self):
