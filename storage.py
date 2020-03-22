@@ -171,8 +171,6 @@ class ClientStorage:
 		
 		return self._save_profiles()
 
-	# Renames the specified profile. The UUID of the storage folder remains unchanged.
-	# Returns: [dict] "error" : string
 	def rename_profile(self, oldname, newname):
 		'''
 		Renames a profile, leaving the profile ID unchanged.
