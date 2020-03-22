@@ -214,3 +214,27 @@ class sqlite:
 		cursor.execute(sqlcmd, (n.title,n.body,timestamp,tag_string,n.id))
 		self.db.commit()
 		return True
+
+	def get_credentials(self, wid):
+		'''Returns the stored login credentials for the requested wid'''
+		cursor = self.db.cursor()
+		cursor.execute('''SELECT FROM workspaces(password,pwhashtype) WHERE wid=?''', (wid,))
+		results = cursor.fetchone()
+		if not results or not results[0]:
+			return dict()
+		return { 'password':results[0], 'pwhashtype':results[1] }
+
+	def set_credentials(self, wid, password, pwhashtype):
+		'''Sets the password and hash type for the specified workspace. A boolean success 
+		value is returned.'''
+		cursor = self.db.cursor()
+		cursor.execute("SELECT wid FROM workspaces WHERE wid=?", (wid,))
+		results = cursor.fetchone()
+		if not results or not results[0]:
+			return False
+
+		cursor = self.db.cursor()
+		cursor.execute("UPDATE workspaces SET password=?,pwhashtype=? WHERE wid=?",
+			(password, pwhashtype, wid))
+		self.db.commit()
+		return True
