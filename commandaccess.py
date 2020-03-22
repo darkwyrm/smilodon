@@ -13,12 +13,8 @@ class CommandAccess:
 		self.add_command(shellcommands.CommandHelp())
 		self.add_command(shellcommands.CommandShell())
 
-		self.add_command(shellcommands.CommandConnect())
-		self.add_command(shellcommands.CommandDisconnect())
-		self.add_command(shellcommands.CommandLogin())
 		self.add_command(shellcommands.CommandProfile())
-		# TODO: enable until server support is implemented
-		# self.add_command(shellcommands.CommandUpload())
+		self.add_command(shellcommands.CommandRegister())
 
 		self.all_names.sort()
 

@@ -8,7 +8,6 @@ import sys
 
 from prompt_toolkit import print_formatted_text, HTML
 
-import clientlib as clib
 import helptext
 from shellbase import BaseCommand, gShellCommands
 
@@ -89,64 +88,6 @@ class CommandChDir(BaseCommand):
 		return list()
 
 
-class CommandConnect(BaseCommand):
-	'''Connect to a server'''
-	def __init__(self, raw_input=None, ptoken_list=None):
-		BaseCommand.__init__(self, raw_input, ptoken_list)
-		self.name = 'connect'
-		self.helpInfo = 'Usage: connect <host> [port=2001]\n' + \
-						'Open a connection to a host, optionally specifying a port.\n' + \
-						'Aliases: con'
-		self.description = 'Connect to a host'
-
-	def execute(self, pshell_state):
-		if len(self.tokenList) > 2:
-			print(self.helpInfo)
-			return ''
-
-		if pshell_state.socket:
-			clib.disconnect(pshell_state.sock)
-			pshell_state.sock = None
-		
-		if len(self.tokenList) == 2:
-			try:
-				port_num = int(self.tokenList[1])
-			except:
-				print("Bad port number %s" % self.tokenList[1])
-		else:
-			port_num = 2001
-		
-		out_data = clib.connect(self.tokenList[0], port_num)
-		if out_data['error'] == '':
-			pshell_state.sock = out_data['socket']
-			if out_data['version']:
-				print("Connected to %s, version %s" % (self.tokenList[0], \
-														out_data['version']))
-			else:
-				print('Connected to host')
-		else:
-			print(out_data['error'])
-
-		return out_data['error']
-
-
-class CommandDisconnect(BaseCommand):
-	'''Disconnect from a server'''
-	def __init__(self, raw_input=None, ptoken_list=None):
-		BaseCommand.__init__(self, raw_input, ptoken_list)
-		self.name = 'disconnect'
-		self.helpInfo = 'Usage: disconnect <host>\n' + \
-						'Close the server connection'
-		self.description = 'Disconnect from the host'
-
-	def get_aliases(self):
-		return { "quit":"disconnect" }
-
-	def execute(self, pshell_state):
-		clib.disconnect(pshell_state.sock)
-		return ''
-
-
 class CommandExit(BaseCommand):
 	'''Exit the program'''
 	def __init__(self, raw_input=None, ptoken_list=None):
@@ -159,8 +100,7 @@ class CommandExit(BaseCommand):
 		return { "x":"exit", "q":"exit" }
 
 	def execute(self, pshell_state):
-		if hasattr(pshell_state,'sock'):
-			clib.disconnect(pshell_state.sock)
+		pshell_state.client.disconnect()
 		sys.exit(0)
 
 
@@ -271,14 +211,14 @@ class CommandProfile(BaseCommand):
 	
 	def execute(self, pshell_state):
 		if len(self.tokenList) == 0:
-			print('Active profile: %s' % pshell_state.fs.get_active_profile())
+			print('Active profile: %s' % pshell_state.client.get_active_profile())
 			return ''
 
 		verb = self.tokenList[0].casefold()
 		if len(self.tokenList) == 1:
 			if verb == 'list':
 				print("Profiles:")
-				profiles = pshell_state.fs.get_profiles()
+				profiles = pshell_state.client.get_profiles()
 				for profile in profiles:
 					print(profile)
 			else:
@@ -286,31 +226,31 @@ class CommandProfile(BaseCommand):
 			return ''
 
 		if verb == 'create':
-			status = pshell_state.fs.create_profile(self.tokenList[1])
+			status = pshell_state.client.create_profile(self.tokenList[1])
 			if status['error']:
 				print("Couldn't create profile: %s" % status['error'])
 		elif verb == 'delete':
 			print("This will delete the profile and all of its files. It can't be undone.")
 			choice = input("Really delete profile %s? [y/N] " % self.tokenList[1]).casefold()
 			if choice in [ 'y', 'yes' ]:
-				status = pshell_state.fs.delete_profile(self.tokenList[1])
+				status = pshell_state.client.delete_profile(self.tokenList[1])
 				if status['error']:
 					print("Couldn't delete profile: %s" % status['error'])
 				else:
 					print("Profile '%s' has been deleted" % self.tokenList[1])
 		elif verb == 'set':
-			status = pshell_state.fs.activate_profile(self.tokenList[1])
+			status = pshell_state.client.activate_profile(self.tokenList[1])
 			if status['error']:
 				print("Couldn't activate profile: %s" % status['error'])
 		elif verb == 'setdefault':
-			status = pshell_state.fs.set_default_profile(self.tokenList[1])
+			status = pshell_state.client.set_default_profile(self.tokenList[1])
 			if status['error']:
 				print("Couldn't set profile as default: %s" % status['error'])
 		elif verb == 'rename':
 			if len(self.tokenList) != 3:
 				print(self.get_help())
 				return ''
-			status = pshell_state.fs.rename_profile(self.tokenList[1], self.tokenList[2])
+			status = pshell_state.client.rename_profile(self.tokenList[1], self.tokenList[2])
 			if status['error']:
 				print("Couldn't rename profile: %s" % status['error'])
 		else:
@@ -326,7 +266,7 @@ class CommandProfile(BaseCommand):
 			outdata = [i for i in verbs if i.startswith(ptokens[0])]
 			return outdata
 		
-		groups = pshell_state.fs.get_profiles()
+		groups = pshell_state.client.get_profiles()
 		if len(ptokens) == 2 and ptokens[1] not in groups:
 			outdata = [i for i in groups if i.startswith(ptokens[1])]
 			return outdata
@@ -344,7 +284,7 @@ class CommandRegister(BaseCommand):
 		
 
 	def execute(self, pshell_state):
-		if len(self.tokenList) != 2:
+		if len(self.tokenList) != 1:
 			print(self.helpInfo)
 			return ''
 		# status = clib.register(pshell_state.sock, self.tokenList[1])
@@ -369,26 +309,4 @@ class CommandShell(BaseCommand):
 			os.system(' '.join(self.tokenList))
 		except Exception as e:
 			print("Error running command: %s" % e)
-		return ''
-
-
-class CommandUpload(BaseCommand):
-	'''Uploads a file'''
-	def __init__(self, raw_input=None, ptoken_list=None):
-		BaseCommand.__init__(self, raw_input, ptoken_list)
-		self.name = 'upload'
-		self.helpInfo = 'Usage: upload <filepath> <folder list>\n' + \
-						'Upload a file to the specified path'
-		self.description = 'Upload a file from the absolute path on the source side to the ' \
-							'location relative to the workspace root on the server.'
-
-	def execute(self, pshell_state):
-		if len(self.tokenList) < 2:
-			print(self.helpInfo)
-			return ''
-
-		path_string = ' '.join(self.tokenList[1:])
-		if (clib.exists(pshell_state.sock, path_string)) != '':
-			print("Unable to find path %s on server" % path_string)
-
 		return ''

@@ -4,7 +4,7 @@ from glob import glob
 import os
 import re
 
-import storage
+from client import AnselusClient
 
 # This global is needed for meta commands, such as Help. Do not access
 # this list directly unless there is literally no other option.
@@ -21,8 +21,7 @@ class ShellState:
 			self.oldpwd = ''
 		
 		self.aliases = dict()
-		self.socket = None
-		self.fs = storage.ClientStorage()
+		self.client = AnselusClient()
 
 
 # The main base Command class. Defines the basic API and all tagsh commands

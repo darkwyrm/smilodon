@@ -29,16 +29,14 @@ list - prints a list of all available profiles
 setdefault <name> - sets the profile to be loaded on startup. If only one
 profile exists, this action has no effect.
 
-set <name> - activates the specified profile and deactivates the current one.
-'''
+set <name> - activates the specified profile and deactivates the current one.'''
 
-register_cmd = '''Usage: register
+register_cmd = '''Usage: register <serveraddress>
 Register a new workspace account. This command requires a connection to a
 server. Depending on the registration type set on the server, this command may
 return a status other than success or failure. If a server immediately creates
 a new workspace account, this command will print the new numeric address
-created.
-'''
+created.'''
 
 shell_cmd = '''Usage: shell <command>
 Executes a command directly in the regular user shell. On Windows, this is 

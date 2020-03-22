@@ -41,7 +41,7 @@ class Shell:
 	'''The main shell class for the application.'''
 	def __init__(self):
 		self.state = ShellState()
-		status = self.state.fs.activate_default_profile()
+		status = self.state.client.activate_default_profile()
 		if status['error']:
 			print("Error loading profile information: %s" % status['error'])
 			sys.exit(1)

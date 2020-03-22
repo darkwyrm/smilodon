@@ -165,7 +165,6 @@ class ClientStorage:
 			if len(self.profiles) == 1:
 				it = iter(self.profiles)
 				self.default_profile = next(it)
-				self.activate_default_profile()
 			else:
 				self.default_profile = ''
 		
@@ -200,10 +199,6 @@ class ClientStorage:
 		'''Returns a list of loaded profiles'''
 		return self.profiles
 	
-	def get_active_profile(self):
-		'''Returns the name of the active profile'''
-		return self.active_profile
-
 	def get_default_profile(self):
 		'''
 		Returns the name of the default profile. If one has not been set, it returns an empty string.
@@ -266,30 +261,3 @@ class ClientStorage:
 		self.db.connect(name)
 		self.active_profile = name
 		return { 'error' : '' }
-
-	def activate_default_profile(self):
-		'''
-		Activates the default profile. If no profile exists, one is created.
-
-		Returns:
-		"error" : string
-		"name" : name of the profile loaded
-		'''
-
-		# Confirm that we really don't have any profiles created on disk.
-		if len(self.profiles) == 0:
-			status = self.load_profiles()
-			if status['error']:
-				return { 'error' : status['error'], 'name' : '' }
-
-		if len(self.profiles) == 0:
-			status = self.create_profile('primary')
-			if status['error']:
-				return { 'error' : status['error'], 'name' : '' }
-			self.set_default_profile('primary')
-		else:
-			status = self.activate_profile('default')
-			if status['error']:
-				return { 'error' : status['error'], 'name' : '' }
-		
-		return { 'error' : '', 'name' : self.active_profile }
