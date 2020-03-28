@@ -79,8 +79,29 @@ class AnselusClient:
 		'''Sets the profile loaded on startup'''
 		return self.fs.set_default_profile(name)
 
-	def register_account(self, server):
+	def register_account(self, server, password):
 		'''Create a new account on the specified server.'''
+		
+		# Process for registration of a new account:
+		# 
+		# Connect to requested server
+		# Send registration request to server, which requires a hash of the user's supplied
+		#	password
+		# Close the connection to the server
+		# If the server returns an error, such as 304 REGISTRATION CLOSED, then return an error.
+		# If the server has returned anything else, including a 101 PENDING, begin the 
+		#	client-side workspace information to generate.
+		# Call storage.generate_profile()
+		# Add the device ID and session string to the profile
+		# Create the necessary client-side folders
+		# Generate the folder mappings
+
+		# If the server returned 201 REGISTERED, we can proceed with the server-side setup
+		#
+		# Create the server-side folders based on the mappings on the client side
+		# Save all encryption keys into an encrypted 7-zip archive which uses the hash of the 
+		# user's password has the archive encryption password and upload the archive to the server.
+		
 		return { 'error':'Unimplemented' }
 	
 	def unregister_account(self, server):
