@@ -9,6 +9,23 @@ import utils
 
 class sqlite:
 	'''Implements the database API for SQLite3-based storage.'''
+	def __init__(self, dbfolder=None):
+		if dbfolder:
+			self.dbfolder=dbfolder
+		else:
+			osname = platform.system().casefold()
+			if osname == 'windows':
+				self.dbfolder = os.path.join(os.getenv('LOCALAPPDATA'), 'anselus')
+			else:
+				self.dbfolder = os.path.join(os.getenv('HOME'), '.config','anselus')
+		
+		if not os.path.exists(self.dbfolder):
+			os.mkdir(self.dbfolder)
+
+		self.profile_id = ''
+		self.db = None
+		self.dbpath = ''
+	
 	def reset_db(self):
 		'''
 		Reinitializes the database to empty.
@@ -90,20 +107,6 @@ class sqlite:
 			cursor = self.db.cursor()
 			cursor.execute(sqlcmd)
 		self.db.commit()
-	
-	def __init__(self):
-		osname = platform.system().casefold()
-		if osname == 'windows':
-			self.dbfolder = os.path.join(os.getenv('LOCALAPPDATA'), 'anselus')
-		else:
-			self.dbfolder = os.path.join(os.getenv('HOME'), '.config','anselus')
-		
-		if not os.path.exists(self.dbfolder):
-			os.mkdir(self.dbfolder)
-
-		self.profile_id = ''
-		self.db = None
-		self.dbpath = ''
 	
 	def connect(self, profile_id):
 		'''Connects to the user data storage database'''
