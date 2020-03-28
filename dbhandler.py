@@ -5,6 +5,7 @@ import time
 import uuid
 
 import items
+import utils
 
 class sqlite:
 	'''Implements the database API for SQLite3-based storage.'''
@@ -26,13 +27,14 @@ class sqlite:
 				"id" TEXT NOT NULL UNIQUE,
 				"wid" TEXT NOT NULL UNIQUE,
 				"friendly_address" TEXT,
+				"domain" TEXT,
 				"password" TEXT,
 				"pwhashtype" TEXT,
 				"type" TEXT
 			);''', '''
 			CREATE table "folders"(
 				"id" TEXT NOT NULL UNIQUE,
-				"wid" TEXT NOT NULL,
+				"address" TEXT NOT NULL,
 				"fid" TEXT NOT NULL,
 				"enc_key" TEXT NOT NULL,
 				"path" TEXT NOT NULL,
@@ -40,13 +42,16 @@ class sqlite:
 			);''', '''
 			CREATE table "sessions"(
 				"id" TEXT NOT NULL UNIQUE,
-				"wid" TEXT NOT NULL,
+				"address" TEXT NOT NULL,
+				"domain" TEXT NOT NULL,
+				"devid" TEXT NOT NULL,
+				"devname" TEXT,
 				"session_str" TEXT NOT NULL
 			);''', '''
 			CREATE table "messages"(
 				"id" TEXT NOT NULL UNIQUE,
 				"from"  TEXT NOT NULL,
-				"wid" TEXT NOT NULL,
+				"address" TEXT NOT NULL,
 				"cc"  TEXT,
 				"bcc" TEXT,
 				"date" TEXT NOT NULL,
@@ -64,6 +69,7 @@ class sqlite:
 			);''', '''
 			CREATE TABLE "notes" (
 				"id"	TEXT NOT NULL UNIQUE,
+				"address" TEXT,
 				"title"	TEXT,
 				"body"	TEXT,
 				"notebook"	TEXT,
@@ -113,17 +119,95 @@ class sqlite:
 		'''Closes the connection to the user data storage database'''
 		self.db.close()
 
-	def add_workspace(self, wid, pwhash, pwhashtype, session_str):
+	def add_workspace(self, wid, domain, pwhash, pwhashtype):
 		'''Adds a workspace to the storage database'''
 
 		cursor = self.db.cursor()
-		cursor.execute('''INSERT INTO workspaces(wid,password,pwhashtype,type)
-			VALUES(?,?,?,?)''', wid, pwhash, pwhashtype, "single")
+		cursor.execute("SELECT wid FROM workspaces WHERE wid=?", (wid,))
+		results = cursor.fetchone()
+		if results or results[0]:
+			return False
 		
-		cursor.execute('''INSERT INTO sessions(wid,session_str) VALUES(?,?)''',
-			(wid, session_str))
+		cursor.execute('''INSERT INTO workspaces(wid,domain,password,pwhashtype,type)
+			VALUES(?,?,?,?,?)''', wid, domain, pwhash, pwhashtype, "single")
 		self.db.commit()
 		return True
+
+	def add_device_session(self, address, devid, session_str, devname=None):
+		'''Adds a device to a workspace'''
+
+		# Normally we don't validate the input, relying on the caller to ensure valid data because
+		# in most cases, bad data just corrupts the database integrity, not crash the program.
+		# We have to do some here to ensure there isn't a crash when the address is split.
+		parts = address.split('/')
+		if len(parts) != 2 or \
+			not parts[0] or \
+			not parts[1] or \
+			utils.validate_uuid(parts[0]):
+			return False
+
+		# address has to be valid and existing already
+		cursor = self.db.cursor()
+		cursor.execute("SELECT wid FROM workspaces WHERE wid=?", (parts[0],))
+		results = cursor.fetchone()
+		if not results or not results[0]:
+			return False
+		
+		# Can't have a session on the server already
+		cursor.execute("SELECT address FROM sessions WHERE address=?", (address,))
+		results = cursor.fetchone()
+		if not results or not results[0]:
+			return False
+		
+		cursor = self.db.cursor()
+		if devname:
+			cursor.execute('''INSERT INTO sessions(address,devid,session_str,devname) VALUES(?,?,?,?)''',
+				(address, devid, session_str, devname))
+		else:
+			cursor.execute('''INSERT INTO sessions(address,devid,session_str) VALUES(?,?,?)''',
+				(address, devid, session_str))
+		self.db.commit()
+		return True
+
+	def update_device_session(self, devid, session_str):
+		'''Updates the session id for a device'''
+
+		# Device ID can't already exist
+		cursor = self.db.cursor()
+		cursor.execute("SELECT devid FROM sessions WHERE devid=?", (devid,))
+		results = cursor.fetchone()
+		if not results or not results[0]:
+			return False
+		
+		cursor = self.db.cursor()
+		cursor.execute('''UPDATE sessions SET session_str=? WHERE devid=?''', (session_str, devid))
+		self.db.commit()
+		return True
+
+	def remove_device_session(self, devid):
+		'''
+		Removes an authorized device from the workspace. Returns a boolean success code.
+		'''
+		cursor = self.db.cursor()
+		cursor.execute("SELECT id FROM notes WHERE id=?", (devid,))
+		results = cursor.fetchone()
+		if not results or not results[0]:
+			return False
+
+		cursor.execute("DELETE FROM notes WHERE id=?", (devid,))
+		self.db.commit()
+		return True
+
+	def get_device_session(self, address):
+		'''The device can have sessions on multiple servers, but it can only have one on each 
+		server. Return the session string for the specified address or None if not found.'''
+		cursor = self.db.cursor()
+		cursor.execute("SELECT session_str FROM sessions WHERE address=?", (address,))
+		results = cursor.fetchone()
+		if not results or not results[0]:
+			return None
+		
+		return results[0]
 
 	def create_note(self, title='New Note', notebook='default'):
 		'''
@@ -215,26 +299,27 @@ class sqlite:
 		self.db.commit()
 		return True
 
-	def get_credentials(self, wid):
+	def get_credentials(self, wid, domain):
 		'''Returns the stored login credentials for the requested wid'''
 		cursor = self.db.cursor()
-		cursor.execute('''SELECT FROM workspaces(password,pwhashtype) WHERE wid=?''', (wid,))
+		cursor.execute('''SELECT FROM workspaces(password,pwhashtype) WHERE wid=? AND domain=?''',
+			(wid,domain))
 		results = cursor.fetchone()
 		if not results or not results[0]:
 			return dict()
 		return { 'password':results[0], 'pwhashtype':results[1] }
 
-	def set_credentials(self, wid, password, pwhashtype):
+	def set_credentials(self, wid, domain, password, pwhashtype):
 		'''Sets the password and hash type for the specified workspace. A boolean success 
 		value is returned.'''
 		cursor = self.db.cursor()
-		cursor.execute("SELECT wid FROM workspaces WHERE wid=?", (wid,))
+		cursor.execute("SELECT wid FROM workspaces WHERE wid=? AND domain=?", (wid,domain))
 		results = cursor.fetchone()
 		if not results or not results[0]:
 			return False
 
 		cursor = self.db.cursor()
-		cursor.execute("UPDATE workspaces SET password=?,pwhashtype=? WHERE wid=?",
-			(password, pwhashtype, wid))
+		cursor.execute("UPDATE workspaces SET password=?,pwhashtype=? WHERE wid=? AND domain=?",
+			(password, pwhashtype, wid, domain))
 		self.db.commit()
 		return True
