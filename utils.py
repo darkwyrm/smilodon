@@ -19,3 +19,41 @@ def validate_uuid(indata):
 		return False
 	
 	return True
+
+def check_password_complexity(indata):
+	'''Checks the requested string as meeting the needed security standards.
+	
+	Returns: (dict)
+	error: string
+	strength: string in [very weak', 'weak', 'medium', 'strong']
+	'''
+	if len(indata) < 8:
+		return { 'error' : 'Passphrase must be at least 8 characters.'}
+	
+	strength_score = 0
+	strength_strings = [ 'error', 'very weak', 'weak', 'medium', 'strong', 'very strong']
+
+	# Anselus *absolutely* permits UTF-8-encoded passwords. This greatly increases the
+	# keyspace
+	try:
+		indata.decode('ascii')
+	except UnicodeDecodeError:
+		strength_score = strength_score + 1
+	
+	if re.search(r"\d", indata):
+		strength_score = strength_score + 1
+	
+	if re.search(r"[A-Z]", indata):
+		strength_score = strength_score + 1
+	
+	if re.search(r"[a-z]", indata):
+		strength_score = strength_score + 1
+
+	if re.search(r"[~`!@#$%^&*()_={}/<>,.:;|'[\]\"\\\-\+\?]", indata):
+		strength_score = strength_score + 1
+
+	if len(indata) < 12 and strength_score < 3:
+		# If the passphrase is less than 12 characters, require complexity
+		return { 'error' : 'passphrase too weak', 'strength' : strength_strings[strength_score] }
+	
+	return { 'error' : '', 'strength' : strength_strings[strength_score] }
