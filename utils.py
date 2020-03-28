@@ -36,7 +36,7 @@ def check_password_complexity(indata):
 	# Anselus *absolutely* permits UTF-8-encoded passwords. This greatly increases the
 	# keyspace
 	try:
-		indata.decode('ascii')
+		indata.encode().decode('ascii')
 	except UnicodeDecodeError:
 		strength_score = strength_score + 1
 	
@@ -52,7 +52,7 @@ def check_password_complexity(indata):
 	if re.search(r"[~`!@#$%^&*()_={}/<>,.:;|'[\]\"\\\-\+\?]", indata):
 		strength_score = strength_score + 1
 
-	if len(indata) < 12 and strength_score < 3:
+	if (len(indata) < 12 and strength_score < 3) or strength_score < 2:
 		# If the passphrase is less than 12 characters, require complexity
 		return { 'error' : 'passphrase too weak', 'strength' : strength_strings[strength_score] }
 	
