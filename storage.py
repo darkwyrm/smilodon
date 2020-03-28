@@ -6,6 +6,7 @@ import uuid
 import nacl.pwhash
 
 import dbhandler
+import encryption
 import utils
 
 class ClientStorage:
@@ -309,3 +310,18 @@ class ClientStorage:
 		
 		creds['wid'] = self.active_wid
 		return creds
+
+	def generate_profile(self, server, wid, password):
+		'''Creates full all the data needed for an individual workspace account'''
+		
+		# Generate user's encryption keys
+		identity_key = encryption.KeyPair()
+		contact_request_key = encryption.KeyPair()
+		broadcast_key = encryption.SecretKey()
+		folder_key = encryption.SecretKey()
+		
+		# TODO: There is other stuff that will need generated here, such as the
+		# mapping of folder IDs to workspace paths, but that can come later.
+
+		return { 'error' : 'Unimplemented'}
+	
