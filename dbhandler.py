@@ -57,9 +57,7 @@ class Sqlite:
 				"permissions" TEXT NOT NULL
 			);''', '''
 			CREATE table "sessions"(
-				"id" TEXT NOT NULL UNIQUE,
 				"address" TEXT NOT NULL,
-				"domain" TEXT NOT NULL,
 				"devid" TEXT NOT NULL,
 				"devname" TEXT,
 				"session_str" TEXT NOT NULL
@@ -143,19 +141,19 @@ class Sqlite:
 		# We have to do some here to ensure there isn't a crash when the address is split.
 		parts = utils.split_address(address)
 		if parts['error']:
-			return parts
+			return False
 
 		# address has to be valid and existing already
 		cursor = self.db.cursor()
-		cursor.execute("SELECT wid FROM workspaces WHERE wid=?", (parts[0],))
+		cursor.execute("SELECT wid FROM workspaces WHERE wid=?", (parts['wid'],))
 		results = cursor.fetchone()
 		if not results or not results[0]:
 			return False
-		
+
 		# Can't have a session on the server already
 		cursor.execute("SELECT address FROM sessions WHERE address=?", (address,))
 		results = cursor.fetchone()
-		if not results or not results[0]:
+		if results:
 			return False
 		
 		cursor = self.db.cursor()
