@@ -62,6 +62,14 @@ class Sqlite:
 				"devname" TEXT,
 				"session_str" TEXT NOT NULL
 			);''', '''
+			CREATE table "keys"(
+				"keyid" TEXT NOT NULL UNIQUE,
+				"address" TEXT NOT NULL,
+				"type" TEXT NOT NULL,
+				"category" TEXT NOT NULL,
+				"private" TEXT NOT NULL,
+				"public" TEXT
+			);''', '''
 			CREATE table "messages"(
 				"id" TEXT NOT NULL UNIQUE,
 				"from"  TEXT NOT NULL,
@@ -320,3 +328,28 @@ class Sqlite:
 			(password, pwhashtype, wid, domain))
 		self.db.commit()
 		return True
+
+	def add_key(self, keyid, address, keytype, category, private, public):
+		'''Adds an encryption key to a workspace.
+		Returns:
+		error : string
+		'''
+		return { 'error' : 'Unimplemented' }
+
+	def remove_key(self, keyid):
+		'''Deletes an encryption key from a workspace.
+		Returns:
+		error : string
+		'''
+		return { 'error' : 'Unimplemented' }
+	
+	def get_key(self, keyid):
+		'''Gets the specified key.
+		Returns:
+		'error' : string
+		'type' : string in [ 'asymmetric', 'symmetric' ]
+		'category' : string
+		'private' : string
+		'public' : string, empty if type == 'symmetric'
+		'''
+		return { 'error' : 'Unimplemented' }

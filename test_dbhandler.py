@@ -167,3 +167,53 @@ def test_set_credentials():
 
 	assert not db.set_credentials('00000000-1111-2222-3333-555555555555','example.com',
 		'09876543210987654321', 'testhash'), 'Failed to detect nonexistent workspace'
+
+
+def test_add_key():
+	'''Tests add_key'''
+	db = setup_db('add_key')
+	db.reset_db()
+	db.add_workspace('00000000-1111-2222-3333-444444444444','example.com',
+		'12345678901234567890', 'testhash')
+	
+	out = db.add_key('11111111-1111-1111-1111-111111111111',
+		'00000000-1111-2222-3333-444444444444/example.com',
+		'symmetric',
+		'identity',
+		'FfcGMFfcGMFfcGMFfcGMFfcGMFfcGMFfcGMFfcGM',
+		'')
+	assert not out['error'], "Failed to add key"
+
+def test_remove_key():
+	'''Tests remove_key()'''
+	db = setup_db('remove_key')
+	db.reset_db()
+	db.add_workspace('00000000-1111-2222-3333-444444444444','example.com',
+		'12345678901234567890', 'testhash')
+	
+	out = db.add_key('11111111-1111-1111-1111-111111111111',
+		'00000000-1111-2222-3333-444444444444/example.com',
+		'symmetric',
+		'identity',
+		'FfcGMFfcGMFfcGMFfcGMFfcGMFfcGMFfcGMFfcGM',
+		'')
+	
+	out = db.remove_key('11111111-1111-1111-1111-111111111111')
+	assert not out['error'], "Failed to remove key"
+
+def test_get_key():
+	'''Tests get_key()'''
+	db = setup_db('get_key')
+	db.reset_db()
+	db.add_workspace('00000000-1111-2222-3333-444444444444','example.com',
+		'12345678901234567890', 'testhash')
+	
+	out = db.add_key('11111111-1111-1111-1111-111111111111',
+		'00000000-1111-2222-3333-444444444444/example.com',
+		'symmetric',
+		'identity',
+		'FfcGMFfcGMFfcGMFfcGMFfcGMFfcGMFfcGMFfcGM',
+		'')
+	
+	out = db.get_key('11111111-1111-1111-1111-111111111111')
+	assert not out['error'], "Failed to get key"
