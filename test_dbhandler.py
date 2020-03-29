@@ -106,3 +106,25 @@ def test_remove_device_session():
 	
 	assert db.remove_device_session('11111111-1111-1111-1111-111111111111'), \
 		"Failed to remove device session string"
+
+def test_get_session_string():
+	'''Tests get_session_string()'''
+	db = setup_db('get_session_string')
+	db.reset_db()
+	db.add_workspace('00000000-1111-2222-3333-444444444444','example.com',
+		'$argon2id$v=19$m=65536,t=2,p=1$5PVRQQhCq+ntrG65xaU+FA'
+		'$vLMKMzi4F7kE3xzK7NAXtfc2sdMERcWObSE/jfaVBZM',
+		'argon2id'
+	)
+	
+	db.add_device_session('00000000-1111-2222-3333-444444444444/example.com',
+		'11111111-1111-1111-1111-111111111111',
+		'----------==========++++++++++__________',
+		'Test Device #1')
+	
+	assert db.get_session_string('00000000-1111-2222-3333-444444444444/example.com'), \
+		"Failed to get device session string"
+	
+	assert not db.get_session_string('00000000-1111-2222-3333-555555555555/example.com'), \
+		"Failed to detect nonexistent device session"
+	

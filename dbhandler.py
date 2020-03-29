@@ -194,7 +194,7 @@ class Sqlite:
 		self.db.commit()
 		return True
 
-	def get_device_session(self, address):
+	def get_session_string(self, address):
 		'''The device can have sessions on multiple servers, but it can only have one on each 
 		server. Return the session string for the specified address or None if not found.'''
 		cursor = self.db.cursor()
