@@ -185,12 +185,12 @@ class Sqlite:
 		Removes an authorized device from the workspace. Returns a boolean success code.
 		'''
 		cursor = self.db.cursor()
-		cursor.execute("SELECT id FROM notes WHERE id=?", (devid,))
+		cursor.execute("SELECT devid FROM sessions WHERE devid=?", (devid,))
 		results = cursor.fetchone()
 		if not results or not results[0]:
 			return False
 
-		cursor.execute("DELETE FROM notes WHERE id=?", (devid,))
+		cursor.execute("DELETE FROM sessions WHERE devid=?", (devid,))
 		self.db.commit()
 		return True
 
