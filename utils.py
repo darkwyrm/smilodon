@@ -26,7 +26,7 @@ def split_address(address):
 	if len(parts) != 2 or \
 		not parts[0] or \
 		not parts[1] or \
-		validate_uuid(parts[0]):
+		not validate_uuid(parts[0]):
 		return { 'error' : 'Bad workspace address'}
 	return { 'error' : '',
 			'wid' : parts[0],
