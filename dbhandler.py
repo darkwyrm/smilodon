@@ -169,7 +169,6 @@ class Sqlite:
 	def update_device_session(self, devid, session_str):
 		'''Updates the session id for a device'''
 
-		# Device ID can't already exist
 		cursor = self.db.cursor()
 		cursor.execute("SELECT devid FROM sessions WHERE devid=?", (devid,))
 		results = cursor.fetchone()
