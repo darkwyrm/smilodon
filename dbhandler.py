@@ -7,7 +7,7 @@ import uuid
 import items
 import utils
 
-class sqlite:
+class Sqlite:
 	'''Implements the database API for SQLite3-based storage.'''
 	def __init__(self, dbfolder=None):
 		if dbfolder:
@@ -41,7 +41,6 @@ class sqlite:
 
 		sqlcmds = [ '''
 			CREATE TABLE workspaces (
-				"id" TEXT NOT NULL UNIQUE,
 				"wid" TEXT NOT NULL UNIQUE,
 				"friendly_address" TEXT,
 				"domain" TEXT,
@@ -128,11 +127,11 @@ class sqlite:
 		cursor = self.db.cursor()
 		cursor.execute("SELECT wid FROM workspaces WHERE wid=?", (wid,))
 		results = cursor.fetchone()
-		if results or results[0]:
+		if results:
 			return False
 		
 		cursor.execute('''INSERT INTO workspaces(wid,domain,password,pwhashtype,type)
-			VALUES(?,?,?,?,?)''', wid, domain, pwhash, pwhashtype, "single")
+			VALUES(?,?,?,?,?)''', (wid, domain, pwhash, pwhashtype, "single"))
 		self.db.commit()
 		return True
 
@@ -142,12 +141,9 @@ class sqlite:
 		# Normally we don't validate the input, relying on the caller to ensure valid data because
 		# in most cases, bad data just corrupts the database integrity, not crash the program.
 		# We have to do some here to ensure there isn't a crash when the address is split.
-		parts = address.split('/')
-		if len(parts) != 2 or \
-			not parts[0] or \
-			not parts[1] or \
-			utils.validate_uuid(parts[0]):
-			return False
+		parts = utils.split_address(address)
+		if parts['error']:
+			return parts
 
 		# address has to be valid and existing already
 		cursor = self.db.cursor()

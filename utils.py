@@ -20,6 +20,20 @@ def validate_uuid(indata):
 	
 	return True
 
+def split_address(address):
+	'''Splits an Anselus numeric address into its two parts.'''
+	parts = address.split('/')
+	if len(parts) != 2 or \
+		not parts[0] or \
+		not parts[1] or \
+		validate_uuid(parts[0]):
+		return { 'error' : 'Bad workspace address'}
+	return { 'error' : '',
+			'wid' : parts[0],
+			'domain' : parts[1]
+			}
+
+
 def check_password_complexity(indata):
 	'''Checks the requested string as meeting the needed security standards.
 	

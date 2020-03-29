@@ -26,7 +26,8 @@ class ClientStorage:
 		self.default_profile = ''
 		self.active_profile = ''
 		self.active_wid = ''
-		self.db = dbhandler.sqlite()		
+		self.active_domain = ''
+		self.db = dbhandler.Sqlite()		
 	
 	def _save_profiles(self):
 		'''
@@ -266,7 +267,12 @@ class ClientStorage:
 		
 		self.db.connect(name)
 		self.active_profile = name
-		self.active_wid = self.profiles[self.active_profile]
+		parts = utils.split_address(self.profiles[self.active_profile])
+		if parts['error']:
+			return parts
+		
+		self.active_wid = parts['wid']
+		self.active_domain = parts['domain']
 		return { 'error' : '' }
 
 	def get_active_profile(self):
@@ -277,21 +283,22 @@ class ClientStorage:
 		'''Returns the WID of the active profile.'''
 		return self.active_wid
 
-	def set_credentials(self, wid, password):
+	def set_credentials(self, address, password):
 		'''
 		Sets the login credentials for the user's workspace in the active profile. 
 		'''
+		
+		parts = utils.split_address(address)
+		if parts['error']:
+			return parts
 		
 		# Password requirements aren't really set here, but we do have to draw the 
 		# line *somewhere*.
 		if len(password) < 8:
 			return { 'error' : 'Password too short, minimum 8 characters.'}
 		
-		if not utils.validate_uuid(wid):
-			return { 'error' : 'Bad workspace ID'}
-		
 		pwhash = nacl.pwhash.argon2id.str(bytes(password, 'utf8')).decode('utf8')
-		if not self.db.set_credentials(wid, pwhash, 'argon2id'):
+		if not self.db.set_credentials(parts[0], parts[1], pwhash, 'argon2id'):
 			return { 'error' : 'database error' }
 		return { 'error':'' }
 
@@ -304,7 +311,7 @@ class ClientStorage:
 		"wid" : string
 		"pwhash" : string -- empty if password-saving is disabled
 		'''
-		creds = self.db.get_credentials(self.active_wid)
+		creds = self.db.get_credentials(self.active_wid, self.active_domain)
 		if 'password' not in creds:
 			return { 'error' : 'database error' }
 		
