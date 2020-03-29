@@ -298,12 +298,13 @@ class Sqlite:
 	def get_credentials(self, wid, domain):
 		'''Returns the stored login credentials for the requested wid'''
 		cursor = self.db.cursor()
-		cursor.execute('''SELECT FROM workspaces(password,pwhashtype) WHERE wid=? AND domain=?''',
+		cursor.execute('''SELECT password,pwhashtype FROM workspaces WHERE wid=? AND domain=?''',
 			(wid,domain))
 		results = cursor.fetchone()
 		if not results or not results[0]:
-			return dict()
-		return { 'password':results[0], 'pwhashtype':results[1] }
+			return { 'error' : 'Workspace not found' }
+		
+		return { 'error' : '', 'password' : results[0], 'pwhashtype' : results[1] }
 
 	def set_credentials(self, wid, domain, password, pwhashtype):
 		'''Sets the password and hash type for the specified workspace. A boolean success 
