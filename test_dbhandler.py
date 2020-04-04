@@ -178,11 +178,27 @@ def test_add_key():
 	
 	out = db.add_key('11111111-1111-1111-1111-111111111111',
 		'00000000-1111-2222-3333-444444444444/example.com',
-		'symmetric',
+		'bogustype',
 		'identity',
 		'FfcGMFfcGMFfcGMFfcGMFfcGMFfcGMFfcGMFfcGM',
 		'')
-	assert not out['error'], "Failed to add key"
+	assert out['error'], 'Failed to reject bad key type'
+
+	out = db.add_key('11111111-1111-1111-1111-111111111111',
+		'00000000-1111-2222-3333-444444444444/example.com',
+		'asymmetric',
+		'identity',
+		'?-YAbw=x;US_1#ye-pHlHeY$}XV(-GAh7$O+-g1F',
+		'l?^W6YrV}&N%Je(KDt{KHPNDMJ&Nb~Abudy^3;@E')
+	assert not out['error'], "Failed to add asymmetric key"
+
+	out = db.add_key('22222222-2222-2222-2222-222222222222',
+		'00000000-1111-2222-3333-444444444444/example.com',
+		'symmetric',
+		'broadcast',
+		'FfcGMFfcGMFfcGMFfcGMFfcGMFfcGMFfcGMFfcGM',
+		'')
+	assert not out['error'], "Failed to add symmetric key"
 
 def test_remove_key():
 	'''Tests remove_key()'''
@@ -210,10 +226,22 @@ def test_get_key():
 	
 	out = db.add_key('11111111-1111-1111-1111-111111111111',
 		'00000000-1111-2222-3333-444444444444/example.com',
-		'symmetric',
+		'asymmetric',
 		'identity',
+		'?-YAbw=x;US_1#ye-pHlHeY$}XV(-GAh7$O+-g1F',
+		'l?^W6YrV}&N%Je(KDt{KHPNDMJ&Nb~Abudy^3;@E')
+	assert not out['error'], "Failed to add asymmetric key"
+
+	out = db.get_key('11111111-1111-1111-1111-111111111111')
+	assert not out['error'], "Failed to get asymmetric key"
+
+	out = db.add_key('22222222-2222-2222-2222-222222222222',
+		'00000000-1111-2222-3333-444444444444/example.com',
+		'symmetric',
+		'broadcast',
 		'FfcGMFfcGMFfcGMFfcGMFfcGMFfcGMFfcGMFfcGM',
 		'')
-	
-	out = db.get_key('11111111-1111-1111-1111-111111111111')
-	assert not out['error'], "Failed to get key"
+	assert not out['error'], "Failed to add symmetric key"
+
+	out = db.get_key('22222222-2222-2222-2222-222222222222')
+	assert not out['error'], "Failed to get symmetric key"

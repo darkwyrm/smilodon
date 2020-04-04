@@ -331,25 +331,89 @@ class Sqlite:
 
 	def add_key(self, keyid, address, keytype, category, private, public):
 		'''Adds an encryption key to a workspace.
+		Parameters:
+		keyid: uuid
+		address: full Anselus address, i.e. wid + domain
+		keytype: 'symmetric' or 'asymmetric'
+		category: string
+		private: string
+		publid: string, not used if keytype == 'symmetric'
+		
 		Returns:
 		error : string
 		'''
-		return { 'error' : 'Unimplemented' }
+
+		cursor = self.db.cursor()
+		cursor.execute("SELECT keyid FROM keys WHERE keyid=?", (keyid,))
+		results = cursor.fetchone()
+		if results:
+			return { 'error' : 'Key exists'}
+		
+		if category is None:
+			category = ''
+		
+		if keytype == 'symmetric':
+			if public:
+				return { 'error' : "Parameter public is not used if keytype "
+									"is 'symmetric'" }
+			cursor.execute('''INSERT INTO keys(keyid,address,type,category,private)
+				VALUES(?,?,?,?,?)''', (keyid, address, keytype, category, private))
+			self.db.commit()
+			return { 'error' : '' }
+		
+		if keytype == 'asymmetric':
+			cursor.execute('''INSERT INTO keys(keyid,address,type,category,private,public)
+				VALUES(?,?,?,?,?,?)''', (keyid, address, keytype, category, private, public))
+			self.db.commit()
+			return { 'error' : '' }
+		
+		return { 'error' : "Key must be 'asymmetric' or 'symmetric'" }
 
 	def remove_key(self, keyid):
 		'''Deletes an encryption key from a workspace.
+		Parameters:
+		keyid : uuid
+
 		Returns:
 		error : string
 		'''
-		return { 'error' : 'Unimplemented' }
+		cursor = self.db.cursor()
+		cursor.execute("SELECT keyid FROM keys WHERE keyid=?", (keyid,))
+		results = cursor.fetchone()
+		if not results or not results[0]:
+			return { 'error' : 'Key does not exist' }
+
+		cursor.execute("DELETE FROM keys WHERE keyid=?", (keyid,))
+		self.db.commit()
+		return { 'error' : '' }
 	
 	def get_key(self, keyid):
 		'''Gets the specified key.
+		Parameters:
+		keyid : uuid
+
 		Returns:
 		'error' : string
 		'type' : string in [ 'asymmetric', 'symmetric' ]
+		'address' : string - Anselus address associated with key
 		'category' : string
 		'private' : string
 		'public' : string, empty if type == 'symmetric'
 		'''
-		return { 'error' : 'Unimplemented' }
+
+		cursor = self.db.cursor()
+		cursor.execute('''SELECT address,type,category,private,public FROM keys WHERE keyid=?''',
+			(keyid,))
+		results = cursor.fetchone()
+		if not results or not results[0]:
+			return { 'error' : 'Key not found' }
+		
+		return {
+			'error' : '',
+			'address' : results[0],
+			'type' : results[1],
+			'category' : results[2],
+			'private' : results[3],
+			'public' : results[4]
+		}
+			
