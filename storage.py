@@ -355,7 +355,36 @@ class ClientStorage:
 			self.db.remove_workspace(wid, server)
 			return { 'error' : 'database error' }
 		
-		# TODO: Add folder mapping
+		# Add folder mappings
+		folder = encryption.FolderMapping()
 
-		return { 'error' : 'Unimplemented'}
+		folder.MakeID()
+		folder.Set(address, folder_key.get_id(), 'messages', 'root')
+		self.db.add_folder(folder)
+
+		folder.MakeID()
+		folder.Set(address, folder_key.get_id(), 'contacts', 'root')
+		self.db.add_folder(folder)
+
+		folder.MakeID()
+		folder.Set(address, folder_key.get_id(), 'events', 'root')
+		self.db.add_folder(folder)
+
+		folder.MakeID()
+		folder.Set(address, folder_key.get_id(), 'tasks', 'root')
+		self.db.add_folder(folder)
+
+		folder.MakeID()
+		folder.Set(address, folder_key.get_id(), 'notes', 'root')
+		self.db.add_folder(folder)
+
+		folder.MakeID()
+		folder.Set(address, folder_key.get_id(), 'files', 'root')
+		self.db.add_folder(folder)
+
+		folder.MakeID()
+		folder.Set(address, folder_key.get_id(), 'files attachments', 'root')
+		self.db.add_folder(folder)
+
+		return { 'error' : ''}
 	
