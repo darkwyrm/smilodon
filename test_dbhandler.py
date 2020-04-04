@@ -38,7 +38,7 @@ def test_add_workspace():
 
 def test_remove_workspace_entry():
 	'''Tests remove_workspace_entry()'''
-	db = setup_db('remove_workspace')
+	db = setup_db('remove_workspace_entry')
 	db.reset_db()
 
 	assert db.add_workspace('00000000-1111-2222-3333-444444444444','example.com',
@@ -235,3 +235,48 @@ def test_get_key():
 	
 	out = db.get_key(key2.get_id())
 	assert not out['error'], "Failed to get symmetric key"
+
+
+def test_add_folder():
+	'''Tests add_folder()'''
+	db = setup_db('add_folder')
+	db.reset_db()
+
+	testpath = encryption.FolderMapping()
+	testpath.MakeID()
+	testpath.Set('00000000-1111-2222-3333-444444444444/example.com',
+		'22222222-2222-2222-2222-222222222222', 'foo bar baz', 'admin')
+	out = db.add_folder(testpath)
+	assert not out['error'], "Failed to add folder mapping"
+
+
+def test_remove_folder():
+	'''Tests remove_folder()'''
+	db = setup_db('remove_folder')
+	db.reset_db()
+
+	testpath = encryption.FolderMapping()
+	testpath.MakeID()
+	testpath.Set('00000000-1111-2222-3333-444444444444/example.com',
+		'22222222-2222-2222-2222-222222222222', 'foo bar baz', 'admin')
+	out = db.add_folder(testpath)
+	assert not out['error'], "Failed to add folder mapping"
+	
+	out = db.remove_folder(testpath.fid)
+	assert not out['error'], "Failed to remove folder"
+
+
+def test_get_folder():
+	'''Tests get_folder()'''
+	db = setup_db('get_folder')
+	db.reset_db()
+
+	testpath = encryption.FolderMapping()
+	testpath.MakeID()
+	testpath.Set('00000000-1111-2222-3333-444444444444/example.com',
+		'22222222-2222-2222-2222-222222222222', 'foo bar baz', 'admin')
+	out = db.add_folder(testpath)
+	assert not out['error'], "Failed to add folder mapping"
+	
+	out = db.remove_folder(testpath.fid)
+	assert not out['error'], "Failed to remove folder"

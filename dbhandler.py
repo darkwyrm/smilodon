@@ -51,10 +51,9 @@ class Sqlite:
 				"type" TEXT
 			);''', '''
 			CREATE table "folders"(
-				"id" TEXT NOT NULL UNIQUE,
+				"fid" TEXT NOT NULL UNIQUE,
 				"address" TEXT NOT NULL,
-				"fid" TEXT NOT NULL,
-				"enc_key" TEXT NOT NULL,
+				"keyid" TEXT NOT NULL,
 				"path" TEXT NOT NULL,
 				"permissions" TEXT NOT NULL
 			);''', '''
@@ -414,11 +413,7 @@ class Sqlite:
 
 		Returns:
 		'error' : string
-		'type' : string in [ 'asymmetric', 'symmetric' ]
-		'address' : string - Anselus address associated with key
-		'category' : string
-		'private' : string
-		'public' : string, empty if type == 'symmetric'
+		'key' : EncryptionKey object
 		'''
 
 		cursor = self.db.cursor()
@@ -443,3 +438,62 @@ class Sqlite:
 		
 		return { 'error' : "Bad key type '%s'" % results[1] } 
 			
+	def add_folder(self, folder):
+		'''
+		Adds a mapping of a folder ID to a specific path in the workspace.
+		Parameters:
+		folder : FolderMapping object
+		'''
+		cursor = self.db.cursor()
+		cursor.execute("SELECT fid FROM folders WHERE fid=?", (folder.fid,))
+		results = cursor.fetchone()
+		if results:
+			return { 'error' : 'Key exists'}
+		
+		cursor.execute('''INSERT INTO folders(fid,address,keyid,path,permissions)
+			VALUES(?,?,?,?,?)''', (folder.fid, folder.address, folder.keyid, folder.path,
+				folder.permissions))
+		self.db.commit()
+
+		return { 'error' : '' }
+
+	def remove_folder(self, fid):
+		'''Deletes a folder mapping.
+		Parameters:
+		fid : uuid
+
+		Returns:
+		error : string
+		'''
+		cursor = self.db.cursor()
+		cursor.execute("SELECT fid FROM folders WHERE fid=?", (fid,))
+		results = cursor.fetchone()
+		if not results or not results[0]:
+			return { 'error' : 'Folder does not exist' }
+
+		cursor.execute("DELETE FROM folders WHERE fid=?", (fid,))
+		self.db.commit()
+		return { 'error' : '' }
+	
+	def get_folder(self, fid):
+		'''Gets the specified folder.
+		Parameters:
+		fid : uuid
+
+		Returns:
+		'error' : string
+		'folder' : FolderMapping object
+		'''
+
+		cursor = self.db.cursor()
+		cursor.execute('''
+			SELECT address,keyid,path,permissions FROM folders WHERE fid=?''', (fid,))
+		results = cursor.fetchone()
+		if not results or not results[0]:
+			return { 'error' : 'Key not found' }
+		
+		folder = encryption.FolderMapping()
+		folder.fid = fid
+		folder.Set(results[0], results[1], results[2], results[3])
+		
+		return { 'error' : '', 'folder' : folder } 
