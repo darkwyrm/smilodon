@@ -1,9 +1,11 @@
+import base64
 import os
 import platform
 import sqlite3
 import time
 import uuid
 
+import encryption
 import items
 import utils
 
@@ -68,7 +70,8 @@ class Sqlite:
 				"type" TEXT NOT NULL,
 				"category" TEXT NOT NULL,
 				"private" TEXT NOT NULL,
-				"public" TEXT
+				"public" TEXT,
+				"algorithm" TEXT NOT NULL
 			);''', '''
 			CREATE table "messages"(
 				"id" TEXT NOT NULL UNIQUE,
@@ -141,6 +144,31 @@ class Sqlite:
 		self.db.commit()
 		return True
 
+	def remove_workspace(self, wid, domain):
+		'''
+		Removes ALL DATA associated with a workspace. Don't call this unless you mean to erase
+		all evidence that a particular workspace ever existed.
+		'''
+		# TODO: Implement
+
+		return { 'error' : 'Unimplemented' }
+	
+	def remove_workspace_entry(self, wid, domain):
+		'''
+		Removes a workspace from the storage database.
+		NOTE: this only removes the workspace entry itself. It does not remove keys, sessions,
+		or other associated data.
+		'''
+		cursor = self.db.cursor()
+		cursor.execute("SELECT wid FROM workspaces WHERE wid=? AND domain=?", (wid,domain))
+		results = cursor.fetchone()
+		if not results or not results[0]:
+			return { 'error' : 'Workspace not found'}
+		
+		cursor.execute("DELETE FROM workspaces WHERE wid=? AND domain=?", (wid,domain))
+		self.db.commit()
+		return { 'error' : '' }
+		
 	def add_device_session(self, address, devid, session_str, devname=None):
 		'''Adds a device to a workspace'''
 
@@ -329,41 +357,33 @@ class Sqlite:
 		self.db.commit()
 		return True
 
-	def add_key(self, keyid, address, keytype, category, private, public):
+	def add_key(self, key, address):
 		'''Adds an encryption key to a workspace.
 		Parameters:
-		keyid: uuid
+		key: EncryptionKey from encryption module
 		address: full Anselus address, i.e. wid + domain
-		keytype: 'symmetric' or 'asymmetric'
-		category: string
-		private: string
-		publid: string, not used if keytype == 'symmetric'
 		
 		Returns:
 		error : string
 		'''
 
 		cursor = self.db.cursor()
-		cursor.execute("SELECT keyid FROM keys WHERE keyid=?", (keyid,))
+		cursor.execute("SELECT keyid FROM keys WHERE keyid=?", (key.get_id(),))
 		results = cursor.fetchone()
 		if results:
 			return { 'error' : 'Key exists'}
 		
-		if category is None:
-			category = ''
-		
-		if keytype == 'symmetric':
-			if public:
-				return { 'error' : "Parameter public is not used if keytype "
-									"is 'symmetric'" }
-			cursor.execute('''INSERT INTO keys(keyid,address,type,category,private)
-				VALUES(?,?,?,?,?)''', (keyid, address, keytype, category, private))
+		if key.get_type() == 'symmetric':
+			cursor.execute('''INSERT INTO keys(keyid,address,type,category,private,algorithm)
+				VALUES(?,?,?,?,?,?)''', (key.get_id(), address, key.get_type(), key.get_category(),
+					key.get_key85(), key.get_encryption_type()))
 			self.db.commit()
 			return { 'error' : '' }
 		
-		if keytype == 'asymmetric':
-			cursor.execute('''INSERT INTO keys(keyid,address,type,category,private,public)
-				VALUES(?,?,?,?,?,?)''', (keyid, address, keytype, category, private, public))
+		if key.get_type() == 'asymmetric':
+			cursor.execute('''INSERT INTO keys(keyid,address,type,category,private,public,algorithm)
+				VALUES(?,?,?,?,?,?,?)''', (key.get_id(), address, key.get_type(), key.get_category(),
+					key.get_private_key85(), key.get_public_key85(), key.get_encryption_type()))
 			self.db.commit()
 			return { 'error' : '' }
 		
@@ -402,18 +422,24 @@ class Sqlite:
 		'''
 
 		cursor = self.db.cursor()
-		cursor.execute('''SELECT address,type,category,private,public FROM keys WHERE keyid=?''',
+		cursor.execute('''
+			SELECT address,type,category,private,public,algorithm
+			FROM keys WHERE keyid=?''',
 			(keyid,))
 		results = cursor.fetchone()
 		if not results or not results[0]:
 			return { 'error' : 'Key not found' }
 		
-		return {
-			'error' : '',
-			'address' : results[0],
-			'type' : results[1],
-			'category' : results[2],
-			'private' : results[3],
-			'public' : results[4]
-		}
+		if results[1] == 'asymmetric':
+			public = base64.b85decode(results[4])
+			private = base64.b85decode(results[3])
+			key = encryption.KeyPair(results[2],	public,	private, results[5])
+			return { 'error' : '', 'key' : key }
+		
+		if results[1] == 'symmetric':
+			private = base64.b85decode(results[3])
+			key = encryption.SecretKey(results[2], private, results[5])
+			return { 'error' : '', 'key' : key }
+		
+		return { 'error' : "Bad key type '%s'" % results[1] } 
 			

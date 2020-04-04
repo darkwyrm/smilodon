@@ -1,6 +1,7 @@
 import os 
 
 from dbhandler import Sqlite
+import encryption
 
 def setup_db(name):
 	'''Creates a new test database'''
@@ -33,6 +34,20 @@ def test_add_workspace():
 		'$argon2id$v=19$m=65536,t=2,p=1$5PVRQQhCq+ntrG65xaU+FA'
 		'$vLMKMzi4F7kE3xzK7NAXtfc2sdMERcWObSE/jfaVBZM',
 		'argon2id'), "Detect duplicate workspace fail"
+
+
+def test_remove_workspace_entry():
+	'''Tests remove_workspace_entry()'''
+	db = setup_db('remove_workspace')
+	db.reset_db()
+
+	assert db.add_workspace('00000000-1111-2222-3333-444444444444','example.com',
+		'$argon2id$v=19$m=65536,t=2,p=1$5PVRQQhCq+ntrG65xaU+FA'
+		'$vLMKMzi4F7kE3xzK7NAXtfc2sdMERcWObSE/jfaVBZM',
+		'argon2id'), "add new workspace fail"
+	
+	out = db.remove_workspace_entry('00000000-1111-2222-3333-444444444444', 'example.com')
+	assert not out['error'], 'remove workspace fail'
 
 
 def test_add_device_session():
@@ -176,29 +191,14 @@ def test_add_key():
 	db.add_workspace('00000000-1111-2222-3333-444444444444','example.com',
 		'12345678901234567890', 'testhash')
 	
-	out = db.add_key('11111111-1111-1111-1111-111111111111',
-		'00000000-1111-2222-3333-444444444444/example.com',
-		'bogustype',
-		'identity',
-		'FfcGMFfcGMFfcGMFfcGMFfcGMFfcGMFfcGMFfcGM',
-		'')
-	assert out['error'], 'Failed to reject bad key type'
-
-	out = db.add_key('11111111-1111-1111-1111-111111111111',
-		'00000000-1111-2222-3333-444444444444/example.com',
-		'asymmetric',
-		'identity',
-		'?-YAbw=x;US_1#ye-pHlHeY$}XV(-GAh7$O+-g1F',
-		'l?^W6YrV}&N%Je(KDt{KHPNDMJ&Nb~Abudy^3;@E')
+	key = encryption.KeyPair('identity')
+	out = db.add_key(key,'00000000-1111-2222-3333-444444444444/example.com')
 	assert not out['error'], "Failed to add asymmetric key"
 
-	out = db.add_key('22222222-2222-2222-2222-222222222222',
-		'00000000-1111-2222-3333-444444444444/example.com',
-		'symmetric',
-		'broadcast',
-		'FfcGMFfcGMFfcGMFfcGMFfcGMFfcGMFfcGMFfcGM',
-		'')
+	key = encryption.SecretKey('broadcast')
+	out = db.add_key(key, '22222222-2222-2222-2222-222222222222')
 	assert not out['error'], "Failed to add symmetric key"
+
 
 def test_remove_key():
 	'''Tests remove_key()'''
@@ -207,15 +207,13 @@ def test_remove_key():
 	db.add_workspace('00000000-1111-2222-3333-444444444444','example.com',
 		'12345678901234567890', 'testhash')
 	
-	out = db.add_key('11111111-1111-1111-1111-111111111111',
-		'00000000-1111-2222-3333-444444444444/example.com',
-		'symmetric',
-		'identity',
-		'FfcGMFfcGMFfcGMFfcGMFfcGMFfcGMFfcGMFfcGM',
-		'')
+	key = encryption.SecretKey('broadcast')
+	out = db.add_key(key, '22222222-2222-2222-2222-222222222222')
+	assert not out['error'], "Failed to add symmetric key"
 	
-	out = db.remove_key('11111111-1111-1111-1111-111111111111')
+	out = db.remove_key(key.get_id())
 	assert not out['error'], "Failed to remove key"
+
 
 def test_get_key():
 	'''Tests get_key()'''
@@ -224,24 +222,16 @@ def test_get_key():
 	db.add_workspace('00000000-1111-2222-3333-444444444444','example.com',
 		'12345678901234567890', 'testhash')
 	
-	out = db.add_key('11111111-1111-1111-1111-111111111111',
-		'00000000-1111-2222-3333-444444444444/example.com',
-		'asymmetric',
-		'identity',
-		'?-YAbw=x;US_1#ye-pHlHeY$}XV(-GAh7$O+-g1F',
-		'l?^W6YrV}&N%Je(KDt{KHPNDMJ&Nb~Abudy^3;@E')
+	key = encryption.KeyPair('identity')
+	out = db.add_key(key,'00000000-1111-2222-3333-444444444444/example.com')
 	assert not out['error'], "Failed to add asymmetric key"
 
-	out = db.get_key('11111111-1111-1111-1111-111111111111')
-	assert not out['error'], "Failed to get asymmetric key"
-
-	out = db.add_key('22222222-2222-2222-2222-222222222222',
-		'00000000-1111-2222-3333-444444444444/example.com',
-		'symmetric',
-		'broadcast',
-		'FfcGMFfcGMFfcGMFfcGMFfcGMFfcGMFfcGMFfcGM',
-		'')
+	key2 = encryption.SecretKey('broadcast')
+	out = db.add_key(key2, '22222222-2222-2222-2222-222222222222')
 	assert not out['error'], "Failed to add symmetric key"
 
-	out = db.get_key('22222222-2222-2222-2222-222222222222')
+	out = db.get_key(key.get_id())
+	assert not out['error'], "Failed to get asymmetric key"
+	
+	out = db.get_key(key2.get_id())
 	assert not out['error'], "Failed to get symmetric key"
