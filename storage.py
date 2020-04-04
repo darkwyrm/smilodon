@@ -322,13 +322,40 @@ class ClientStorage:
 		'''Creates full all the data needed for an individual workspace account'''
 		
 		# Generate user's encryption keys
-		identity_key = encryption.KeyPair()
-		contact_request_key = encryption.KeyPair()
-		broadcast_key = encryption.SecretKey()
-		folder_key = encryption.SecretKey()
+		identity_key = encryption.KeyPair('identity')
+		conrequest_key = encryption.KeyPair('conrequest')
+		broadcast_key = encryption.SecretKey('broadcast')
+		folder_key = encryption.SecretKey('folder')
 		
-		# TODO: There is other stuff that will need generated here, such as the
-		# mapping of folder IDs to workspace paths, but that can come later.
+		# Add workspace
+		pwhash = nacl.pwhash.argon2id.str(bytes(password, 'utf8')).decode('utf8')
+		if not self.db.add_workspace(wid, server, pwhash, 'argon2id'):
+			return { 'error' : 'database error' }
+		
+		address = '/'.join([wid,server])
+
+		# Add encryption keys
+		out = self.db.add_key(identity_key, address)
+		if out['error']:
+			self.db.remove_workspace_entry(wid, server)
+			return { 'error' : 'database error' }
+
+		self.db.add_key(conrequest_key, address)
+		if out['error']:
+			self.db.remove_workspace(wid, server)
+			return { 'error' : 'database error' }
+
+		self.db.add_key(broadcast_key, address)
+		if out['error']:
+			self.db.remove_workspace(wid, server)
+			return { 'error' : 'database error' }
+
+		self.db.add_key(folder_key, address)
+		if out['error']:
+			self.db.remove_workspace(wid, server)
+			return { 'error' : 'database error' }
+		
+		# TODO: Add folder mapping
 
 		return { 'error' : 'Unimplemented'}
 	
