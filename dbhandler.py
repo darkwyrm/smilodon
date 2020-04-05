@@ -148,9 +148,21 @@ class Sqlite:
 		Removes ALL DATA associated with a workspace. Don't call this unless you mean to erase
 		all evidence that a particular workspace ever existed.
 		'''
-		# TODO: Implement
-
-		return { 'error' : 'Unimplemented' }
+		cursor = self.db.cursor()
+		cursor.execute("SELECT wid FROM workspaces WHERE wid=? AND domain=?", (wid,domain))
+		results = cursor.fetchone()
+		if not results or not results[0]:
+			return { 'error' : 'Workspace not found'}
+		
+		address = '/'.join([wid,domain])
+		cursor.execute("DELETE FROM workspaces WHERE wid=? AND domain=?", (wid,domain))
+		cursor.execute("DELETE FROM folders WHERE address=?", (address,))
+		cursor.execute("DELETE FROM sessions WHERE address=?", (address,))
+		cursor.execute("DELETE FROM keys WHERE address=?", (address,))
+		cursor.execute("DELETE FROM messages WHERE address=?", (address,))
+		cursor.execute("DELETE FROM notes WHERE address=?", (address,))
+		self.db.commit()
+		return { 'error' : '' }
 	
 	def remove_workspace_entry(self, wid, domain):
 		'''
@@ -250,7 +262,7 @@ class Sqlite:
 		while True:
 			item_id = str(uuid.uuid4())
 			cursor = self.db.cursor()
-			cursor.execute("SELECT id FROM notes WHERE id=?", (id,))
+			cursor.execute("SELECT id FROM notes WHERE id=?", (item_id,))
 			if cursor.fetchone() is None:
 				break
 		

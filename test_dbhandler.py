@@ -36,6 +36,66 @@ def test_add_workspace():
 		'argon2id'), "Detect duplicate workspace fail"
 
 
+def test_remove_workspace():
+	'''Tests remove_workspace()'''
+	db = setup_db('remove_workspace')
+	db.reset_db()
+
+	# A lot of setup to test this method because it's supposed to erase ALL remnants of the 
+	# specified Anselus address
+	assert db.add_workspace('00000000-1111-2222-3333-444444444444','example.com',
+		'$argon2id$v=19$m=65536,t=2,p=1$5PVRQQhCq+ntrG65xaU+FA'
+		'$vLMKMzi4F7kE3xzK7NAXtfc2sdMERcWObSE/jfaVBZM',
+		'argon2id'), "add new workspace fail"
+	
+	assert db.add_workspace('00000000-1111-2222-3333-555555555555','example.com',
+		'$argon2id$v=19$m=65536,t=2,p=1$7YxSIvohj/+L4Zqx7ywl+g'
+		'$B3sEts3Zs4+t2/J6fBX7LQEwRebtvDd+Ypl9K6y+Eoc',
+		'argon2id'), 'add new workspace fail'
+	
+	# Folder mappings
+	testpath = encryption.FolderMapping()
+	testpath.MakeID()
+	testpath.Set('00000000-1111-2222-3333-444444444444/example.com',
+		'22222222-2222-2222-2222-222222222222', 'folder1', 'admin')
+	out = db.add_folder(testpath)
+	assert not out['error'], "Failed to add folder mapping 1"
+
+	testpath.MakeID()
+	testpath.Set('00000000-1111-2222-3333-444444444444/example.com',
+		'22222222-2222-2222-2222-222222222222', 'folder2', 'admin')
+	out = db.add_folder(testpath)
+	assert not out['error'], "Failed to add folder mapping 2"
+
+	# Device sessions
+	assert db.add_device_session('00000000-1111-2222-3333-444444444444/example.com',
+		'11111111-1111-1111-1111-111111111111',
+		'----------==========++++++++++__________',
+		'Test Device #1'), "Add new device session fail"
+
+	assert db.add_device_session('00000000-1111-2222-3333-444444444444/example2.com',
+		'22222222-2222-2222-2222-222222222222',
+		'..........==========++++++++++__________',
+		'Test Device #2'), "Add second new device session fail"
+
+	# Encryption keys
+	key = encryption.SecretKey('folder')
+	out = db.add_key(key, '11111111-1111-1111-1111-111111111111')
+	assert not out['error'], "Failed to add folder key"
+
+	key = encryption.SecretKey('broadcast')
+	out = db.add_key(key, '22222222-2222-2222-2222-222222222222')
+	assert not out['error'], "Failed to add broadcast key"
+
+	# Notes
+	db.create_note('Note #1', 'default')
+	db.create_note('Note #2', 'default')
+
+	# Clean up EVERYTHING
+	out = db.remove_workspace('00000000-1111-2222-3333-444444444444', 'example.com')
+	assert not out['error'], 'remove workspace fail'
+
+
 def test_remove_workspace_entry():
 	'''Tests remove_workspace_entry()'''
 	db = setup_db('remove_workspace_entry')
