@@ -318,7 +318,7 @@ class ClientStorage:
 		creds['wid'] = self.active_wid
 		return creds
 
-	def generate_profile(self, server, wid, password):
+	def generate_profile_data(self, name, server, wid, password):
 		'''Creates full all the data needed for an individual workspace account'''
 		
 		# Generate user's encryption keys
@@ -385,6 +385,21 @@ class ClientStorage:
 		folder.MakeID()
 		folder.Set(address, folder_key.get_id(), 'files attachments', 'root')
 		self.db.add_folder(folder)
+
+		# Create the folders themselves
+		new_profile_folder = os.path.join(self.profile_folder, name)
+		try:
+			os.mkdir(new_profile_folder)
+		except:
+			self.db.remove_workspace(wid, server)
+			return { 'error' : 'filesystem rejected new profile path'}
+		os.mkdir(os.path.join(new_profile_folder, 'messages'))
+		os.mkdir(os.path.join(new_profile_folder, 'contacts'))
+		os.mkdir(os.path.join(new_profile_folder, 'events'))
+		os.mkdir(os.path.join(new_profile_folder, 'tasks'))
+		os.mkdir(os.path.join(new_profile_folder, 'notes'))
+		os.mkdir(os.path.join(new_profile_folder, 'files'))
+		os.mkdir(os.path.join(new_profile_folder, 'files', 'attachments'))
 
 		return { 'error' : ''}
 	
