@@ -1,7 +1,9 @@
 import base64
+import re
 import uuid
 
 import nacl.public
+import nacl.pwhash
 import nacl.secret
 import nacl.utils
 
@@ -78,6 +80,7 @@ class KeyPair (EncryptionKey):
 		'''Returns the private key encoded in base64'''
 		return self.private64
 
+
 class SecretKey (EncryptionKey):
 	'''Represents a secret key used by symmetric encryption'''
 	def __init__(self, category='', key=None, encryption=None):
@@ -119,3 +122,65 @@ class FolderMapping:
 		self.keyid = keyid
 		self.path = path
 		self.permissions = permissions
+
+
+def check_password_complexity(indata):
+	'''Checks the requested string as meeting the needed security standards.
+	
+	Returns: (dict)
+	error: string
+	strength: string in [very weak', 'weak', 'medium', 'strong']
+	'''
+	if len(indata) < 8:
+		return { 'error' : 'Passphrase must be at least 8 characters.'}
+	
+	strength_score = 0
+	strength_strings = [ 'error', 'very weak', 'weak', 'medium', 'strong', 'very strong']
+
+	# Anselus *absolutely* permits UTF-8-encoded passwords. This greatly increases the
+	# keyspace
+	try:
+		indata.encode().decode('ascii')
+	except UnicodeDecodeError:
+		strength_score = strength_score + 1
+	
+	if re.search(r"\d", indata):
+		strength_score = strength_score + 1
+	
+	if re.search(r"[A-Z]", indata):
+		strength_score = strength_score + 1
+	
+	if re.search(r"[a-z]", indata):
+		strength_score = strength_score + 1
+
+	if re.search(r"[~`!@#$%^&*()_={}/<>,.:;|'[\]\"\\\-\+\?]", indata):
+		strength_score = strength_score + 1
+
+	if (len(indata) < 12 and strength_score < 3) or strength_score < 2:
+		# If the passphrase is less than 12 characters, require complexity
+		return { 'error' : 'passphrase too weak', 'strength' : strength_strings[strength_score] }
+	
+	return { 'error' : '', 'strength' : strength_strings[strength_score] }
+
+
+class Password:
+	'''Encapsulates hashed password interactions'''
+	def __init__(self):
+		self.hash = None
+		self.hashtype = None
+		self.strength = ''
+	
+	def Set(self, text):
+		'''
+		Takes the given password text, checks strength, and generates a hash
+		Returns: [dict]
+		error : string
+		'''
+		status = check_password_complexity(text)
+		if status['error']:
+			return status
+		self.strength = status['strength']
+		self.hash = nacl.pwhash.argon2id.str(bytes(text, 'utf8')).decode('utf8')
+		self.hashtype = 'argon2id'
+
+		return status
