@@ -235,7 +235,8 @@ def register(sock, pwhash):
 		response = read_response(sock)
 		if response['errorcode'] in [ 304, 406 ]:	# Registration closed, Payment required
 			break
-		elif response['errorcode'] in [ 101, 201]:	# Pending, Success
+		
+		if response['errorcode'] in [ 101, 201]:	# Pending, Success
 			tokens = response['error'].split()
 			if len(tokens) != 2 or not utils.validate_uuid(tokens[0]):
 				return { 'errorcode' : 300, 'error' : 'INTERNAL SERVER ERROR' }
@@ -243,7 +244,8 @@ def register(sock, pwhash):
 			response['devid'] = tokens[0]
 			response['session'] = tokens[1]
 			break
-		elif response['errorcode'] == 408:	# WID exists
+		
+		if response['errorcode'] == 408:	# WID exists
 			tries = tries + 1
 		else:
 			# Something we didn't expect
