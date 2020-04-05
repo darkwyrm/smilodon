@@ -1,3 +1,4 @@
+import clientlib
 from storage import ClientStorage
 
 # The role of this class is to provide an interface to the client as a whole,
@@ -102,6 +103,17 @@ class AnselusClient:
 		# Save all encryption keys into an encrypted 7-zip archive which uses the hash of the 
 		# user's password has the archive encryption password and upload the archive to the server.
 		
+		# Parse server string. Should be in the form of (ip/domain):portnum
+		try:
+			host,port = server.split(':')
+		except ValueError:
+			return { 'error' : 'bad server string'}
+		
+		conndata = clientlib.connect(host, port)
+		if conndata['error']:
+			return conndata
+		
+
 		return { 'error':'Unimplemented' }
 	
 	def unregister_account(self, server):

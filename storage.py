@@ -283,7 +283,7 @@ class ClientStorage:
 		'''Returns the WID of the active profile.'''
 		return self.active_wid
 
-	def set_credentials(self, address, password):
+	def set_credentials(self, address, password, pwhash=None, hashtype=None):
 		'''
 		Sets the login credentials for the user's workspace in the active profile. 
 		'''
@@ -297,9 +297,14 @@ class ClientStorage:
 		if len(password) < 8:
 			return { 'error' : 'Password too short, minimum 8 characters.'}
 		
-		pwhash = nacl.pwhash.argon2id.str(bytes(password, 'utf8')).decode('utf8')
-		if not self.db.set_credentials(parts[0], parts[1], pwhash, 'argon2id'):
-			return { 'error' : 'database error' }
+		if pwhash is None or hashtype is None:
+			pwhash = nacl.pwhash.argon2id.str(bytes(password, 'utf8')).decode('utf8')
+			if not self.db.set_credentials(parts[0], parts[1], pwhash, 'argon2id'):
+				return { 'error' : 'database error' }
+		else:
+			if not self.db.set_credentials(parts[0], parts[1], pwhash, hashtype):
+				return { 'error' : 'database error' }
+		
 		return { 'error':'' }
 
 	def get_credentials(self):
