@@ -3,8 +3,6 @@ import platform
 import shutil
 import uuid
 
-import nacl.pwhash
-
 import dbhandler
 import encryption
 import utils
@@ -283,7 +281,7 @@ class ClientStorage:
 		'''Returns the WID of the active profile.'''
 		return self.active_wid
 
-	def set_credentials(self, address, password, pwhash=None, hashtype=None):
+	def set_credentials(self, address, pw):
 		'''
 		Sets the login credentials for the user's workspace in the active profile. 
 		'''
@@ -292,18 +290,11 @@ class ClientStorage:
 		if parts['error']:
 			return parts
 		
-		# Password requirements aren't really set here, but we do have to draw the 
-		# line *somewhere*.
-		if len(password) < 8:
-			return { 'error' : 'Password too short, minimum 8 characters.'}
+		if not pw.hash:
+			return { 'error' : 'empty password given'}
 		
-		if pwhash is None or hashtype is None:
-			pwhash = nacl.pwhash.argon2id.str(bytes(password, 'utf8')).decode('utf8')
-			if not self.db.set_credentials(parts[0], parts[1], pwhash, 'argon2id'):
-				return { 'error' : 'database error' }
-		else:
-			if not self.db.set_credentials(parts[0], parts[1], pwhash, hashtype):
-				return { 'error' : 'database error' }
+		if not self.db.set_credentials(parts[0], parts[1], pw):
+			return { 'error' : 'database error' }
 		
 		return { 'error':'' }
 
@@ -323,7 +314,7 @@ class ClientStorage:
 		creds['wid'] = self.active_wid
 		return creds
 
-	def generate_profile_data(self, name, server, wid, password):
+	def generate_profile_data(self, name, server, wid, pw):
 		'''Creates full all the data needed for an individual workspace account'''
 		
 		# Generate user's encryption keys
@@ -333,8 +324,7 @@ class ClientStorage:
 		folder_key = encryption.SecretKey('folder')
 		
 		# Add workspace
-		pwhash = nacl.pwhash.argon2id.str(bytes(password, 'utf8')).decode('utf8')
-		if not self.db.add_workspace(wid, server, pwhash, 'argon2id'):
+		if not self.db.add_workspace(wid, server, pw):
 			return { 'error' : 'database error' }
 		
 		address = '/'.join([wid,server])

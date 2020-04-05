@@ -1,4 +1,5 @@
 import clientlib
+from encryption import Password
 from storage import ClientStorage
 
 # The role of this class is to provide an interface to the client as a whole,
@@ -80,11 +81,15 @@ class AnselusClient:
 		'''Sets the profile loaded on startup'''
 		return self.fs.set_default_profile(name)
 
-	def register_account(self, server, password):
+	def register_account(self, server, userpass):
 		'''Create a new account on the specified server.'''
 		
 		# Process for registration of a new account:
 		# 
+		# Check to see if we already have a workspace allocated on this profile. Because we don't
+		# 	yet support shared workspaces, it means that there are only individual ones. Each 
+		#	profile can have only one individual workspace.
+		#
 		# Connect to requested server
 		# Send registration request to server, which requires a hash of the user's supplied
 		#	password
@@ -92,7 +97,7 @@ class AnselusClient:
 		# If the server returns an error, such as 304 REGISTRATION CLOSED, then return an error.
 		# If the server has returned anything else, including a 101 PENDING, begin the 
 		#	client-side workspace information to generate.
-		# Call storage.generate_profile()
+		# Call storage.generate_profile_data()
 		# Add the device ID and session string to the profile
 		# Create the necessary client-side folders
 		# Generate the folder mappings
@@ -103,16 +108,42 @@ class AnselusClient:
 		# Save all encryption keys into an encrypted 7-zip archive which uses the hash of the 
 		# user's password has the archive encryption password and upload the archive to the server.
 		
+		# TODO: Check to see if we already have a workspace created.
+
 		# Parse server string. Should be in the form of (ip/domain):portnum
 		try:
 			host,port = server.split(':')
 		except ValueError:
 			return { 'error' : 'bad server string'}
 		
+		# Password requirements aren't really set here, but we do have to draw the 
+		# line *somewhere*.
+		pw = Password()
+		status = pw.Set(userpass)
+		if status['error']:
+			return status
+		
 		conndata = clientlib.connect(host, port)
 		if conndata['error']:
 			return conndata
 		
+		regdata = clientlib.register(conndata['socket'], pw.hash)
+		if regdata['error']:
+			return regdata
+		
+		clientlib.disconnect(conndata['socket'])
+
+		# Possible errorcodes from register()
+		# 304 - Registration closed
+		# 406 - Payment required
+		# 101 - Pending
+		# 201 - Registered
+		# 300 - Internal server error
+		# 408 - Resource exists
+		if regdata['errorcode'] in [304, 406, 300, 408]:
+			return regdata
+		
+		self.fs.generate_profile_data()
 
 		return { 'error':'Unimplemented' }
 	

@@ -180,7 +180,13 @@ class Password:
 		if status['error']:
 			return status
 		self.strength = status['strength']
-		self.hash = nacl.pwhash.argon2id.str(bytes(text, 'utf8')).decode('utf8')
+		self.hash = nacl.pwhash.argon2id.str(bytes(text, 'utf8')).decode('ascii')
 		self.hashtype = 'argon2id'
 
 		return status
+	
+	def Check(self, text):
+		'''
+		Checks the supplied password against the stored hash and returns a boolean match status.
+		'''
+		return nacl.pwhash.verify(self.hash, text)
