@@ -189,4 +189,4 @@ class Password:
 		'''
 		Checks the supplied password against the stored hash and returns a boolean match status.
 		'''
-		return nacl.pwhash.verify(self.hash, text)
+		return nacl.pwhash.verify(self.hash.encode(), text.encode())
