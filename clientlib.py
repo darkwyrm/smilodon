@@ -254,6 +254,15 @@ def register(sock, pwhash):
 	return response
 
 
+# TODO: Implement clientlib.unregister()
+def unregister(sock, pwhash):
+	'''
+	Deletes the online account at the specified server.
+	Returns:
+	error : string
+	'''
+	return { 'error' : 'Unimplemented'}
+
 def progress_stdout(value):
 	'''callback for upload() which just prints what it's given'''
 	sys.stdout.write("Progress: %s\r" % value)
