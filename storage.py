@@ -375,3 +375,49 @@ class ClientStorage:
 
 		return { 'error' : ''}
 	
+	def add_session(self, address, devid, session_str, devname=None):
+		'''
+		Adds a device session to a workspace
+		
+		Returns: [dict]
+		error : string
+		'''
+		if self.db.add_device_session(address, devid, session_str, devname):
+			return { 'error' : '' }
+		return { 'error' : 'Failure to add device session' }
+
+	def update_device_session(self, devid, session_str):
+		'''
+		Updates the session string for a device
+		
+		Returns: [dict]
+		error : string
+		'''
+		if self.db.update_device_session(devid, session_str):
+			return { 'error' : '' }
+		return { 'error' : 'Failure to update device session' }
+
+	def remove_device_session(self, devid):
+		'''
+		Removes an authorized device from the workspace.
+		
+		Returns: [dict]
+		error : string
+		'''
+		if self.db.remove_device_session(devid):
+			return { 'error' : '' }
+		return { 'error' : 'Failure to remove device session' }
+
+	def get_session_string(self, address):
+		'''
+		The device can have sessions on multiple servers, but it can only have one on each server.
+		
+		Returns: [dict]
+		error : string
+		session : string
+		'''
+		
+		session = self.db.get_session_string(address)
+		if session:
+			return { 'error' : '', 'session' : session }
+		return { 'error' : 'Failure to obtain device session' }
