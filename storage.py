@@ -318,69 +318,44 @@ class ClientStorage:
 	def generate_profile_data(self, name, server, wid, pw):
 		'''Creates full all the data needed for an individual workspace account'''
 		
-		# Generate user's encryption keys
-		identity_key = encryption.KeyPair('identity')
-		conrequest_key = encryption.KeyPair('conrequest')
-		broadcast_key = encryption.SecretKey('broadcast')
-		folder_key = encryption.SecretKey('folder')
-		
 		# Add workspace
 		if not self.db.add_workspace(wid, server, pw):
 			return { 'error' : 'database error' }
 		
 		address = '/'.join([wid,server])
 
+		# Generate user's encryption keys
+		keys = {
+			'identity' : encryption.KeyPair('identity'),
+			'conrequest' : encryption.KeyPair('conrequest'),
+			'broadcast' : encryption.SecretKey('broadcast'),
+			'folder' : encryption.SecretKey('folder')
+		}
+		
 		# Add encryption keys
-		out = self.db.add_key(identity_key, address)
-		if out['error']:
-			self.db.remove_workspace_entry(wid, server)
-			return { 'error' : 'database error' }
-
-		self.db.add_key(conrequest_key, address)
-		if out['error']:
-			self.db.remove_workspace(wid, server)
-			return { 'error' : 'database error' }
-
-		self.db.add_key(broadcast_key, address)
-		if out['error']:
-			self.db.remove_workspace(wid, server)
-			return { 'error' : 'database error' }
-
-		self.db.add_key(folder_key, address)
-		if out['error']:
-			self.db.remove_workspace(wid, server)
-			return { 'error' : 'database error' }
+		for key in keys.items():
+			out = self.db.add_key(key, address)
+			if out['error']:
+				self.db.remove_workspace_entry(wid, server)
+				return { 'error' : 'database error' }
 		
 		# Add folder mappings
-		folder = encryption.FolderMapping()
+		foldermap = encryption.FolderMapping()
 
-		folder.MakeID()
-		folder.Set(address, folder_key.get_id(), 'messages', 'root')
-		self.db.add_folder(folder)
+		folderlist = [
+			'messages',
+			'contacts',
+			'events',
+			'tasks',
+			'notes'
+			'files',
+			'files attachments'
+		]
 
-		folder.MakeID()
-		folder.Set(address, folder_key.get_id(), 'contacts', 'root')
-		self.db.add_folder(folder)
-
-		folder.MakeID()
-		folder.Set(address, folder_key.get_id(), 'events', 'root')
-		self.db.add_folder(folder)
-
-		folder.MakeID()
-		folder.Set(address, folder_key.get_id(), 'tasks', 'root')
-		self.db.add_folder(folder)
-
-		folder.MakeID()
-		folder.Set(address, folder_key.get_id(), 'notes', 'root')
-		self.db.add_folder(folder)
-
-		folder.MakeID()
-		folder.Set(address, folder_key.get_id(), 'files', 'root')
-		self.db.add_folder(folder)
-
-		folder.MakeID()
-		folder.Set(address, folder_key.get_id(), 'files attachments', 'root')
-		self.db.add_folder(folder)
+		for folder in folderlist:
+			foldermap.MakeID()
+			foldermap.Set(address, keys['folder'].get_id(), folder, 'root')
+			self.db.add_folder(foldermap)
 
 		# Create the folders themselves
 		new_profile_folder = os.path.join(self.profile_folder, name)
@@ -389,6 +364,7 @@ class ClientStorage:
 		except:
 			self.db.remove_workspace(wid, server)
 			return { 'error' : 'filesystem rejected new profile path'}
+		
 		os.mkdir(os.path.join(new_profile_folder, 'messages'))
 		os.mkdir(os.path.join(new_profile_folder, 'contacts'))
 		os.mkdir(os.path.join(new_profile_folder, 'events'))
