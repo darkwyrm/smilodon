@@ -1,3 +1,5 @@
+'''This module provides a simple interface to the handling storage and networking needs for an 
+Anselus client'''
 import clientlib
 from encryption import Password
 from storage import ClientStorage
@@ -30,12 +32,12 @@ class AnselusClient:
 		'''
 
 		# Confirm that we really don't have any profiles created on disk.
-		if len(self.fs.get_profiles()) == 0:
+		if not self.fs.get_profiles():
 			status = self.fs.load_profiles()
 			if status['error']:
 				return { 'error' : status['error'], 'name' : '' }
 
-		if len(self.fs.get_profiles()) == 0:
+		if not self.fs.get_profiles():
 			status = self.fs.create_profile('primary')
 			if status['error']:
 				return { 'error' : status['error'], 'name' : '' }

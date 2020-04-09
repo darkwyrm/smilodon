@@ -1,3 +1,4 @@
+'''This module provides an abstract interface to a database. Currently only supports SQLite3'''
 import base64
 import os
 import platform

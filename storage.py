@@ -1,3 +1,4 @@
+'''This module provides an API to interact with the filesystem'''
 import os
 import platform
 import shutil
@@ -77,12 +78,12 @@ class ClientStorage:
 			line_index = 1
 			for line in lines:
 				stripped = line.strip()
-				if len(stripped) == 0:
+				if not stripped:
 					continue
 				
 				tokens = stripped.split('=')
 				if len(tokens) != 2:
-					if len(errormsg) > 0:
+					if errormsg:
 						errormsg = errormsg + ', bad line %d' % line_index
 					else:
 						errormsg = 'bad line %d' % line_index
@@ -94,7 +95,7 @@ class ClientStorage:
 					continue
 				
 				if not utils.validate_uuid(tokens[1]):
-					if len(errormsg) > 0:
+					if errormsg:
 						errormsg = errormsg + ', bad folder id in line %d' % line_index
 					else:
 						errormsg = 'bad folder id in line %d' % line_index
