@@ -19,7 +19,15 @@ class AnselusClient:
 		'''Activates the specified profile'''
 
 		status = self.fs.activate_profile(name)
-		# TODO: add server connect/disconnect here
+		if status['error']:
+			return status
+		
+		if self.socket:
+			clientlib.disconnect(self.socket)
+		self.socket = None
+		
+		# TODO: get the address of the now-active profile and connect
+		
 		return status
 
 	def activate_default_profile(self):
@@ -145,9 +153,18 @@ class AnselusClient:
 		if regdata['errorcode'] in [304, 406, 300, 408]:
 			return regdata
 		
-		self.fs.generate_profile_data()
+		# Just a basic sanity check
+		if 'wid' not in regdata:
+			return { 'error' : 'BUG: bad data from clientlib.register()' }
 
-		return { 'error':'Unimplemented' }
+		status = self.fs.generate_profile_data(self.fs.get_active_profile(), server, 
+			regdata['wid'], pw)
+		if status['error']:
+			return status
+		
+		address = '/'.join([regdata['wid'], server])
+		status = self.fs.add_session(address, regdata['devid'], regdata['session'])
+		return status
 	
 	def unregister_account(self, server):
 		'''Remove account from server. This does not delete any local files'''
