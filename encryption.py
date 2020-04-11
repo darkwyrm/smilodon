@@ -1,5 +1,6 @@
 import base64
 import re
+import secrets
 import uuid
 
 import nacl.public
@@ -124,6 +125,20 @@ class FolderMapping:
 		self.permissions = permissions
 
 
+def b64encode(indata):
+	'''Base64 encodes the input data and strips the padding'''
+	outdata = base64.b64encode(indata)
+	limiter = len(outdata) - 1
+	while outdata[limiter] == b'=':
+		limiter = limiter - 1
+	return outdata[:limiter - 1]
+
+
+def b64decode(indata):
+	'''Base64 decodes the input data after applying padding'''
+	return base64.b64decode(indata + (b'=' * (4 - (len(indata) % 4))))
+
+
 def check_password_complexity(indata):
 	'''Checks the requested string as meeting the needed security standards.
 	
@@ -164,12 +179,17 @@ def check_password_complexity(indata):
 
 
 class Password:
-	'''Encapsulates hashed password interactions'''
+	'''Encapsulates hashed password interactions. Uses the Argon2id hashing algorithm.'''
 	def __init__(self):
 		self.hash = None
-		self.hashtype = None
+		self.hashtype = 'argon2id'
+		self.hashstring = ''
+		self.salt = None
+		self.memsize = 0
+		self.opslimit = 0
 		self.strength = ''
-	
+		self.parallelism = 0
+
 	def Set(self, text):
 		'''
 		Takes the given password text, checks strength, and generates a hash
@@ -180,13 +200,76 @@ class Password:
 		if status['error']:
 			return status
 		self.strength = status['strength']
-		self.hash = nacl.pwhash.argon2id.str(bytes(text, 'utf8')).decode('ascii')
-		self.hashtype = 'argon2id'
+
+		self.salt = secrets.token_bytes(16)
+		self.memsize = nacl.pwhash.argon2id.MEMLIMIT_INTERACTIVE
+		self.opslimit = nacl.pwhash.argon2id.OPSLIMIT_INTERACTIVE
+		self.parallelism = 1
+
+		self.hash = nacl.pwhash.argon2id.kdf(43, bytes(text, 'utf8'), self.salt, self.opslimit,
+			self.memsize)
+		
+		paramstring = ','.join([
+			'v=19',
+			'm=%s' % self.memsize,
+			't=%s' % self.opslimit,
+			'p=1'
+		])
+		self.hashstring = '$'.join(['', 'argon2id', paramstring,
+			b64encode(self.salt).decode('ascii'),
+			b64encode(self.hash).decode('ascii')])
 
 		return status
+	
+	def Assign(self, pwhash):
+		'''
+		Takes a PHC hash format string and sets the password to use the information in it.
+		Returns: [dict]
+		error : string
+		'''
+		hashparts = pwhash.split('$')
+
+		if len(hashparts) != 6:
+			return { 'error' : 'Hash was not in PHC string format' }
+
+		# A proper PHC string will result in the first element being an empty string
+		if not hashparts[0]:
+			del hashparts[0]
+
+		if hashparts[0] != 'argon2id':
+			return { 'error' : 'Only Argon2id hashes are supported' }
+
+		match = re.search(r'm=(\d+)', hashparts[2])
+		if not match:
+			return { 'error' : 'Memory parameter is required' }
+		self.memsize = int(match[1])
+
+		match = re.search(r't=(\d+)', hashparts[2])
+		if not match:
+			return { 'error' : 'Iterations parameter is required' }
+		self.opslimit = int(match[1])
+
+		match = re.search(r'p=(\d+)', hashparts[2])
+		if not match:
+			return { 'error' : 'Parallelism parameter is required' }
+		self.parallelism = int(match[1])
+
+		try:
+			self.salt = b64decode(hashparts[3])
+		except:
+			return { 'error' : 'Bad salt encoding' }
+		
+		try:
+			self.hash = b64decode(hashparts[4])
+		except:
+			return { 'error' : 'Bad password hash encoding' }
+
+		self.hashstring = pwhash
+		return { 'error' : '' }
 	
 	def Check(self, text):
 		'''
 		Checks the supplied password against the stored hash and returns a boolean match status.
 		'''
-		return nacl.pwhash.verify(self.hash.encode(), text.encode())
+		return nacl.pwhash.verify(self.hashstring.encode(), text.encode())
+
