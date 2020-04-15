@@ -124,20 +124,6 @@ class FolderMapping:
 		self.permissions = permissions
 
 
-def b64encode(indata):
-	'''Base64 encodes the input data and strips the padding'''
-	outdata = base64.b64encode(indata)
-	limiter = len(outdata) - 1
-	while outdata[limiter] == b'=':
-		limiter = limiter - 1
-	return outdata[:limiter - 1]
-
-
-def b64decode(indata):
-	'''Base64 decodes the input data after applying padding'''
-	return base64.b64decode(indata + (b'=' * (4 - (len(indata) % 4))))
-
-
 def check_password_complexity(indata):
 	'''Checks the requested string as meeting the needed security standards.
 	
