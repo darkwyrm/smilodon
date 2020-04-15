@@ -140,7 +140,7 @@ class Sqlite:
 			return False
 		
 		cursor.execute('''INSERT INTO workspaces(wid,domain,password,pwhashtype,type)
-			VALUES(?,?,?,?,?)''', (wid, domain, pw.hash, pw.hashtype, "single"))
+			VALUES(?,?,?,?,?)''', (wid, domain, pw.hashstring, pw.hashtype, "single"))
 		self.db.commit()
 		return True
 
@@ -353,9 +353,9 @@ class Sqlite:
 			return { 'error' : 'Workspace not found' }
 		
 		out = encryption.Password()
-		out.hash = results[0]
-		out.hashtype = results[1]
-		return { 'error' : '', 'password' : out }
+		status = out.Assign(results[0])
+		status['password'] = out
+		return status
 
 	def set_credentials(self, wid, domain, pw):
 		'''Sets the password and hash type for the specified workspace. A boolean success 
@@ -368,7 +368,7 @@ class Sqlite:
 
 		cursor = self.db.cursor()
 		cursor.execute("UPDATE workspaces SET password=?,pwhashtype=? WHERE wid=? AND domain=?",
-			(pw.hash, pw.hashtype, wid, domain))
+			(pw.hashstring, pw.hashtype, wid, domain))
 		self.db.commit()
 		return True
 
