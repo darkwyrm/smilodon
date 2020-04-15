@@ -137,7 +137,7 @@ class AnselusClient:
 		if conndata['error']:
 			return conndata
 		
-		regdata = clientlib.register(conndata['socket'], pw.hash)
+		regdata = clientlib.register(conndata['socket'], pw.hashstring)
 		if regdata['error']:
 			return regdata
 		
