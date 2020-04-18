@@ -118,7 +118,8 @@ class AnselusClient:
 		# Save all encryption keys into an encrypted 7-zip archive which uses the hash of the 
 		# user's password has the archive encryption password and upload the archive to the server.
 		
-		# TODO: Check to see if we already have a workspace created.
+		if self.fs.get_profiles():
+			return { 'error' : 'an individual workspace already exists' }
 
 		# Parse server string. Should be in the form of (ip/domain):portnum
 		try:
@@ -166,7 +167,12 @@ class AnselusClient:
 		status = self.fs.add_session(address, regdata['devid'], regdata['session'])
 		return status
 	
-	def unregister_account(self, server):
+	def unregister_account(self):
 		'''Remove account from server. This does not delete any local files'''
-		return { 'error':'Unimplemented' }
+		status = self.fs.get_credentials()
+		if status['error']:
+			return status
+		
+		status = clientlib.unregister(self.socket, status['password'])
+		return status
 		
