@@ -2,7 +2,6 @@
 communications. Commands largely map 1-to-1 to the commands outlined in the 
 spec.'''
 
-import os
 import socket
 import sys
 import time
@@ -30,6 +29,8 @@ def write_text(sock, text):
 	except Exception as exc:
 		sock.close()
 		return { 'error' : exc.__str__() }
+	
+	return { 'error' : '' }
 
 
 # Read Text
@@ -254,19 +255,32 @@ def register(sock, pwhash):
 	return response
 
 
-# TODO: Implement clientlib.unregister()
 def unregister(sock, pwhash):
 	'''
 	Deletes the online account at the specified server.
 	Returns:
 	error : string
 	'''
-	return { 'error' : 'Unimplemented'}
+
+	response = write_text(sock, 'UNREGISTER %s\r\n' % pwhash)
+	if response['error']:
+		return response
+	
+	response = read_response(sock)
+
+	# This particular command is very simple: make a request, because the server will return
+	# one of three possible types of responses: success, pending (for private/moderated 
+	# registration modes), or an error. In all of those cases there isn't anything else to do.
+	return response
+
 
 def progress_stdout(value):
 	'''callback for upload() which just prints what it's given'''
 	sys.stdout.write("Progress: %s\r" % value)
 
+
+# pylint: disable=fixme
+# Disable the TODO listings embedded in the disabled code until it is properly rewritten
 
 # TODO: Refactor/update to match current spec
 # Upload
@@ -278,39 +292,40 @@ def progress_stdout(value):
 #
 #	Returns: [dict] error code
 #				error string
-def upload(sock, path, serverpath, progress):
-	'''Upload a local file to the server.'''
-	chunk_size = 128
 
-	# Check to see if we're allowed to upload
-	filesize = os.path.getsize(path)
-	write_text(sock, "UPLOAD %s %s\r\n" % (filesize, serverpath))
-	response = read_text(sock)
-	if not response['string']:
-		# TODO: Properly handle no server response
-		raise "No response from server"
+# def upload(sock, path, serverpath, progress):
+# 	'''Upload a local file to the server.'''
+# 	chunk_size = 128
+
+# 	# Check to see if we're allowed to upload
+# 	filesize = os.path.getsize(path)
+# 	write_text(sock, "UPLOAD %s %s\r\n" % (filesize, serverpath))
+# 	response = read_text(sock)
+# 	if not response['string']:
+# 		# TODO: Properly handle no server response
+# 		raise "No response from server"
 	
-	if response['string'].strip().split()[0] != 'PROCEED':
-		# TODO: Properly handle not being allowed
-		print("Unable to upload file. Server response: %s" % response)
-		return
+# 	if response['string'].strip().split()[0] != 'PROCEED':
+# 		# TODO: Properly handle not being allowed
+# 		print("Unable to upload file. Server response: %s" % response)
+# 		return
 
-	try:
-		totalsent = 0
-		handle = open(path,'rb')
-		data = handle.read(chunk_size)
-		while data:
-			write_text(sock, "BINARY [%s/%s]\r\n" % (totalsent, filesize))
-			sent_size = sock.send(data)
-			totalsent = totalsent + sent_size
+# 	try:
+# 		totalsent = 0
+# 		handle = open(path,'rb')
+# 		data = handle.read(chunk_size)
+# 		while data:
+# 			write_text(sock, "BINARY [%s/%s]\r\n" % (totalsent, filesize))
+# 			sent_size = sock.send(data)
+# 			totalsent = totalsent + sent_size
 
-			if progress:
-				progress(float(totalsent / filesize) * 100.0)
+# 			if progress:
+# 				progress(float(totalsent / filesize) * 100.0)
 
-			if sent_size < chunk_size:
-				break
+# 			if sent_size < chunk_size:
+# 				break
 			
-			data = handle.read(chunk_size)
-		data.close()
-	except Exception as exc:
-		print("Failure uploading %s: %s" % (path, exc))
+# 			data = handle.read(chunk_size)
+# 		data.close()
+# 	except Exception as exc:
+# 		print("Failure uploading %s: %s" % (path, exc))
