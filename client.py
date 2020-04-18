@@ -4,12 +4,12 @@ import clientlib
 from encryption import Password
 from storage import ClientStorage
 
-# The role of this class is to provide an interface to the client as a whole,
-# not just the storage aspects. It does duplicate the ClientStorage interface,
-# but it also handles network interaction where needed. In short, the user's
-# commands map pretty much one-to-one to this class.
 class AnselusClient:
-	'''This class provides the interface to the Anselus protocol for the app'''
+	'''
+	The role of this class is to provide an interface to the client as a whole, not just the 
+	storage aspects. It does duplicate the ClientStorage interface,	but it also handles network 
+	interaction where needed. In short, the user's commands map pretty much one-to-one to this class.
+	'''
 	def __init__(self):
 		self.fs = ClientStorage()
 		self.active_profile = ''
@@ -26,8 +26,7 @@ class AnselusClient:
 			clientlib.disconnect(self.socket)
 		self.socket = None
 		
-		# TODO: get the address of the now-active profile and connect
-		
+		status = clientlib.connect(status['host'],status['port'])
 		return status
 
 	def activate_default_profile(self):
@@ -122,10 +121,18 @@ class AnselusClient:
 			return { 'error' : 'an individual workspace already exists' }
 
 		# Parse server string. Should be in the form of (ip/domain):portnum
-		try:
-			host,port = server.split(':')
-		except ValueError:
-			return { 'error' : 'bad server string'}
+		if ':' in server:
+			addressparts = server.split(':')
+			host = addressparts[0]
+			try:
+				port = int(addressparts[1])
+			except ValueError:
+				return { 'error' : 'bad server string'}
+			serverstring = server
+		else:
+			host = server
+			port = 2001
+			serverstring = host + ':2001'
 		
 		# Password requirements aren't really set here, but we do have to draw the 
 		# line *somewhere*.
@@ -163,7 +170,7 @@ class AnselusClient:
 		if status['error']:
 			return status
 		
-		address = '/'.join([regdata['wid'], server])
+		address = '/'.join([regdata['wid'], serverstring])
 		status = self.fs.add_session(address, regdata['devid'], regdata['session'])
 		return status
 	

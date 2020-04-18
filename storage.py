@@ -244,6 +244,9 @@ class ClientStorage:
 
 		Returns:
 		"error" : string
+		"wid" : string
+		"host" : string
+		"port" : integer
 		'''
 		if self.active_profile:
 			self.db.disconnect()
@@ -272,7 +275,19 @@ class ClientStorage:
 		
 		self.active_wid = parts['wid']
 		self.active_domain = parts['domain']
-		return { 'error' : '' }
+		
+		if ':' in self.active_domain:
+			domain_parts = self.active_domain.split(':')
+			domain = domain_parts[0]
+			try:
+				port = int(domain_parts[1])
+			except:
+				return { 'error' : 'bad host address syntax' }
+		else:
+			domain = self.active_domain
+			port = 2001
+		
+		return { 'error' : '', 'wid' : self.active_wid, 'host' : domain, 'port' : port }
 
 	def get_active_profile(self):
 		'''Returns the active profile name'''
