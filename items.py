@@ -1,3 +1,7 @@
+# pylint: disable=too-many-instance-attributes,too-few-public-methods
+# These classes are data containers and will have a lot of instance attributes and not many
+# methods
+
 class ClientItem():
 	'''Provides a base interface for all client items'''
 	def __init__(self):
