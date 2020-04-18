@@ -306,7 +306,7 @@ class ClientStorage:
 		Returns:
 		"error" : string
 		"wid" : string
-		"pwhash" : string -- empty if password-saving is disabled
+		"password" : string -- empty if password-saving is disabled
 		'''
 		creds = self.db.get_credentials(self.active_wid, self.active_domain)
 		if 'password' not in creds:
