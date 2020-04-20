@@ -1,6 +1,7 @@
 '''The userprofile module handles user profile management'''
 import json
 import os
+import uuid
 
 import utils
 
@@ -12,10 +13,19 @@ class Profile:
 		self.id = ''
 		self.wid = ''
 		self.domain = ''
+		self.port = 2001
 	
+	def make_id(self):
+		'''Generates a new profile ID for the object'''
+		self.id = str(uuid.uuid4())
+
 	def address(self):
 		'''Returns the identity workspace address for the profile'''
 		return '/'.join([self.wid, self.domain])
+	
+	def serverstring(self):
+		'''Returns the identity workspace address for the profile including port'''
+		return ':'.join([self.address(),self.port])
 	
 	def as_dict(self):
 		'''Returns the state of the profile as JSON'''
@@ -24,14 +34,15 @@ class Profile:
 			'isdefault' : self.isdefault,
 			'id' : self.id,
 			'wid' : self.wid,
-			'domain' : self.domain
+			'domain' : self.domain,
+			'port' : self.port
 		}
 	
 	def set_from_dict(self, data):
 		'''Assigns profile data from a JSON string'''
 		
 		for k,v in data.items():
-			if k in [ 'name', 'isdefault', 'id', 'wid', 'domain' ]:
+			if k in [ 'name', 'isdefault', 'id', 'wid', 'domain', 'port' ]:
 				setattr(self, k, v)
 	
 	def is_valid(self):
@@ -92,7 +103,7 @@ def save_profiles(profile_path, profiles):
 				
 				profile_data.append(profile.as_dict())
 
-				item_folder = os.path.join(profile_path, profile.id)
+				item_folder = os.path.join(profile_path, profile.name)
 				if not os.path.exists(item_folder):
 					os.mkdir(item_folder)
 
