@@ -2,10 +2,10 @@
 import os
 import platform
 import shutil
-import uuid
 
 import dbhandler
 import encryption
+import userprofile
 import utils
 
 class ClientStorage:
@@ -21,124 +21,46 @@ class ClientStorage:
 		if not os.path.exists(self.profile_folder):
 			os.mkdir(self.profile_folder)
 		
-		self.profiles = dict()
+		self.profiles = list()
 		self.default_profile = ''
-		self.active_profile = ''
-		self.active_wid = ''
-		self.active_domain = ''
+		self.active_index = -1
 		self.db = dbhandler.Sqlite()		
 	
-	def _save_profiles(self):
-		'''
-		Exports the current list of profiles to the profile list file.
-
-		Returns:
-		"error" : error state - string
-		'''
-		profile_list_path = os.path.join(self.profile_folder, 'profiles.txt')
+	def __index_for_profile(self, name):
+		'''Returns the numeric index of the named profile. Returns -1 on error'''
+		if not name:
+			return -1
 		
-		if not os.path.exists(self.profile_folder):
-			os.mkdir(self.profile_folder)
+		name_squashed = name.casefold()
+		for i in range(0, len(self.profiles)):
+			if name_squashed == self.profiles[i].name:
+				return i
+		return -1
 
-		try:
-			with open(profile_list_path, 'w') as fhandle:
-				for k,v in self.profiles.items():
-					if k == 'default':
-						continue
-					
-					fhandle.write("%s=%s\n" % (k,v))
-
-					item_folder = os.path.join(self.profile_folder,k)
-					if not os.path.exists(item_folder):
-						os.mkdir(item_folder)
-
-				fhandle.write("default=%s\n" % (self.default_profile))
-		except Exception as e:
-			return { "error" : e.__str__() }
-
-		return { "error" : '' }
-
-	def load_profiles(self):
-		'''
-		Loads the list of profiles from disk, which is stored in AppData/Local/anselus/profiles.txt 
-		on Windows and ~/.config/anselus/profiles.txt on POSIX platforms.
-
-		Returns:
-		"error" : error state - string
-		"count" : number of profiles loaded - int
-		'''
-		self.profiles = dict()
-		profile_list_path = os.path.join(self.profile_folder, 'profiles.txt')
-		if not os.path.exists(profile_list_path):
-			return { "error" : '', 'count' : 0 }
-		
-		errormsg = ''
-		with open(profile_list_path, 'r') as fhandle:
-			lines = fhandle.readlines()
-			line_index = 1
-			for line in lines:
-				stripped = line.strip()
-				if not stripped:
-					continue
-				
-				tokens = stripped.split('=')
-				if len(tokens) != 2:
-					if errormsg:
-						errormsg = errormsg + ', bad line %d' % line_index
-					else:
-						errormsg = 'bad line %d' % line_index
-					line_index = line_index + 1
-					continue
-				
-				if tokens[0] == 'default':
-					self.default_profile = tokens[1]
-					continue
-				
-				if not utils.validate_uuid(tokens[1]):
-					if errormsg:
-						errormsg = errormsg + ', bad folder id in line %d' % line_index
-					else:
-						errormsg = 'bad folder id in line %d' % line_index
-					line_index = line_index + 1
-					continue
-				self.profiles[tokens[0]] = tokens[1]
-				
-			
-			if self.default_profile not in self.profiles.keys():
-				if len(self.profiles) == 1:
-					it = iter(self.profiles)
-					self.profiles['default'] = next(it)
-				else:
-					self.default_profile = ''
-				
-		return { "error" : errormsg, 'count' : len(self.profiles) }
-				
 	def create_profile(self, name):
 		'''
-		Creates a profile with the specified name.
+		Creates a profile with the specified name. Profile names are not case-sensitive.
 
 		Returns:
 		"error" : string
 		"id" : uuid of folder for new profile
 		'''
-		if name == 'default':
-			return { 'error' : "the name 'default' is reserved", 'id' : '' }
-		
 		if not name:
 			return { 'error' : "BUG: name may not be empty" }
 		
-		if name in self.profiles.keys():
+		name_squashed = name.casefold()
+		if self.__index_for_profile(name_squashed):
 			return { 'error' : "%s already exists" % name }
 
-		item_id = ''
-		while len(item_id) < 1 or item_id in self.profiles.values():
-			item_id = uuid.uuid4().__str__()
-		
-		self.profiles[name] = item_id
+		profile = userprofile.Profile()
+		profile.make_id()
+
 		if len(self.profiles) == 1:
-			it = iter(self.profiles)
-			self.profiles['default'] = next(it)
-		return self._save_profiles()
+			profile.isdefault = True
+		
+		self.profiles.append(profile)
+		return userprofile.save_profiles(os.path.join(self.profile_folder,'profiles.json'),
+				self.profiles)
 	
 	def delete_profile(self, name):
 		'''
@@ -153,26 +75,25 @@ class ClientStorage:
 		if not name:
 			return { 'error' : "BUG: name may not be empty" }
 		
-		if name not in self.profiles.keys():
+		name_squashed = name.casefold()
+		itemindex = self.__index_for_profile(name_squashed)
+		if itemindex < 0:
 			return { 'error' : "%s doesn't exist" }
 
-		item_id = self.profiles[name]
-		profile_path = os.path.join(self.profile_folder, item_id)
+		profile = self.profiles.pop(itemindex)
+		profile_path = os.path.join(self.profile_folder, profile.id)
 		if os.path.exists(profile_path):
 			try:
 				shutil.rmtree(profile_path)
 			except Exception as e:
 				return { 'error' : e.__str__() }
 		
-		del self.profiles[name]
-		if self.default_profile == name:
-			if len(self.profiles) == 1:
-				it = iter(self.profiles)
-				self.default_profile = next(it)
-			else:
-				self.default_profile = ''
+		if profile.isdefault:
+			if self.profiles:
+				self.profiles[0].isdefault = True
 		
-		return self._save_profiles()
+		return userprofile.save_profiles(os.path.join(self.profile_folder,'profiles.json'),
+				self.profiles)
 
 	def rename_profile(self, oldname, newname):
 		'''
@@ -182,24 +103,25 @@ class ClientStorage:
 		"error" : string
 		'''
 		
-		if oldname == 'default' or newname == 'default':
-			return { 'error' : "the name 'default' is reserved" }
-		
 		if not oldname or not newname:
 			return { 'error' : "BUG: name may not be empty" }
 		
-		if oldname not in self.profiles.keys():
+		old_squashed = oldname.casefold()
+		new_squashed = newname.casefold()
+
+		if old_squashed == new_squashed:
+			return { 'error' : '' }
+		
+		index = self.__index_for_profile(old_squashed)
+		if index < 0:
 			return { 'error' : "'%s' doesn't exist" % oldname }
 
-		if newname in self.profiles.keys():
+		if self.__index_for_profile(new_squashed):
 			return { 'error' : "'%s' already exists" % newname }
 
-		self.profiles[newname] = self.profiles[oldname]
-		del self.profiles[oldname]
-		if self.active_profile == oldname:
-			self.active_profile = newname
-
-		return self._save_profiles()
+		self.profiles[index].name = new_squashed
+		return userprofile.save_profiles(os.path.join(self.profile_folder,'profiles.json'),
+				self.profiles)
 	
 	def get_profiles(self):
 		'''Returns a list of loaded profiles'''
@@ -209,34 +131,46 @@ class ClientStorage:
 		'''
 		Returns the name of the default profile. If one has not been set, it returns an empty string.
 		'''
-		return self.default_profile
+		for item in self.profiles:
+			if item.isdefault:
+				return item.name
+		return ''
 
 	def set_default_profile(self, name):
 		'''
 		Sets the default profile. If there is only one profile -- or none at all -- this call has 
 		no effect.
 		'''
-		if name == 'default':
-			return { 'error' : "Name 'default' is reserved" }
-		
 		if not name:
 			return { 'error' : "Name parameter may not be empty" }
 		
 		if len(self.profiles) == 1:
-			it = iter(self.profiles)
-			self.profiles['default'] = next(it)
-			return { 'error' : '' }
+			if self.profiles[0].isdefault:
+				return { 'error' : '' }
+			self.profiles[0].isdefault = True
+			return userprofile.save_profiles(os.path.join(self.profile_folder,'profiles.json'),
+					self.profiles)
 		
-		if name:
-			if name in self.profiles.keys():
-				self.default_profile = name
-			else:
-				return { 'error' : 'Name not found' }
-		else:
-			self.default_profile = ''
+		oldindex = -1
+		for i in range(0, len(self.profiles)):
+			if self.profiles[i].isdefault:
+				oldindex = i
 		
-		self._save_profiles()
-		return { 'error' : '' }
+		name_squashed = name.casefold()
+		newindex = self.__index_for_profile(name_squashed)
+		
+		if newindex < 0:
+			return { 'error' : "New profile %s not found" % name_squashed }
+		
+		if oldindex >= 0:
+			if name_squashed == self.profiles[i].name:
+				return { 'error' : '' }
+			self.profiles[i].isdefault = False
+
+		self.profiles[newindex].isdefault = True		
+		
+		return userprofile.save_profiles(os.path.join(self.profile_folder,'profiles.json'),
+				self.profiles)
 
 	def activate_profile(self, name):
 		'''
@@ -248,54 +182,33 @@ class ClientStorage:
 		"host" : string
 		"port" : integer
 		'''
-		if self.active_profile:
+		if self.active_index >= 0:
 			self.db.disconnect()
+			self.active_index = -1
 		
 		if not name:
 			return { 'error' : "BUG: name may not be empty" }
 		
-		# This gives us the ability to easily load the default profile on startup by merely
-		# invoking activate_profile('default')
-		if name == 'default':
-			defprof = self.get_default_profile()
-			if defprof:
-				name = defprof
-			else:
-				# Empty string means there's only one profile available
-				name = self.profiles.keys()[0]
+		name_squashed = name.casefold()
+		active_index = self.__index_for_profile(name_squashed)
+		if active_index < 0:
+			return { 'error' : "%s doesn't exist" % name_squashed }
 		
-		if name not in self.profiles.keys():
-			return { 'error' : "%s doesn't exist" % name }
+		self.db.connect(name_squashed)
+		self.active_index = active_index
 		
-		self.db.connect(name)
-		self.active_profile = name
-		parts = utils.split_address(self.profiles[self.active_profile])
-		if parts['error']:
-			return parts
-		
-		self.active_wid = parts['wid']
-		self.active_domain = parts['domain']
-		
-		if ':' in self.active_domain:
-			domain_parts = self.active_domain.split(':')
-			domain = domain_parts[0]
-			try:
-				port = int(domain_parts[1])
-			except:
-				return { 'error' : 'bad host address syntax' }
-		else:
-			domain = self.active_domain
-			port = 2001
-		
-		return { 'error' : '', 'wid' : self.active_wid, 'host' : domain, 'port' : port }
+		return {
+			'error' : '', 
+			'wid' : self.profiles[active_index].wid,
+			'host' : self.profiles[active_index].domain,
+			'port' : self.profiles[active_index].port 
+		}
 
 	def get_active_profile(self):
 		'''Returns the active profile name'''
-		return self.active_profile
-
-	def get_active_wid(self):
-		'''Returns the WID of the active profile.'''
-		return self.active_wid
+		if self.active_index >= 0:
+			return self.profiles[self.active_index]
+		return ''
 
 	def set_credentials(self, address, pw):
 		'''
@@ -323,11 +236,12 @@ class ClientStorage:
 		"wid" : string
 		"password" : string -- empty if password-saving is disabled
 		'''
-		creds = self.db.get_credentials(self.active_wid, self.active_domain)
+		creds = self.db.get_credentials(self.profiles[self.active_index].wid,
+				self.profiles[self.active_index].domain)
 		if 'password' not in creds:
 			return { 'error' : 'database error' }
 		
-		creds['wid'] = self.active_wid
+		creds['wid'] = self.profiles[self.active_index].wid
 		return creds
 
 	def generate_profile_data(self, name, server, wid, pw):
