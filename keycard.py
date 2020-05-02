@@ -55,8 +55,8 @@ class __CardBase:
 			else:
 				raise TypeError
 		
-			expiration = datetime.datetime.utcnow() + datetime.timedelta(numdays)
-			self.fields['Expires'] = expiration.strftime("%Y%m%d")
+		expiration = datetime.datetime.utcnow() + datetime.timedelta(numdays)
+		self.fields['Expires'] = expiration.strftime("%Y%m%d")
 
 
 
@@ -123,29 +123,3 @@ class UserCard(__CardBase):
 		]
 		self.fields['Time-To-Live'] = '7'
 		self.set_expiration()
-
-
-if __name__ == '__main__':
-	card = OrgCard()
-	card.set_fields({
-		'Name':'Example, Inc.',
-		'Street':'1443 Dogwood Lane',
-		'City':'Nogales',
-		'Province':'AZ',
-		'Postal-Code':'85621',
-		'Country':'United States',
-		'Contact-Admin':'admin/example.com',
-		'Language':'English',
-		'Website':'https://www.example.com',
-		'Primary-Signing-Key':'l<V_`qb)QM=K#F>u-GCs?W1+>^nl1*#!%$NRxP-6',
-		'Secondary-Signing-Key':'`D7QV39R926R3nf<NjU;pi)80xJxvj#1&iWD0!%6',
-		'Encryption-Key':'9+8r$)N}={KFhGD3H2rv<q8$72b4A$K!DN;bGrvt',
-		'Web-Access':'mail.example.com:2081',
-		'Mail-Access':'mail.example.com:2001',
-		'Message-Size-Limit':'100MB'
-	})
-	compliant, bad_field = card.is_compliant()
-	print("Card is compliant: %s" % compliant)
-	if not compliant:
-		print("Non-compliant field: %s" % bad_field)
-	print(card)
