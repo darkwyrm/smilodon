@@ -1,6 +1,27 @@
 '''This module is responsible for Anselus keycard definition and resolution'''
 
+import base64
 import datetime
+
+import nacl.public
+import nacl.signing
+
+def generate_signing_key():
+	'''Generates a dictionary containing an Ed25519 key pair'''
+	key = nacl.signing.SigningKey.generate()
+	keypair = dict()
+	keypair['private'] = key.encode()
+	keypair['public'] = key.verify_key
+	return keypair
+
+
+def generate_encryption_key():
+	'''Generates a dictionary containing a Curve25519 encryption key pair'''
+	key = nacl.public.PrivateKey.generate()
+	keypair = dict()
+	keypair['private'] = key.encode()
+	keypair['public'] = key.public_key.encode()
+	return keypair
 
 
 class __CardBase:
@@ -57,7 +78,6 @@ class __CardBase:
 		
 		expiration = datetime.datetime.utcnow() + datetime.timedelta(numdays)
 		self.fields['Expires'] = expiration.strftime("%Y%m%d")
-
 
 
 class OrgCard(__CardBase):
@@ -123,3 +143,18 @@ class UserCard(__CardBase):
 		]
 		self.fields['Time-To-Live'] = '7'
 		self.set_expiration()
+
+
+class Base85Encoder:
+	'''Base85 encoder for PyNaCl library'''
+	@staticmethod
+	def encode(data):
+		'''Returns Base85 encoded data'''
+		return base64.b85encode(data)
+	
+	@staticmethod
+	def decode(data):
+		'''Returns Base85 decoded data'''
+		return base64.b85decode(data)
+
+
