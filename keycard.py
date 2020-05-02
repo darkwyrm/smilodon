@@ -1,5 +1,8 @@
 '''This module is responsible for Anselus keycard definition and resolution'''
 
+import datetime
+
+
 class __CardBase:
 	'''Represents an organizational keycard'''
 	def __init__(self):
@@ -21,14 +24,40 @@ class __CardBase:
 		return '\n'.join(lines)
 	
 	def is_compliant(self):
-		'''Checks the fields to ensure that it meets spec requirements'''
+		'''Checks the fields to ensure that it meets spec requirements. If a field causes it 
+		to be noncompliant, the noncompliant field is also returned'''
 
+		if self.type != 'User' and self.type != 'Organization':
+			return False
+		
 		# Check for existence of required fields
 		for field in self.required_fields:
 			if field not in self.fields or not self.fields[field]:
-				return False
+				return False, field
 		
-		return True
+		return True, ''
+	
+	def set_fields(self, fields):
+		'''Takes a dictionary of fields to be assigned to the object. Any field which is not part 
+		of the official spec is assigned but otherwise ignored.'''
+		for field in fields:
+			self.fields[field] = fields[field]
+
+	def set_expiration(self, numdays=-1):
+		'''Sets the expiration field using the specific form of ISO8601 format recommended. 
+		If not specified, organizational keycards expire 1 year from the present time and user 
+		keycards expire after 90 numdays. Other types of keycards raise a TypeError exception.'''
+		if numdays < 0:
+			if self.type == 'Organization':
+				numdays = 365
+			elif self.type == 'User':
+				numdays = 90
+			else:
+				raise TypeError
+		
+			expiration = datetime.datetime.utcnow() + datetime.timedelta(numdays)
+			self.fields['Expires'] = expiration.strftime("%Y%m%d")
+
 
 
 class OrgCard(__CardBase):
@@ -37,7 +66,6 @@ class OrgCard(__CardBase):
 		super().__init__()
 		self.type = 'Organization'
 		self.field_names = [
-			'Type',
 			'Name',
 			'Street',
 			'City',
@@ -59,7 +87,6 @@ class OrgCard(__CardBase):
 			'Expires'
 		]
 		self.required_fields = [
-			'Type',
 			'Name',
 			'Contact-Admin',
 			'Primary-Signing-Key',
@@ -67,7 +94,8 @@ class OrgCard(__CardBase):
 			'Time-To-Live',
 			'Expires'
 		]
-	
+		self.fields['Time-To-Live'] = '30'
+		self.set_expiration()
 
 
 class UserCard(__CardBase):
@@ -76,7 +104,6 @@ class UserCard(__CardBase):
 		super().__init__()
 		self.type = 'User'
 		self.field_names = [
-			'Type',
 			'Workspace-ID',
 			'Workspace-Name',
 			'Domain',
@@ -87,7 +114,6 @@ class UserCard(__CardBase):
 			'Expires'
 		]
 		self.required_fields = [
-			'Type',
 			'Workspace-ID',
 			'Domain',
 			'Contact-Request-Key',
@@ -95,11 +121,13 @@ class UserCard(__CardBase):
 			'Time-To-Live',
 			'Expires'
 		]
+		self.fields['Time-To-Live'] = '7'
+		self.set_expiration()
 
 
 if __name__ == '__main__':
 	card = OrgCard()
-	card.fields = {
+	card.set_fields({
 		'Name':'Example, Inc.',
 		'Street':'1443 Dogwood Lane',
 		'City':'Nogales',
@@ -115,5 +143,9 @@ if __name__ == '__main__':
 		'Web-Access':'mail.example.com:2081',
 		'Mail-Access':'mail.example.com:2001',
 		'Message-Size-Limit':'100MB'
-	}
+	})
+	compliant, bad_field = card.is_compliant()
+	print("Card is compliant: %s" % compliant)
+	if not compliant:
+		print("Non-compliant field: %s" % bad_field)
 	print(card)
