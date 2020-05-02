@@ -2,7 +2,6 @@ import datetime
 
 import keycard
 
-
 def test_orgcard():
 	'''Tests the OrgCard constructor'''
 	card = keycard.OrgCard()
@@ -16,7 +15,8 @@ def test_orgcard():
 		'Encryption-Key':'9+8r$)N}={KFhGD3H2rv<q8$72b4A$K!DN;bGrvt'
 	})
 	compliant, bad_field = card.is_compliant()
-	assert compliant, "OrgCard() compliance failed: %s" % bad_field
+	assert not compliant, "OrgCard() should not comply and did"
+	assert bad_field == 'Organizational-Signature', "Signature complied and shouldn't"
 
 def test_set_fields():
 	'''Tests setfields'''
@@ -40,7 +40,8 @@ def test_set_fields():
 		'noncompliant-field':'foobar2000'
 	})
 	compliant, bad_field = card.is_compliant()
-	assert compliant, "Setfield() compliance failed: %s" % bad_field
+	assert not compliant, "Setfield() should not comply and did"
+	assert bad_field == 'Organizational-Signature', "Signature complied and shouldn't"
 
 
 def test_usercard():
@@ -65,3 +66,18 @@ def test_set_expiration():
 	card.set_expiration(7)
 	expiration = datetime.datetime.utcnow() + datetime.timedelta(7)
 	assert card.fields['Expires'] == expiration.strftime("%Y%m%d"), "Expiration calculations failed"
+
+
+# def test_orgcard_sign():
+# 	'''Tests the signing of an organizational keycard'''
+# 	skey = nacl.signing.SigningKey.generate()
+# 	ekey = nacl.public.PrivateKey.generate()
+
+# 	card = keycard.OrgCard()
+# 	card.set_fields({
+# 		'Name':'Example, Inc.',
+# 		'Contact-Admin':'admin/example.com',
+# 		'Primary-Signing-Key':skey.verify_key.encode(keycard.Base85Encoder).decode(),
+# 		'Encryption-Key':ekey.public_key.encode(keycard.Base85Encoder).decode()
+# 	})
+# 	card.sign(skey.encode())

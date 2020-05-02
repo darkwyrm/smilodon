@@ -31,6 +31,7 @@ class __CardBase:
 		self.field_names = list()
 		self.required_fields = list()
 		self.type = ''
+		self.signatures = dict()
 
 	def __str__(self):
 		lines = list()
@@ -42,6 +43,10 @@ class __CardBase:
 			# meant to be human-readable, so order matters in that sense.
 			if field in self.fields and self.fields[field]:
 				lines.append("%s:%s" % (field, self.fields[field]))
+		
+		# To ensure that the entire thing ends in a newline
+		lines.append('')
+
 		return '\n'.join(lines)
 	
 	def is_compliant(self):
@@ -63,6 +68,9 @@ class __CardBase:
 		of the official spec is assigned but otherwise ignored.'''
 		for field in fields:
 			self.fields[field] = fields[field]
+		
+		# Any kind of editing invalidates the signatures
+		self.signatures = dict()
 
 	def set_expiration(self, numdays=-1):
 		'''Sets the expiration field using the specific form of ISO8601 format recommended. 
@@ -116,6 +124,50 @@ class OrgCard(__CardBase):
 		]
 		self.fields['Time-To-Live'] = '30'
 		self.set_expiration()
+	
+	def is_compliant(self):
+		'''Checks the fields to ensure that it meets spec requirements. If a field causes it 
+		to be noncompliant, the noncompliant field is also returned'''
+		status, bad_field = super().is_compliant()
+		if not status:
+			return status, bad_field
+		
+		if 'Organization' not in self.signatures or not self.signatures['Organization']:
+			return False, 'Organizational-Signature'
+		
+		return True, ''
+
+	def __str__(self):
+		lines = list()
+		if self.type:
+			lines.append("Type:" + self.type)
+		
+		for field in self.field_names:
+			if field in self.fields and self.fields[field]:
+				lines.append("%s:%s" % (field, self.fields[field]))
+		
+		if 'Organization' in self.signatures and self.signatures['Organization']:
+			lines.append('Organization-Signature:' + self.signatures['Organization'])
+		return '\n'.join(lines)
+
+	def sign(self, signing_key):
+		'''Adds the organizational signature to the keycard. Note that for any change in the 
+		keycard fields, this call must be made afterward.'''
+		if not signing_key:
+			raise ValueError
+		
+		if not isinstance(signing_key, bytes):
+			raise TypeError
+		
+		base = super().__str__()
+		key = nacl.signing.SigningKey(signing_key)
+		signed = key.sign(base.encode(), Base85Encoder)
+		self.signatures['Organization'] = signed.signature.decode()
+
+	def verify(self):
+		'''Verifies the signature, given a verification key'''
+		# TODO: Implement
+		return False
 
 
 class UserCard(__CardBase):
@@ -158,3 +210,16 @@ class Base85Encoder:
 		return base64.b85decode(data)
 
 
+if __name__ == '__main__':
+	skey = nacl.signing.SigningKey.generate()
+	ekey = nacl.public.PrivateKey.generate()
+
+	card = OrgCard()
+	card.set_fields({
+		'Name':'Example, Inc.',
+		'Contact-Admin':'admin/example.com',
+		'Primary-Signing-Key':skey.verify_key.encode(Base85Encoder).decode(),
+		'Encryption-Key':ekey.public_key.encode(Base85Encoder).decode()
+	})
+	card.sign(skey.encode())
+	print(card)
