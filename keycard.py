@@ -164,10 +164,19 @@ class OrgCard(__CardBase):
 		signed = key.sign(base.encode(), Base85Encoder)
 		self.signatures['Organization'] = signed.signature.decode()
 
-	def verify(self):
+	def verify(self, verify_key):
 		'''Verifies the signature, given a verification key'''
-		# TODO: Implement
-		return False
+		if 'Organization' not in self.signatures or not self.signatures['Organization']:
+			raise ValueError
+		
+		base = super().__str__()
+		vkey = nacl.signing.VerifyKey(Base85Encoder.decode(verify_key))
+		try:
+			vkey.verify(base.encode(), Base85Encoder.decode(self.signatures['Organization']))
+		except nacl.exceptions.BadSignatureError:
+			return False
+		
+		return True
 
 
 class UserCard(__CardBase):
@@ -223,3 +232,7 @@ if __name__ == '__main__':
 	})
 	card.sign(skey.encode())
 	print(card)
+	if card.verify(card.fields['Primary-Signing-Key']):
+		print("Card verifies")
+	else:
+		print("Card doesn't verify")
