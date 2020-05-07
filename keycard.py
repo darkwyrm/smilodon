@@ -63,6 +63,23 @@ class __CardBase:
 		
 		return True, ''
 	
+	def set_from_string(self, text):
+		'''Takes a string representation of the keycard and parses it into fields and signatures.'''
+		if not text:
+			self.fields = dict()
+			self.signatures = dict()
+			return
+		
+		lines = text.split('\n')
+		for line in lines:
+			line = line.strip()
+			if not line:
+				continue
+			parts = line.split(':', 1)
+			if len(parts) > 1:
+				self.fields[parts[0]] = parts[1]
+
+
 	def set_fields(self, fields):
 		'''Takes a dictionary of fields to be assigned to the object. Any field which is not part 
 		of the official spec is assigned but otherwise ignored.'''
@@ -124,7 +141,14 @@ class OrgCard(__CardBase):
 		]
 		self.fields['Time-To-Live'] = '30'
 		self.set_expiration()
-	
+
+	def set_from_string(self, text):
+		'''Initializes the keycard from string data'''
+		super().set_from_string(text)
+		if 'Organization-Signature' in self.fields:
+			self.signatures['Organization'] = self.fields['Organization-Signature']
+			del self.fields['Organization-Signature']
+
 	def is_compliant(self):
 		'''Checks the fields to ensure that it meets spec requirements. If a field causes it 
 		to be noncompliant, the noncompliant field is also returned'''
@@ -223,16 +247,4 @@ if __name__ == '__main__':
 	skey = nacl.signing.SigningKey.generate()
 	ekey = nacl.public.PrivateKey.generate()
 
-	card = OrgCard()
-	card.set_fields({
-		'Name':'Example, Inc.',
-		'Contact-Admin':'admin/example.com',
-		'Primary-Signing-Key':skey.verify_key.encode(Base85Encoder).decode(),
-		'Encryption-Key':ekey.public_key.encode(Base85Encoder).decode()
-	})
-	card.sign(skey.encode())
-	print(card)
-	if card.verify(card.fields['Primary-Signing-Key']):
-		print("Card verifies")
-	else:
-		print("Card doesn't verify")
+	card = UserCard()

@@ -1,5 +1,7 @@
 import datetime
 
+import nacl.signing
+
 import keycard
 
 def test_orgcard():
@@ -68,16 +70,33 @@ def test_set_expiration():
 	assert card.fields['Expires'] == expiration.strftime("%Y%m%d"), "Expiration calculations failed"
 
 
-# def test_orgcard_sign():
-# 	'''Tests the signing of an organizational keycard'''
-# 	skey = nacl.signing.SigningKey.generate()
-# 	ekey = nacl.public.PrivateKey.generate()
+def test_orgcard_sign_verify():
+	'''Tests the signing of an organizational keycard'''
+	skey = nacl.signing.SigningKey.generate()
+	ekey = nacl.public.PrivateKey.generate()
 
-# 	card = keycard.OrgCard()
-# 	card.set_fields({
-# 		'Name':'Example, Inc.',
-# 		'Contact-Admin':'admin/example.com',
-# 		'Primary-Signing-Key':skey.verify_key.encode(keycard.Base85Encoder).decode(),
-# 		'Encryption-Key':ekey.public_key.encode(keycard.Base85Encoder).decode()
-# 	})
-# 	card.sign(skey.encode())
+	card = keycard.OrgCard()
+	card.set_fields({
+		'Name':'Example, Inc.',
+		'Contact-Admin':'admin/example.com',
+		'Primary-Signing-Key':skey.verify_key.encode(keycard.Base85Encoder).decode(),
+		'Encryption-Key':ekey.public_key.encode(keycard.Base85Encoder).decode()
+	})
+	card.sign(skey.encode())
+	assert card.signatures['Organization'], 'keycard failed to sign'
+	assert card.verify(card.fields['Primary-Signing-Key']), 'keycard failed to verify'
+
+
+def test_orgcard_set_from_string():
+	'''Tests an organizational keycard from raw text'''
+	card = keycard.OrgCard()
+	card.set_from_string('''Type:Organization
+	Name:Example, Inc.
+	Contact-Admin:admin/example.com
+	Primary-Signing-Key:fbqsEyXT`Sq?us{OgVygsK|zBP7njBmwT+Q_a*0E
+	Encryption-Key:0IaDFoy}NDe1@fzkg9z!5`@gclY20sRINMJd_{j!
+	Time-To-Live:30
+	Expires:20210507
+	Organization-Signature:ct1+I$3hcAikDsXP*%I)z0_9_VH;47DsPd-gsdzbq~LOqq(*1h#R$vC>jz~>_yOk<y4mG}ur^CVFLQ?p
+	''')
+	assert card.verify(card.fields['Primary-Signing-Key']), 'keycard failed to verify'
