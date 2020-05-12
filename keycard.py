@@ -9,6 +9,7 @@ import nacl.signing
 from retval import RetVal, BadParameterValue, BadParameterType
 
 UnsupportedKeycardType = 'UnsupportedKeycardType'
+InvalidKeycard = 'InvalidKeycard'
 
 # These three return codes are associated with a second field, 'field', which indicates which
 # signature field is related to the error
@@ -174,7 +175,9 @@ class OrgCard(__CardBase):
 			return rv
 		
 		if 'Organization' not in self.signatures or not self.signatures['Organization']:
-			return RetVal(SignatureMissing)
+			rv = RetVal(SignatureMissing)
+			rv['field'] = 'Organization-Signature'
+			return rv
 		
 		return RetVal()
 
@@ -217,10 +220,8 @@ class OrgCard(__CardBase):
 		try:
 			vkey.verify(base.encode(), Base85Encoder.decode(self.signatures['Organization']))
 		except nacl.exceptions.BadSignatureError:
-			rv['valid'] = False
-			return rv
+			rv.set_error(InvalidKeycard)
 		
-		rv['valid'] = True
 		return rv
 
 
@@ -263,6 +264,7 @@ class UserCard(__CardBase):
 			return rv
 		
 		if 'Organization' not in self.signatures or not self.signatures['Organization']:
+			rv.set_error(SignatureMissing)
 			rv['field'] = 'Organization-Signature'
 			return rv
 		
@@ -329,7 +331,7 @@ class UserCard(__CardBase):
 		if sigtype == 'User':
 			if 'User' in self.signatures:
 				del self.signatures['Organization']
-			if self.signatures['Custody']:
+			if 'Custody' in self.signatures and self.signatures['Custody']:
 				parts.append('Custody-Signature:' + self.signatures['Custody'] + '\n')
 		elif sigtype == 'Orgnization':
 			if not self.signatures['User']:
@@ -379,10 +381,8 @@ class UserCard(__CardBase):
 		try:
 			vkey.verify(''.join(parts).encode(), Base85Encoder.decode(self.signatures[sigtype]))
 		except nacl.exceptions.BadSignatureError:
-			rv['valid'] = False
-			return rv
+			rv.set_error(InvalidKeycard)
 		
-		rv['valid'] = True
 		return rv
 
 
