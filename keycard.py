@@ -6,6 +6,17 @@ import datetime
 import nacl.public
 import nacl.signing
 
+from retval import RetVal, BadParameterValue, BadParameterType
+
+UnsupportedKeycardType = 'UnsupportedKeycardType'
+
+# These three return codes are associated with a second field, 'field', which indicates which
+# signature field is related to the error
+NotCompliant = 'NotCompliant'
+RequiredFieldMissing = 'RequiredFieldMissing'
+SignatureMissing = 'SignatureMissing'
+
+
 def generate_signing_key():
 	'''Generates a dictionary containing an Ed25519 key pair'''
 	key = nacl.signing.SigningKey.generate()
@@ -57,14 +68,16 @@ class __CardBase:
 		to be noncompliant, the noncompliant field is also returned'''
 
 		if self.type != 'User' and self.type != 'Organization':
-			return False
+			return RetVal(UnsupportedKeycardType)
 		
 		# Check for existence of required fields
 		for field in self.required_fields:
 			if field not in self.fields or not self.fields[field]:
-				return False, field
+				rv = RetVal(RequiredFieldMissing)
+				rv['field'] = field
+				return rv
 		
-		return True, ''
+		return RetVal()
 	
 	def set_from_string(self, text):
 		'''Takes a string representation of the keycard and parses it into fields and signatures.'''
@@ -95,17 +108,18 @@ class __CardBase:
 	def set_expiration(self, numdays=-1):
 		'''Sets the expiration field using the specific form of ISO8601 format recommended. 
 		If not specified, organizational keycards expire 1 year from the present time and user 
-		keycards expire after 90 numdays. Other types of keycards raise a TypeError exception.'''
+		keycards expire after 90 numdays. Other types of keycards return an error.'''
 		if numdays < 0:
 			if self.type == 'Organization':
 				numdays = 365
 			elif self.type == 'User':
 				numdays = 90
 			else:
-				raise TypeError
+				return RetVal(UnsupportedKeycardType)
 		
 		expiration = datetime.datetime.utcnow() + datetime.timedelta(numdays)
 		self.fields['Expires'] = expiration.strftime("%Y%m%d")
+		return RetVal()
 
 
 class OrgCard(__CardBase):
@@ -155,14 +169,14 @@ class OrgCard(__CardBase):
 	def is_compliant(self):
 		'''Checks the fields to ensure that it meets spec requirements. If a field causes it 
 		to be noncompliant, the noncompliant field is also returned'''
-		status, bad_field = super().is_compliant()
-		if not status:
-			return status, bad_field
+		rv = super().is_compliant()
+		if rv.error():
+			return rv
 		
 		if 'Organization' not in self.signatures or not self.signatures['Organization']:
-			return False, 'Organizational-Signature'
+			return RetVal(SignatureMissing)
 		
-		return True, ''
+		return RetVal()
 
 	def __str__(self):
 		lines = list()
@@ -181,29 +195,33 @@ class OrgCard(__CardBase):
 		'''Adds the organizational signature to the keycard. Note that for any change in the 
 		keycard fields, this call must be made afterward.'''
 		if not signing_key:
-			raise ValueError
+			return RetVal(BadParameterValue)
 		
 		if not isinstance(signing_key, bytes):
-			raise TypeError
+			return RetVal(BadParameterType)
 		
 		base = super().__str__()
 		key = nacl.signing.SigningKey(signing_key)
 		signed = key.sign(base.encode(), Base85Encoder)
 		self.signatures['Organization'] = signed.signature.decode()
+		return RetVal()
 
 	def verify(self, verify_key):
 		'''Verifies the signature, given a verification key'''
 		if 'Organization' not in self.signatures or not self.signatures['Organization']:
-			raise ValueError
+			return RetVal(SignatureMissing)
 		
+		rv = RetVal()
 		base = super().__str__()
 		vkey = nacl.signing.VerifyKey(Base85Encoder.decode(verify_key))
 		try:
 			vkey.verify(base.encode(), Base85Encoder.decode(self.signatures['Organization']))
 		except nacl.exceptions.BadSignatureError:
-			return False
+			rv['valid'] = False
+			return rv
 		
-		return True
+		rv['valid'] = True
+		return rv
 
 
 class UserCard(__CardBase):
@@ -235,17 +253,20 @@ class UserCard(__CardBase):
 	def is_compliant(self):
 		'''Checks the fields to ensure that it meets spec requirements. If a field causes it 
 		to be noncompliant, the noncompliant field is also returned'''
-		status, bad_field = super().is_compliant()
-		if not status:
-			return status, bad_field
+		rv = super().is_compliant()
+		if rv.error():
+			return rv
 		
 		if 'User' not in self.signatures or not self.signatures['User']:
-			return False, 'User-Signature'
+			rv.set_error(SignatureMissing)
+			rv['field'] = 'User-Signature'
+			return rv
 		
 		if 'Organization' not in self.signatures or not self.signatures['Organization']:
-			return False, 'Organizational-Signature'
+			rv['field'] = 'Organization-Signature'
+			return rv
 		
-		return True, ''
+		return rv
 
 	def set_from_string(self, text):
 		'''Initializes the keycard from string data'''
@@ -281,11 +302,21 @@ class UserCard(__CardBase):
 		call must be made afterward. Note that successive signatures are deleted, such that 
 		updating a User signature will delete the Organization signature which depends on it. The 
 		sigtype must be Custody, User, or Organization, and the type is case-sensitive.'''
-		if not signing_key or sigtype not in ['Custody', 'User', 'Organization']:
-			raise ValueError
+		rv = RetVal()
+		if not signing_key:
+			rv.set_error(BadParameterValue)
+			rv['parameter'] = 'signing_key'
+			return rv 
+		
+		if sigtype not in ['Custody', 'User', 'Organization']:
+			rv.set_error(BadParameterValue)
+			rv['parameter'] = 'sigtype'
+			return rv 
 		
 		if not isinstance(signing_key, bytes):
-			raise TypeError
+			rv.set_error(BadParameterType)
+			rv['parameter'] = 'signing_key'
+			return rv 
 		
 		key = nacl.signing.SigningKey(signing_key)
 		parts = [ super().__str__() ]
@@ -307,11 +338,25 @@ class UserCard(__CardBase):
 		
 		signed = key.sign(''.join(parts).encode(), Base85Encoder)
 		self.signatures[sigtype] = signed.signature.decode()
+		return RetVal()
 
 	def verify(self, verify_key, sigtype):
 		'''Verifies a signature, given a verification key'''
-		if sigtype not in self.signatures or not self.signatures[sigtype]:
-			raise ValueError
+		rv = RetVal()
+		if not verify_key:
+			rv.set_error(BadParameterValue)
+			rv['parameter'] = 'verify_key'
+			return rv 
+		
+		if sigtype not in ['Custody', 'User', 'Organization']:
+			rv.set_error(BadParameterValue)
+			rv['parameter'] = 'sigtype'
+			return rv 
+		
+		if not isinstance(verify_key, bytes):
+			rv.set_error(BadParameterType)
+			rv['parameter'] = 'verify_key'
+			return rv 
 		
 		vkey = nacl.signing.VerifyKey(Base85Encoder.decode(verify_key))
 		parts = [ super().__str__() ]
@@ -321,18 +366,24 @@ class UserCard(__CardBase):
 				parts.append('Custody-Signature:' + self.signatures['Custody'] + '\n')
 			else:
 				# The Custody-Signature field must be populated if it exists
-				raise ComplianceException
-		elif sigtype == 'Orgnization':
+				rv.set_error(NotCompliant)
+				rv['field'] = 'Custody-Signature'
+				return rv
+		elif sigtype == 'Organization':
 			if 'User' not in self.signatures or not self.signatures['User']:
-				raise ComplianceException
+				rv.set_error(NotCompliant)
+				rv['field'] = 'User-Signature'
+				return rv
 			parts.append('User-Signature:' + self.signatures['User'] + '\n')
 		
 		try:
 			vkey.verify(''.join(parts).encode(), Base85Encoder.decode(self.signatures[sigtype]))
 		except nacl.exceptions.BadSignatureError:
-			return False
+			rv['valid'] = False
+			return rv
 		
-		return True
+		rv['valid'] = True
+		return rv
 
 
 class Base85Encoder:
