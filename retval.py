@@ -1,17 +1,18 @@
 '''RetVal is a module for flexible return values and error checking without exceptions'''
 
 # Constants for error checking
-BadParameterValue = 'BadParameterValue'
-BadParameterType = 'BadParameterType'
-TooSmall = 'TooSmall'
-TooLarge = 'TooLarge'
 OK = ''
 NoError = ''
 
+# When either of these are returned and more than one parameter is needed by the function,
+# the field 'parameter' will also be returned and will contain the name of the bad parameter
+BadParameterValue = 'BadParameterValue'
+BadParameterType = 'BadParameterType'
+
 class RetVal:
-	'''The RetVal class enables easy error checking and variable return values'''
-	def __init__(self):
-		self._fields = { '_error':OK }
+	'''The RetVal class enables better error checking and variable return values'''
+	def __init__(self, value=OK):
+		self._fields = { '_error':value }
 	
 	def __contains__(self, key):
 		return key in self._fields
@@ -55,3 +56,4 @@ class RetVal:
 	def count(self):
 		'''Returns the number of values contained by the return value'''
 		return len(self._fields) - 1
+	
