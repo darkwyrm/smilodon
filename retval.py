@@ -1,16 +1,17 @@
 '''RetVal is a module for flexible return values and error checking without exceptions'''
 
 # Constants for error checking
-IsEmpty = 'IsEmpty'
-IsNotEmpty = 'IsNotEmpty'
+BadParameterValue = 'BadParameterValue'
+BadParameterType = 'BadParameterType'
 TooSmall = 'TooSmall'
 TooLarge = 'TooLarge'
+OK = ''
+NoError = ''
 
 class RetVal:
 	'''The RetVal class enables easy error checking and variable return values'''
 	def __init__(self):
-		self._fields = dict()
-		self._fields['_error'] = ''
+		self._fields = { '_error':OK }
 	
 	def __contains__(self, key):
 		return key in self._fields
@@ -27,6 +28,14 @@ class RetVal:
 	def __setitem__(self, key, value):
 		self._fields[key] = value
 	
+	def set_error(self, value):
+		'''Sets the error value of the object'''
+		self._fields['_error'] = value
+
+	def error(self):
+		'''Gets the error value of the object'''
+		return self._fields['_error']
+
 	def set_value(self, name, value):
 		'''Adds a field to the object. Returns True if successful.'''
 		if name == '_error':
@@ -38,12 +47,11 @@ class RetVal:
 	def has_value(self, s):
 		'''Tests if a specific value field has been returned'''
 		return s in self._fields
+	
+	def empty(self):
+		'''Empties the object of all values and clears any errors'''
+		self._fields = { '_error':OK }
 
 	def count(self):
 		'''Returns the number of values contained by the return value'''
 		return len(self._fields) - 1
-
-	def test(self, s):
-		'''tests for an error matching the supplied string code'''
-		return self._fields['_error'] == s
-	
