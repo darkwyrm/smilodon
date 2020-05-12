@@ -24,6 +24,7 @@ def generate_encryption_key():
 	return keypair
 
 class ComplianceException(Exception):
+	'''Custom exception for spec compliance failures'''
 	pass
 
 class __CardBase:
