@@ -1,14 +1,16 @@
+'''This module tests the KeyCard class'''
 import datetime
 
 import nacl.signing
 
 import keycard
+# Pylint doesn't detect the use of this import:
+from retval import RetVal # pylint: disable=unused-import
 
 def test_orgcard():
 	'''Tests the OrgCard constructor'''
 	card = keycard.OrgCard()
-	compliant, bad_field = card.is_compliant()
-	assert not compliant, "Initial OrgCard() complies but shouldn't"
+	assert card.is_compliant().error(), "Initial OrgCard() complies but shouldn't"
 
 	card.set_fields({
 		'Name':'Example, Inc.',
@@ -16,9 +18,9 @@ def test_orgcard():
 		'Primary-Signing-Key':'l<V_`qb)QM=K#F>u-GCs?W1+>^nl1*#!%$NRxP-6',
 		'Encryption-Key':'9+8r$)N}={KFhGD3H2rv<q8$72b4A$K!DN;bGrvt'
 	})
-	compliant, bad_field = card.is_compliant()
-	assert not compliant, "OrgCard() should not comply and did"
-	assert bad_field == 'Organizational-Signature', "Signature complied and shouldn't"
+	rv = card.is_compliant()
+	assert rv.error(), "OrgCard() should not comply and did"
+	assert rv['field'] == 'Organization-Signature', "Signature complied and shouldn't"
 
 def test_set_fields():
 	'''Tests setfields'''
@@ -41,25 +43,9 @@ def test_set_fields():
 		'Message-Size-Limit':'100MB',
 		'noncompliant-field':'foobar2000'
 	})
-	compliant, bad_field = card.is_compliant()
-	assert not compliant, "Setfield() should not comply and did"
-	assert bad_field == 'Organizational-Signature', "Signature complied and shouldn't"
-
-
-def test_usercard():
-	'''Tests the UserCard constructor'''
-	card = keycard.UserCard()
-	compliant, bad_field = card.is_compliant()
-	assert not compliant, "Initial UserCard() complies but shouldn't"
-
-	card.set_fields({
-		'Workspace-ID':'00000000-1111-2222-3333-444444444444',
-		'Domain':'example.com',
-		'Contact-Request-Key':'l<V_`qb)QM=K#F>u-GCs?W1+>^nl1*#!%$NRxP-6',
-		'Public-Encryption-Key':'`D7QV39R926R3nf<NjU;pi)80xJxvj#1&iWD0!%6',
-	})
-	compliant, bad_field = card.is_compliant()
-	assert compliant, "UserCard() compliance failed: %s" % bad_field
+	rv = card.is_compliant()
+	assert rv.error(), "Setfield() should not comply and did"
+	assert rv['field'] == 'Organization-Signature', "Signature complied and shouldn't"
 
 
 def test_set_expiration():
@@ -82,7 +68,8 @@ def test_orgcard_sign_verify():
 		'Primary-Signing-Key':skey.verify_key.encode(keycard.Base85Encoder).decode(),
 		'Encryption-Key':ekey.public_key.encode(keycard.Base85Encoder).decode()
 	})
-	card.sign(skey.encode())
+	rv = card.sign(skey.encode())
+	assert not rv.error(), 'Unexpected RetVal error'
 	assert card.signatures['Organization'], 'keycard failed to sign'
 	assert card.verify(card.fields['Primary-Signing-Key']), 'keycard failed to verify'
 
@@ -100,3 +87,68 @@ def test_orgcard_set_from_string():
 	Organization-Signature:ct1+I$3hcAikDsXP*%I)z0_9_VH;47DsPd-gsdzbq~LOqq(*1h#R$vC>jz~>_yOk<y4mG}ur^CVFLQ?p
 	''')
 	assert card.verify(card.fields['Primary-Signing-Key']), 'keycard failed to verify'
+
+
+def test_usercard():
+	'''Tests the UserCard constructor'''
+	card = keycard.UserCard()
+	rv = card.is_compliant()
+	assert rv.error(), "Initial UserCard() complies but shouldn't"
+
+	card.set_fields({
+		'Workspace-ID':'00000000-1111-2222-3333-444444444444',
+		'Domain':'example.com',
+		'Contact-Request-Key':'fbqsEyXT`Sq?us{OgVygsK|zBP7njBmwT+Q_a*0E',
+		'Public-Encryption-Key':'0IaDFoy}NDe1@fzkg9z!5`@gclY20sRINMJd_{j!',
+	})
+	card.signatures['User'] = 'TestBadUserSig'
+	card.signatures['Organization'] = 'TestBadOrgSig'
+
+	rv = card.is_compliant()
+	assert not rv.error(), "UserCard() compliance failed: %s" % rv['field']
+
+
+def test_usercard_sign_verify():
+	'''Tests the signing of a user keycard'''
+	skey = nacl.signing.SigningKey.generate()
+	crkey = nacl.public.PrivateKey.generate()
+	ekey = nacl.public.PrivateKey.generate()
+
+	card = keycard.UserCard()
+	card.set_fields({
+		'Name':'Example, Inc.',
+		'Contact-Admin':'admin/example.com',
+		'Contact-Request-Key':crkey.public_key.encode(keycard.Base85Encoder).decode(),
+		'Encryption-Key':ekey.public_key.encode(keycard.Base85Encoder).decode()
+	})
+	rv = card.sign(skey.encode(), 'User')
+	assert not rv.error(), 'Unexpected RetVal error'
+	assert card.signatures['User'], 'keycard failed to user sign'
+
+	org_skey = nacl.signing.SigningKey.generate()
+	rv = card.sign(org_skey.encode(), 'Organization')
+	assert not rv.error(), 'Unexpected RetVal error'
+	assert card.signatures['Organization'], 'keycard failed to org sign'
+	
+	rv = card.verify(skey.verify_key.encode(keycard.Base85Encoder).decode(), 'User')
+	assert not rv.error(), 'keycard failed to user verify'
+	
+	rv = card.verify(org_skey.verify_key.encode(keycard.Base85Encoder).decode(), 'Organization')
+	assert not rv.error(), 'keycard failed to org verify'
+
+
+# TODO: Implement once sign_verify works
+def test_usercard_set_from_string():
+	'''Tests a user keycard from raw text'''
+	card = keycard.UserCard()
+	card.set_from_string('''Type:Organization
+	Name:Example, Inc.
+	Contact-Admin:admin/example.com
+	Primary-Signing-Key:fbqsEyXT`Sq?us{OgVygsK|zBP7njBmwT+Q_a*0E
+	Encryption-Key:0IaDFoy}NDe1@fzkg9z!5`@gclY20sRINMJd_{j!
+	Time-To-Live:30
+	Expires:20210507
+	Organization-Signature:ct1+I$3hcAikDsXP*%I)z0_9_VH;47DsPd-gsdzbq~LOqq(*1h#R$vC>jz~>_yOk<y4mG}ur^CVFLQ?p
+	''')
+	# assert card.verify(card.fields['Primary-Signing-Key']), 'keycard failed to verify'
+
