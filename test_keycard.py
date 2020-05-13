@@ -116,10 +116,12 @@ def test_usercard_sign_verify():
 
 	card = keycard.UserCard()
 	card.set_fields({
-		'Name':'Example, Inc.',
-		'Contact-Admin':'admin/example.com',
+		'Name':'Corbin Simons',
+		'Workspace-ID':'4418bf6c-000b-4bb3-8111-316e72030468',
+		'Workspace-Name':'csimons/example.com',
+		'Domain':'example.com',
 		'Contact-Request-Key':crkey.public_key.encode(keycard.Base85Encoder).decode(),
-		'Encryption-Key':ekey.public_key.encode(keycard.Base85Encoder).decode()
+		'Public-Encryption-Key':ekey.public_key.encode(keycard.Base85Encoder).decode()
 	})
 	rv = card.sign(skey.encode(), 'User')
 	assert not rv.error(), 'Unexpected RetVal error'
@@ -130,10 +132,10 @@ def test_usercard_sign_verify():
 	assert not rv.error(), 'Unexpected RetVal error'
 	assert card.signatures['Organization'], 'keycard failed to org sign'
 	
-	rv = card.verify(skey.verify_key.encode(keycard.Base85Encoder).decode(), 'User')
+	rv = card.verify(skey.verify_key.encode(keycard.Base85Encoder), 'User')
 	assert not rv.error(), 'keycard failed to user verify'
 	
-	rv = card.verify(org_skey.verify_key.encode(keycard.Base85Encoder).decode(), 'Organization')
+	rv = card.verify(org_skey.verify_key.encode(keycard.Base85Encoder), 'Organization')
 	assert not rv.error(), 'keycard failed to org verify'
 
 

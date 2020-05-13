@@ -195,7 +195,7 @@ class OrgCard(__CardBase):
 		return '\n'.join(lines)
 
 	def sign(self, signing_key):
-		'''Adds the organizational signature to the keycard. Note that for any change in the 
+		'''Adds the organizational signature to the  Note that for any change in the 
 		keycard fields, this call must be made afterward.'''
 		if not signing_key:
 			return RetVal(BadParameterValue)
@@ -300,7 +300,7 @@ class UserCard(__CardBase):
 		return '\n'.join(lines)
 
 	def sign(self, signing_key, sigtype):
-		'''Adds a signature to the keycard. Note that for any change in the keycard fields, this 
+		'''Adds a signature to the  Note that for any change in the keycard fields, this 
 		call must be made afterward. Note that successive signatures are deleted, such that 
 		updating a User signature will delete the Organization signature which depends on it. The 
 		sigtype must be Custody, User, or Organization, and the type is case-sensitive.'''
@@ -401,6 +401,22 @@ class Base85Encoder:
 
 if __name__ == '__main__':
 	skey = nacl.signing.SigningKey.generate()
+	crkey = nacl.public.PrivateKey.generate()
 	ekey = nacl.public.PrivateKey.generate()
 
 	card = UserCard()
+	card.set_fields({
+		'Name':'Corbin Simons',
+		'Workspace-ID':'4418bf6c-000b-4bb3-8111-316e72030468',
+		'Workspace-Name':'csimons/example.com',
+		'Domain':'example.com',
+		'Contact-Request-Key':crkey.public_key.encode(Base85Encoder).decode(),
+		'Public-Encryption-Key':ekey.public_key.encode(Base85Encoder).decode()
+	})
+	rv = card.sign(skey.encode(), 'User')
+
+	org_skey = nacl.signing.SigningKey.generate()
+	rv = card.sign(org_skey.encode(), 'Organization')
+	rv = card.verify(skey.verify_key.encode(Base85Encoder), 'User')
+	rv = card.verify(org_skey.verify_key.encode(Base85Encoder), 'Organization')
+	print(card)
