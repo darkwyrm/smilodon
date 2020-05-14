@@ -363,7 +363,7 @@ class UserCard(__CardBase):
 		vkey = nacl.signing.VerifyKey(Base85Encoder.decode(verify_key))
 		parts = [ super().__str__() ]
 		
-		if sigtype == 'User' and 'Custody' in self.signatures:
+		if 'Custody' in self.signatures:
 			if self.signatures['Custody']:
 				parts.append('Custody-Signature:' + self.signatures['Custody'] + '\n')
 			else:
@@ -371,7 +371,8 @@ class UserCard(__CardBase):
 				rv.set_error(NotCompliant)
 				rv['field'] = 'Custody-Signature'
 				return rv
-		elif sigtype == 'Organization':
+		
+		if sigtype == 'Organization':
 			if 'User' not in self.signatures or not self.signatures['User']:
 				rv.set_error(NotCompliant)
 				rv['field'] = 'User-Signature'
@@ -414,9 +415,9 @@ if __name__ == '__main__':
 		'Public-Encryption-Key':ekey.public_key.encode(Base85Encoder).decode()
 	})
 	rv = card.sign(skey.encode(), 'User')
+	rv = card.verify(skey.verify_key.encode(Base85Encoder), 'User')
 
 	org_skey = nacl.signing.SigningKey.generate()
 	rv = card.sign(org_skey.encode(), 'Organization')
-	rv = card.verify(skey.verify_key.encode(Base85Encoder), 'User')
 	rv = card.verify(org_skey.verify_key.encode(Base85Encoder), 'Organization')
 	print(card)
