@@ -231,6 +231,7 @@ class UserCard(__CardBase):
 		super().__init__()
 		self.type = 'User'
 		self.field_names = [
+			'Name',
 			'Workspace-ID',
 			'Workspace-Name',
 			'Domain',
@@ -295,7 +296,7 @@ class UserCard(__CardBase):
 		
 		for sig in [ 'Custody', 'User', 'Organization' ]:
 			if sig in self.signatures and self.signatures[sig]:
-				lines.append(''.join([sig, '-Signature:', self.signatures['User']]))
+				lines.append(''.join([sig, '-Signature:', self.signatures[sig]]))
 		
 		return '\n'.join(lines)
 
@@ -320,7 +321,7 @@ class UserCard(__CardBase):
 			rv['parameter'] = 'signing_key'
 			return rv 
 		
-		key = nacl.signing.SigningKey(signing_key)
+		key = nacl.signing.SigningKey(Base85Encoder.decode(signing_key))
 		parts = [ super().__str__() ]
 		
 		if sigtype == 'Custody':
@@ -329,11 +330,11 @@ class UserCard(__CardBase):
 				del self.signatures['Organization']
 		
 		if sigtype == 'User':
-			if 'User' in self.signatures:
+			if 'Organization' in self.signatures:
 				del self.signatures['Organization']
 			if 'Custody' in self.signatures and self.signatures['Custody']:
 				parts.append('Custody-Signature:' + self.signatures['Custody'] + '\n')
-		elif sigtype == 'Orgnization':
+		elif sigtype == 'Organization':
 			if not self.signatures['User']:
 				raise ComplianceException
 			parts.append('User-Signature:' + self.signatures['User'] + '\n')
@@ -401,23 +402,26 @@ class Base85Encoder:
 
 
 if __name__ == '__main__':
-	skey = nacl.signing.SigningKey.generate()
-	crkey = nacl.public.PrivateKey.generate()
-	ekey = nacl.public.PrivateKey.generate()
+	skey = nacl.signing.SigningKey(b'{Ue^0)?k`s(>pNG&Wg9f5b;VHN1^PC*c4-($G#>}',Base85Encoder)
+	crkey = nacl.public.PrivateKey(b'VyFX5PC~?eL5)>q|6W7ciRrOJw$etlej<tY$f+t_',Base85Encoder)
+	ekey = nacl.public.PrivateKey(b'Wsx6BC(HP~goS-C_`K=6Daqr97kapfc=vQUzi?KI',Base85Encoder)
+	org_skey = nacl.signing.SigningKey(b'JCfIfVhvn|k4Q%M2>@)ENbX%fE_+0Ml2%oz<Mss?',Base85Encoder)
 
 	card = UserCard()
-	card.set_fields({
-		'Name':'Corbin Simons',
-		'Workspace-ID':'4418bf6c-000b-4bb3-8111-316e72030468',
-		'Workspace-Name':'csimons/example.com',
-		'Domain':'example.com',
-		'Contact-Request-Key':crkey.public_key.encode(Base85Encoder).decode(),
-		'Public-Encryption-Key':ekey.public_key.encode(Base85Encoder).decode()
-	})
-	rv = card.sign(skey.encode(), 'User')
-	rv = card.verify(skey.verify_key.encode(Base85Encoder), 'User')
-
-	org_skey = nacl.signing.SigningKey.generate()
-	rv = card.sign(org_skey.encode(), 'Organization')
-	rv = card.verify(org_skey.verify_key.encode(Base85Encoder), 'Organization')
+	card.set_from_string('''Type:User
+	Name:Corbin Simons
+	Workspace-ID:4418bf6c-000b-4bb3-8111-316e72030468
+	Workspace-Name:csimons/example.com
+	Domain:example.com
+	Contact-Request-Key:yBZ0{1fE9{2<b~#i^R+JT-yh-y5M(Wyw_)}_SZOn
+	Public-Encryption-Key:_`UC|vltn_%P5}~vwV^)oY){#uvQSSy(dOD_l(yE
+	Time-To-Live:7
+	Expires:20200812
+	User-Signature:K$&m~?|fdchy4GSTEiCoaF6WxM)ySeV|=#;M35}*wrQ5cSc)CC2l2gY*JF4-vLq(WFg8qE_qks56%nQl
+	Organization-Signature:G(8a}*krMSR($!Uq?=5Sk)J~w2uGGAOD~~<hvsAK7TvS>%>gP{answ=TXB;pakRinUvy1)>B7^4A2tyO
+	''')
+	rval = card.verify(skey.verify_key.encode(Base85Encoder), 'User')
+	print(rval.error())
+	rval = card.verify(org_skey.verify_key.encode(Base85Encoder), 'Organization')
+	print(rval.error())
 	print(card)
