@@ -4,10 +4,13 @@ adding other engines easy.
 '''
 
 import os
+import pathlib
 import platform
 import sqlite3
 
-from retval import RetVal, BadParameterValue
+from retval import RetVal, BadParameterValue, FilesystemError
+
+DBConnectionFailed = 'DBConnectionFailed'
 
 class Database:
 	'''The Database class provides the API to interact with the requested database type'''
@@ -18,6 +21,25 @@ class Database:
 		indicates connection state. More details can be found in the docstring for the subclass' 
 		connect() method.
 		'''
+		return RetVal()
+
+	def disconnect(self):
+		'''disconnect() closes the connection to the user data storage database.'''
+		return RetVal()
+	
+	def create_table(self, name, fields):
+		'''create_table() creates a database table. 'name' is the name of the table and 'fields' 
+		is a list of 2-element tuples containing the field name and the field parameters, like 
+		type and any qualifiers, e.g. [ ('wid','TEXT NOT NULL'), ('fid', 'TEXT NOT NULL UNIQUE')]. 
+		'''
+		return RetVal()
+
+	def delete_table(self, name):
+		'''delete_table() deletes the named table.'''
+		return RetVal()
+	
+	def empty_table(self, name):
+		'''empty_table() deletes all records from the named table.'''
 		return RetVal()
 
 
@@ -40,23 +62,28 @@ class SQLiteDatabase(Database):
 		if 'path' not in args or not args['path']:
 			return RetVal(BadParameterValue)
 		
-		# TODO: ensure absolute path,
-		self.dbpath = args['path']
-
-		# TODO: ensure db folder exists
-
-		# osname = platform.system().casefold()
-		# if osname == 'windows':
-		# 	self.dbfolder = os.path.join(os.getenv('LOCALAPPDATA'), 'anselus')
-		# else:
-		# 	self.dbfolder = os.path.join(os.getenv('HOME'), '.config','anselus')
+		p = pathlib.Path(args['path']).absolute()
+		self.dbpath = str(p)
+		if not p.parent().exists():
+			try:
+				p.parent().mkdir(parents=True, exist_ok=True)
+			except Exception as e:
+				error = RetVal(FilesystemError)
+				error.set_value("message", str(e))
+				return error
+		try:
+			self.db = sqlite3.connect(self.dbpath)
+		except Exception as e:
+			error = RetVal(DBConnectionFailed)
+			error.set_value("message", str(e))
+			return error
 		
-		# if not os.path.exists(self.dbfolder):
-		# 	os.mkdir(self.dbfolder)
+		return RetVal()
 
-		# self.profile_id = ''
-		# self.db = None
-		# self.dbpath = ''
+	def disconnect(self):
+		'''Closes the connection to the SQLite database instance'''
+		self.db.close()
+		return RetVal()
 
 
 # The global interaction object.
