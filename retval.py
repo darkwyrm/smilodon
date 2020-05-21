@@ -8,6 +8,7 @@ NoError = ''
 # the field 'parameter' will also be returned and will contain the name of the bad parameter
 BadParameterValue = 'BadParameterValue'
 BadParameterType = 'BadParameterType'
+FilesystemError = 'FilesystemError'
 
 class RetVal:
 	'''The RetVal class enables better error checking and variable return values'''
