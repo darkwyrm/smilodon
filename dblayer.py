@@ -3,9 +3,9 @@ the Singleton pattern. Currently only SQLite3 is implemented, but internals are 
 adding other engines easy.
 '''
 
-import os
+# pylint: disable=unused-argument,no-self-use
+
 import pathlib
-import platform
 import sqlite3
 
 from retval import RetVal, BadParameterValue, FilesystemError
@@ -41,12 +41,38 @@ class Database:
 	def empty_table(self, name):
 		'''empty_table() deletes all records from the named table.'''
 		return RetVal()
+	
+	def insert_row(self, name, fields):
+		'''insert_row() adds a record to the named table. 'name' is the name of the table and 
+		'fields' is a list of 2-element tuples containing the field name and its value.
+		'''
+		return RetVal()
+	
+	def update_rows(self, name, fields, condition):	
+		'''update_rows() updates records in the named table. 'name' is the name of the table,  
+		'fields' is a list list of 2-element tuples containing the field name and its value, and 
+		'condition' is an expression. 
+		'''
+		return RetVal()
+	
+	def delete_rows(self, name, fields, condition):	
+		'''delete_rows() deletes records in the named table. 'name' is the name of the table,  
+		'fields' is a list of containing the field name(s), and 'condition' is an expression. 
+		'''
+		return RetVal()
+
+	def select_rows(self, name, fields, condition):	
+		'''select_rows() returns records from the named table. 'name' is the name of the table,  
+		'fields' is a list of containing the field name(s), and 'condition' is an expression. 
+		'''
+		return RetVal()
 
 
 class SQLiteDatabase(Database):
 	'''SQLiteDatabase implements the Database API using SQLite for storage'''
 	def __init__(self):
 		self.dbpath = ''
+		self.db = None
 
 	def connect(self, args):
 		'''Connects to a SQLite database.
@@ -91,14 +117,17 @@ instance = None
 __DBTYPE__ = ''
 
 def instantiate(dbtype):
+	'''Returns an instance of the database connection requested. Currently only 'sqlite' is 
+	supported.
+	'''
 	if not dbtype or dbtype not in [ 'sqlite' ]:
 		raise ValueError
 	
-	global __DBTYPE__
+	global __DBTYPE__	# pylint: disable=global-statement
 	if __DBTYPE__:
 		return
 	
 	if dbtype == 'sqlite':
 		__DBTYPE__ = dbtype
-		global instance
+		global instance	# pylint: disable=global-statement
 		instance = SQLiteDatabase()
