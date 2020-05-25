@@ -63,12 +63,15 @@ class Profile:
 class ProfileManager:
 	'''Handles user profile management'''
 	
-	def __init__(self):
-		osname = platform.system().casefold()
-		if osname == 'windows':
-			self.profile_folder = os.path.join(os.getenv('LOCALAPPDATA'), 'anselus')
+	def __init__(self, profile_path=''):
+		if profile_path:
+			self.profile_folder = profile_path
 		else:
-			self.profile_folder = os.path.join(os.getenv('HOME'), '.config','anselus')
+			osname = platform.system().casefold()
+			if osname == 'windows':
+				self.profile_folder = os.path.join(os.getenv('LOCALAPPDATA'), 'anselus')
+			else:
+				self.profile_folder = os.path.join(os.getenv('HOME'), '.config','anselus')
 		
 		if not os.path.exists(self.profile_folder):
 			os.mkdir(self.profile_folder)
@@ -82,11 +85,9 @@ class ProfileManager:
 		self.dbfolder = ''
 		self.dbpath = ''
 
-		self.error_state = RetVal()
-
 		# Activate the default profile. If one doesn't exist, create one
 		
-		self.load_profiles()
+		self.error_state = self.load_profiles()
 		
 		if not self.get_profiles():
 			self.error_state = self.create_profile('primary')
@@ -104,7 +105,7 @@ class ProfileManager:
 		"error" : error state - string
 		'''
 		if self.error_state.error():
-			return self.error_state.error()
+			return self.error_state
 		
 		profile_list_path = os.path.join(self.profile_folder, 'profiles.json')
 		
@@ -148,8 +149,7 @@ class ProfileManager:
 				profile_data = json.load(fhandle)
 			
 		except Exception:
-			self.error_state = RetVal(BadProfileList)
-			return
+			return RetVal(BadProfileList)
 
 		profiles = list()
 		for item in profile_data:
@@ -158,6 +158,7 @@ class ProfileManager:
 			profiles.append(profile)
 
 		self.profiles = profiles
+		return RetVal()
 	
 	def get_db(self):
 		'''Returns a handle to the profile manager's database connection'''

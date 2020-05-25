@@ -33,8 +33,9 @@ def test_save_profiles():
 	profile2.domain = 'example.com'
 	profile2.isdefault = False
 
-	assert userprofile.save_profiles(profile_test_folder, [profile1, profile2]), \
-		"Failed to save profiles"
+	pman = userprofile.ProfileManager(profile_test_folder)
+	status = pman.save_profiles()
+	assert status.error(), "Failed to save profiles"
 
 def test_load_profiles():
 	'''Tests userprofile.load_profiles()'''
@@ -54,13 +55,14 @@ def test_load_profiles():
 	profile2.domain = 'example.com'
 	profile2.isdefault = False
 
-	assert userprofile.save_profiles(profile_test_folder, [profile1, profile2]), \
-		"Failed to save profiles"
+	pman = userprofile.ProfileManager(profile_test_folder)
+	status = pman.save_profiles()
+	assert status.error(), "Failed to save profiles"
 	
-	status = userprofile.load_profiles(os.path.join(profile_test_folder, 'profiles.json'))
-	assert not status['error'], 'Failed to load profiles: %s' % status['error']
+	status = pman.load_profiles()
+	assert not status.error(), 'Failed to load profiles: %s' % status.info()
 
-	profiles = status['profiles']
+	profiles = pman.get_profiles()
 	assert len(profiles) == 2, "load_profiles did not yield correct count"
 	assert profiles[0].is_valid(), "Profile #1 not valid"
 	assert profiles[0].name == 'Primary' and \
