@@ -72,9 +72,9 @@ class RetVal:
 	
 	def empty(self):
 		'''Empties the object of all values and clears any errors'''
-		self._fields = { '_error':OK }
+		self._fields = { '_error':OK, '_info':'' }
 
 	def count(self):
 		'''Returns the number of values contained by the return value'''
-		return len(self._fields) - 1
+		return len(self._fields) - 2
 	
