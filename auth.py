@@ -112,7 +112,7 @@ def get_session_string(db, address):
 	return results[0]
 
 
-def add_key(self, key, address):
+def add_key(db, key, address):
 	'''Adds an encryption key to a workspace.
 	Parameters:
 	key: EncryptionKey from encryption module
@@ -122,7 +122,7 @@ def add_key(self, key, address):
 	error : string
 	'''
 
-	cursor = self.db.cursor()
+	cursor = db.cursor()
 	cursor.execute("SELECT keyid FROM keys WHERE keyid=?", (key.get_id(),))
 	results = cursor.fetchone()
 	if results:
@@ -132,19 +132,19 @@ def add_key(self, key, address):
 		cursor.execute('''INSERT INTO keys(keyid,address,type,category,private,algorithm)
 			VALUES(?,?,?,?,?,?)''', (key.get_id(), address, key.get_type(), key.get_category(),
 				key.get_key85(), key.get_encryption_type()))
-		self.db.commit()
+		db.commit()
 		return { 'error' : '' }
 	
 	if key.get_type() == 'asymmetric':
 		cursor.execute('''INSERT INTO keys(keyid,address,type,category,private,public,algorithm)
 			VALUES(?,?,?,?,?,?,?)''', (key.get_id(), address, key.get_type(), key.get_category(),
 				key.get_private_key85(), key.get_public_key85(), key.get_encryption_type()))
-		self.db.commit()
+		db.commit()
 		return { 'error' : '' }
 	
 	return { 'error' : "Key must be 'asymmetric' or 'symmetric'" }
 
-def remove_key(self, keyid):
+def remove_key(db, keyid):
 	'''Deletes an encryption key from a workspace.
 	Parameters:
 	keyid : uuid
@@ -152,17 +152,17 @@ def remove_key(self, keyid):
 	Returns:
 	error : string
 	'''
-	cursor = self.db.cursor()
+	cursor = db.cursor()
 	cursor.execute("SELECT keyid FROM keys WHERE keyid=?", (keyid,))
 	results = cursor.fetchone()
 	if not results or not results[0]:
 		return { 'error' : 'Key does not exist' }
 
 	cursor.execute("DELETE FROM keys WHERE keyid=?", (keyid,))
-	self.db.commit()
+	db.commit()
 	return { 'error' : '' }
 
-def get_key(self, keyid):
+def get_key(db, keyid):
 	'''Gets the specified key.
 	Parameters:
 	keyid : uuid
@@ -172,7 +172,7 @@ def get_key(self, keyid):
 	'key' : EncryptionKey object
 	'''
 
-	cursor = self.db.cursor()
+	cursor = db.cursor()
 	cursor.execute('''
 		SELECT address,type,category,private,public,algorithm
 		FROM keys WHERE keyid=?''',

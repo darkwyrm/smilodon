@@ -2,6 +2,7 @@
 
 import pathlib
 
+import auth
 import encryption
 from retval import RetVal, ResourceExists, ResourceNotFound, ExceptionThrown
 
@@ -11,9 +12,10 @@ class Workspace:
 		self.db = db
 		p = pathlib.Path(path)
 		self.path = p.absolute()
+		self.name = ''
 
 	def generate(self, name, server, wid, pw):
-		'''Creates full all the data needed for an individual workspace account'''
+		'''Creates all the data needed for an individual workspace account'''
 		
 		# Add workspace
 		status = self.add_to_db(wid, server, pw)
@@ -32,9 +34,9 @@ class Workspace:
 		
 		# Add encryption keys
 		for key in keys.items():
-			out = self.db.add_key(key, address)
+			out = auth.add_key(self.db, key, address)
 			if out['error']:
-				status = self.db.remove_from_db_entry(wid, server)
+				status = self.remove_workspace_entry(wid, server)
 				if status.error():
 					return status
 		
@@ -65,6 +67,8 @@ class Workspace:
 		
 		self.path.joinpath('files').mkdir(exist_ok=True)
 		self.path.joinpath('files','attachments').mkdir(exist_ok=True)
+
+		self.set_friendly_name(name)
 		return RetVal()
 
 	def add_to_db(self, wid, domain, pw):
@@ -102,6 +106,22 @@ class Workspace:
 		self.db.commit()
 		return RetVal()
 	
+	def remove_workspace_entry(self, wid, domain):
+		'''
+		Removes a workspace from the storage database.
+		NOTE: this only removes the workspace entry itself. It does not remove keys, sessions,
+		or other associated data.
+		'''
+		cursor = self.db.cursor()
+		cursor.execute("SELECT wid FROM workspaces WHERE wid=? AND domain=?", (wid,domain))
+		results = cursor.fetchone()
+		if not results or not results[0]:
+			return RetVal(ResourceNotFound, "%s/%s not found" % (wid,domain))
+		
+		cursor.execute("DELETE FROM workspaces WHERE wid=? AND domain=?", (wid,domain))
+		self.db.commit()
+		return RetVal()
+		
 	def add_folder(self, folder):
 		'''
 		Adds a mapping of a folder ID to a specific path in the workspace.
@@ -162,3 +182,11 @@ class Workspace:
 		out = RetVal()
 		out.set_value('folder', folder)
 		return out
+
+	def set_friendly_name(self, name):
+		'''set_friendly_name() sets the human-friendly name for the workspace'''
+		# TODO: Implement set_friendly_name()
+
+	def get_friendly_name(self):
+		'''get_friendly_name() sets the human-friendly name for the workspace'''
+		return self.name

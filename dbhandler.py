@@ -10,22 +10,6 @@ class Sqlite:
 	def __init__(self):
 		self.db = None
 
-	def remove_workspace_entry(self, wid, domain):
-		'''
-		Removes a workspace from the storage database.
-		NOTE: this only removes the workspace entry itself. It does not remove keys, sessions,
-		or other associated data.
-		'''
-		cursor = self.db.cursor()
-		cursor.execute("SELECT wid FROM workspaces WHERE wid=? AND domain=?", (wid,domain))
-		results = cursor.fetchone()
-		if not results or not results[0]:
-			return { 'error' : 'Workspace not found'}
-		
-		cursor.execute("DELETE FROM workspaces WHERE wid=? AND domain=?", (wid,domain))
-		self.db.commit()
-		return { 'error' : '' }
-		
 	def create_note(self, title='New Note', notebook='default'):
 		'''
 		Creates a new note and returns a note structure
