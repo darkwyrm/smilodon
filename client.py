@@ -1,6 +1,8 @@
 '''This module provides a simple interface to the handling storage and networking needs for an 
 Anselus client'''
+import auth
 import clientlib
+
 from encryption import Password
 from storage import ClientStorage
 
@@ -18,8 +20,9 @@ class AnselusClient:
 	def activate_profile(self, name):
 		'''Activates the specified profile'''
 
-		status = self.fs.activate_profile(name)
-		if status['error']:
+		pman = self.fs.get_profile_manager()
+		status = pman.activate_profile(name)
+		if status.error():
 			return status
 		
 		if self.socket:
@@ -28,54 +31,32 @@ class AnselusClient:
 		
 		status = clientlib.connect(status['host'],status['port'])
 		return status
-
-	def activate_default_profile(self):
-		'''
-		Activates the default profile. If no profile exists, one is created.
-
-		Returns:
-		"error" : string
-		"name" : name of the profile loaded
-		'''
-
-		# Confirm that we really don't have any profiles created on disk.
-		if not self.fs.get_profiles():
-			status = self.fs.load_profiles()
-			if status['error']:
-				return { 'error' : status['error'], 'name' : '' }
-
-		if not self.fs.get_profiles():
-			status = self.fs.create_profile('primary')
-			if status['error']:
-				return { 'error' : status['error'], 'name' : '' }
-			self.fs.set_default_profile('primary')
-		
-		status = self.activate_profile('default')
-		if status['error']:
-			return { 'error' : status['error'], 'name' : '' }
-		
-		return { 'error' : '', 'name' : self.active_profile }
 	
 	def get_active_profile(self):
 		'''Returns the name of the active profile'''
-		return self.active_profile
+		pman = self.fs.get_profile_manager()
+		return pman.get_active_profile()
 
 	def get_profiles(self):
 		'''Gets the list of available profiles'''
-		return self.fs.get_profiles()
+		pman = self.fs.get_profile_manager()
+		return pman.get_profiles()
 
 	def create_profile(self, name):
 		'''Creates a new profile'''
-		return self.fs.create_profile(name)
+		pman = self.fs.get_profile_manager()
+		return pman.create_profile(name)
 
 	def delete_profile(self, name):
 		'''Deletes the specified profile'''
-		return self.fs.delete_profile(name)
+		pman = self.fs.get_profile_manager()
+		return pman.delete_profile(name)
 	
 	def rename_profile(self, oldname, newname):
 		'''Renames the specified profile'''
-		status = self.fs.rename_profile(oldname, newname)
-		if status['error'] != '':
+		pman = self.fs.get_profile_manager()
+		status = pman.rename_profile(oldname, newname)
+		if status.error() != '':
 			return status
 		
 		if self.active_profile == oldname:
@@ -84,11 +65,13 @@ class AnselusClient:
 	
 	def get_default_profile(self):
 		'''Gets the default profile'''
-		return self.fs.get_default_profile()
+		pman = self.fs.get_profile_manager()
+		return pman.get_default_profile()
 		
 	def set_default_profile(self, name):
 		'''Sets the profile loaded on startup'''
-		return self.fs.set_default_profile(name)
+		pman = self.fs.get_profile_manager()
+		return pman.set_default_profile(name)
 
 	def register_account(self, server, userpass):
 		'''Create a new account on the specified server.'''
@@ -117,7 +100,8 @@ class AnselusClient:
 		# Save all encryption keys into an encrypted 7-zip archive which uses the hash of the 
 		# user's password has the archive encryption password and upload the archive to the server.
 		
-		if self.fs.get_profiles():
+		pman = self.fs.get_profile_manager()
+		if pman.get_profiles():
 			return { 'error' : 'an individual workspace already exists' }
 
 		# Parse server string. Should be in the form of (ip/domain):portnum
@@ -138,7 +122,7 @@ class AnselusClient:
 		# line *somewhere*.
 		pw = Password()
 		status = pw.Set(userpass)
-		if status['error']:
+		if status.error():
 			return status
 		
 		conndata = clientlib.connect(host, port)
@@ -165,21 +149,22 @@ class AnselusClient:
 		if 'wid' not in regdata:
 			return { 'error' : 'BUG: bad data from clientlib.register()' }
 
-		status = self.fs.generate_profile_data(self.fs.get_active_profile(), server, 
+		status = pman.generate_profile_data(pman.get_active_profile(), server, 
 			regdata['wid'], pw)
-		if status['error']:
+		if status.error():
 			return status
 		
 		address = '/'.join([regdata['wid'], serverstring])
-		status = self.fs.add_session(address, regdata['devid'], regdata['session'])
+		status = auth.add_device_session(self.fs.get_db(), address, regdata['devid'], regdata['session'])
 		return status
 	
 	def unregister_account(self):
 		'''Remove account from server. This does not delete any local files'''
-		status = self.fs.get_credentials()
-		if status['error']:
-			return status
+		# TODO: Fix
+		# status = self.fs.get_credentials()
+		# if status.error():
+		# 	return status
 		
-		status = clientlib.unregister(self.socket, status['password'])
-		return status
+		# status = clientlib.unregister(self.socket, status['password'])
+		# return status
 		
