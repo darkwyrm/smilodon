@@ -9,11 +9,14 @@ NoError = ''
 BadParameterValue = 'BadParameterValue'
 BadParameterType = 'BadParameterType'
 FilesystemError = 'FilesystemError'
+ResourceExists = 'ResourceExists'
+ResourceNotFound = 'ResourceNotFound'
+ExceptionThrown = 'ExceptionThrown'
 
 class RetVal:
 	'''The RetVal class enables better error checking and variable return values'''
-	def __init__(self, value=OK):
-		self._fields = { '_error':value }
+	def __init__(self, value=OK, info=''):
+		self._fields = { '_error':value, '_info':info }
 	
 	def __contains__(self, key):
 		return key in self._fields
@@ -30,13 +33,22 @@ class RetVal:
 	def __setitem__(self, key, value):
 		self._fields[key] = value
 	
-	def set_error(self, value):
+	def set_error(self, value, info=''):
 		'''Sets the error value of the object'''
 		self._fields['_error'] = value
+		self._fields['_info'] = info
 
 	def error(self):
 		'''Gets the error value of the object'''
 		return self._fields['_error']
+
+	def set_info(self, value):
+		'''Sets the extra error information of the object.'''
+		self._fields['_info'] = value
+
+	def info(self):
+		'''Gets the error value of the object'''
+		return self._fields['_info']
 
 	def set_value(self, name, value):
 		'''Adds a field to the object. Returns True if successful.'''
@@ -46,6 +58,14 @@ class RetVal:
 		self._fields[name] = value
 		return True
 
+	def set_values(self, values):
+		'''Adds multiple dictionary fields to the object. Returns True if successful.'''
+		for k,v in values:
+			if k in [ '_error', '_info' ]:
+				return False
+			self._fields[k] = v
+		return True
+	
 	def has_value(self, s):
 		'''Tests if a specific value field has been returned'''
 		return s in self._fields
