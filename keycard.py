@@ -37,7 +37,7 @@ def generate_encryption_key():
 
 class ComplianceException(Exception):
 	'''Custom exception for spec compliance failures'''
-	pass
+
 
 class __CardBase:
 	'''Represents an organizational keycard'''
@@ -130,7 +130,8 @@ class OrgCard(__CardBase):
 		self.type = 'Organization'
 		self.field_names = [
 			'Name',
-			'Street',
+			'Street-Address',
+			'Extended-Addres',
 			'City',
 			'Province',
 			'Postal-Code',
@@ -141,10 +142,14 @@ class OrgCard(__CardBase):
 			'Language',
 			'Website',
 			'Primary-Signing-Key',
+			'Primary-Signing-Algorithm',
 			'Secondary-Signing-Key',
+			'Secondary-Signing-Algorithm',
 			'Encryption-Key',
+			'Encryption-Key-Algorithm',
 			'Web-Access',
 			'Mail-Access',
+			'Item-Size-Limit',
 			'Message-Size-Limit',
 			'Time-To-Live',
 			'Expires'
