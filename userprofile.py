@@ -6,7 +6,6 @@ import shutil
 import sqlite3
 import uuid
 
-import encryption
 from retval import RetVal, ResourceExists, ExceptionThrown, BadParameterValue, ResourceNotFound
 import utils
 
@@ -439,68 +438,3 @@ class ProfileManager:
 		db.commit()
 		return db
 
-	def generate_profile_data(self, name, server, wid, pw):
-		'''Creates full all the data needed for an individual workspace account'''
-		
-		# TODO: Resolve workspace access
-
-		# Add workspace
-		status = self.db.add_workspace(wid, server, pw)
-		if status.error():
-			return status
-		
-		address = '/'.join([wid,server])
-
-		# Generate user's encryption keys
-		keys = {
-			'identity' : encryption.KeyPair('identity'),
-			'conrequest' : encryption.KeyPair('conrequest'),
-			'broadcast' : encryption.SecretKey('broadcast'),
-			'folder' : encryption.SecretKey('folder')
-		}
-		
-		# Add encryption keys
-		for key in keys.items():
-			out = self.db.add_key(key, address)
-			if out['error']:
-				# TODO: Resolve workspace access
-				status = self.db.remove_workspace_entry(wid, server)
-				if status.error():
-					return status
-		
-		# Add folder mappings
-		foldermap = encryption.FolderMapping()
-
-		folderlist = [
-			'messages',
-			'contacts',
-			'events',
-			'tasks',
-			'notes'
-			'files',
-			'files attachments'
-		]
-
-		for folder in folderlist:
-			foldermap.MakeID()
-			foldermap.Set(address, keys['folder'].get_id(), folder, 'root')
-			self.db.add_folder(foldermap)
-
-		# Create the folders themselves
-		new_profile_folder = os.path.join(self.profile_folder, name)
-		try:
-			os.mkdir(new_profile_folder)
-		except Exception as e:
-			# TODO: Resolve workspace access
-			self.db.remove_workspace(wid, server)
-			return RetVal(ExceptionThrown, e.__str__())
-		
-		os.mkdir(os.path.join(new_profile_folder, 'messages'))
-		os.mkdir(os.path.join(new_profile_folder, 'contacts'))
-		os.mkdir(os.path.join(new_profile_folder, 'events'))
-		os.mkdir(os.path.join(new_profile_folder, 'tasks'))
-		os.mkdir(os.path.join(new_profile_folder, 'notes'))
-		os.mkdir(os.path.join(new_profile_folder, 'files'))
-		os.mkdir(os.path.join(new_profile_folder, 'files', 'attachments'))
-
-		return RetVal()
