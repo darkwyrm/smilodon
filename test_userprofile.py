@@ -1,5 +1,7 @@
 '''This module tests the Profile and ProfileManager classes'''
 import os
+import shutil
+import time
 
 from userprofile import Profile, ProfileManager
 
@@ -10,10 +12,15 @@ def setup_test(name):
 		os.mkdir(test_folder)
 
 	profiletest_folder = os.path.join(test_folder, name)
-	if not os.path.exists(profiletest_folder):
-		os.mkdir(profiletest_folder)
-	
+	while os.path.exists(profiletest_folder):
+		try:
+			shutil.rmtree(profiletest_folder)
+		except:
+			print("Waiting a second for test folder to unlock")
+			time.sleep(1.0)
+	os.mkdir(profiletest_folder)
 	return profiletest_folder
+
 
 def test_profile_class():
 	'''Test the Profile class. It's not big or complicated, so several 
@@ -46,6 +53,7 @@ def test_profile_class():
 			profile.domain == 'example.com' and \
 			profile.port == 2001, "set_dict() assignments did not match test data."
 
+
 def test_pman_init():
 	'''Tests initialization of ProfileManager objects. Oddly enough, this 
 	tests a lot of parts of the class'''
@@ -68,3 +76,19 @@ def test_pman_init():
 	assert len(pman.profiles) == 1, "Profile folder bootstrap didn't have a profile"
 	assert pman.active_index == 0, 'Active profile index not 0'
 	assert pman.default_profile == 'primary', 'Init profile not primary'
+
+
+def test_pman_create():
+	'''Tests ProfileManager's create() methods'''
+	profile_test_folder = setup_test('pman_create')
+	pman = ProfileManager(profile_test_folder)
+
+	# Creation tests: empty name (fail), existing profile, new profile
+	status = pman.create_profile(None)
+	assert status.error(), "create_profile: failed to handle empty name"
+
+	status = pman.create_profile('primary')
+	assert status.error(), "create_profile: failed to handle existing profile"
+
+	status = pman.create_profile('secondary')
+	assert 'id' in status and status['id'], "Failed to get id of new profile"
