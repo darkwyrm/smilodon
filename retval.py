@@ -60,7 +60,7 @@ class RetVal:
 
 	def set_values(self, values):
 		'''Adds multiple dictionary fields to the object. Returns True if successful.'''
-		for k,v in values:
+		for k,v in values.items():
 			if k in [ '_error', '_info' ]:
 				return False
 			self._fields[k] = v

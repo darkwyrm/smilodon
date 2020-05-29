@@ -9,6 +9,16 @@ def test_setvalue():
 	assert r.set_value('foo','bar'), 'Failed to set RetVal value'
 	assert r['foo'] == 'bar', 'Failed to get RetVal value'
 
+def test_set_values():
+	'''Tests set_values'''
+	r = RetVal()
+	
+	assert r.set_values({
+		'foo' : 'bar',
+		'spam' : 'eggs'
+	}), 'Failed to set RetVal values'
+	assert r['foo'] == 'bar' and r['spam'] == 'eggs', 'Failed to get RetVal values'
+
 def test_hasvalue():
 	'''Tests hasvalue()'''
 	r = RetVal()
