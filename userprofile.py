@@ -14,14 +14,17 @@ InvalidProfile = 'InvalidProfile'
 
 class Profile:
 	'''Encapsulates data for user profiles'''
-	def __init__(self):
-		self.name = ''
+	def __init__(self, name=''):
+		self.name = name
 		self.isdefault = False
 		self.id = ''
 		self.wid = ''
 		self.domain = ''
 		self.port = 2001
 	
+	def __str__(self):
+		return str(self.as_dict())
+
 	def make_id(self):
 		'''Generates a new profile ID for the object'''
 		self.id = str(uuid.uuid4())
@@ -86,7 +89,6 @@ class ProfileManager:
 		self.dbpath = ''
 
 		# Activate the default profile. If one doesn't exist, create one
-		
 		self.error_state = self.load_profiles()
 		
 		if not self.get_profiles():
@@ -95,7 +97,7 @@ class ProfileManager:
 				self.set_default_profile('primary')
 		
 		if not self.error_state.error():
-			self.error_state = self.activate_profile('default')
+			self.error_state = self.activate_profile(self.get_default_profile())
 
 	def save_profiles(self):
 		'''
@@ -126,7 +128,7 @@ class ProfileManager:
 					if not os.path.exists(item_folder):
 						os.mkdir(item_folder)
 
-				json.dump(profile_data, fhandle)
+				json.dump(profile_data, fhandle, ensure_ascii=False, indent=1)
 			
 		except Exception as e:
 			return RetVal(ExceptionThrown, e.__str__())
@@ -144,20 +146,24 @@ class ProfileManager:
 		'''
 		profile_list_path = os.path.join(self.profile_folder, 'profiles.json')
 		
-		try:
-			with open(profile_list_path, 'r') as fhandle:
-				profile_data = json.load(fhandle)
-			
-		except Exception:
-			return RetVal(BadProfileList)
+		if os.path.exists(profile_list_path):
+			profile_data = list()
+			try:
+				with open(profile_list_path, 'r') as fhandle:
+					profile_data = json.load(fhandle)
+				
+			except Exception:
+				return RetVal(BadProfileList)
 
-		profiles = list()
-		for item in profile_data:
-			profile = Profile()
-			profile.set_from_dict(item)
-			profiles.append(profile)
+			profiles = list()
+			for item in profile_data:
+				profile = Profile()
+				profile.set_from_dict(item)
+				profiles.append(profile)
+				if profile.isdefault:
+					self.default_profile = profile.name
 
-		self.profiles = profiles
+			self.profiles = profiles
 		return RetVal()
 	
 	def get_db(self):
@@ -187,16 +193,17 @@ class ProfileManager:
 			return RetVal(BadParameterValue, "BUG: name may not be empty")
 		
 		name_squashed = name.casefold()
-		if self.__index_for_profile(name_squashed):
+		if self.__index_for_profile(name_squashed) >= 0:
 			return RetVal(ResourceExists, name)
 
-		profile = Profile()
+		profile = Profile(name)
 		profile.make_id()
+		self.profiles.append(profile)
 
 		if len(self.profiles) == 1:
 			profile.isdefault = True
+			self.default_profile = name
 		
-		self.profiles.append(profile)
 		return self.save_profiles()
 
 	def delete_profile(self, name):
@@ -297,9 +304,9 @@ class ProfileManager:
 			return RetVal(ResourceNotFound, "New profile %s not found" % name_squashed)
 		
 		if oldindex >= 0:
-			if name_squashed == self.profiles[i].name:
+			if name_squashed == self.profiles[oldindex].name:
 				return RetVal()
-			self.profiles[i].isdefault = False
+			self.profiles[oldindex].isdefault = False
 
 		self.profiles[newindex].isdefault = True		
 		return self.save_profiles()
@@ -326,9 +333,8 @@ class ProfileManager:
 		if active_index < 0:
 			return RetVal(ResourceNotFound, "%s doesn't exist" % name_squashed)
 		
-		self.db.connect(name_squashed)
-		self.dbpath = os.path.join(self.dbfolder, name_squashed, 'storage.db')
-
+		self.dbfolder = os.path.join(self.profile_folder, name_squashed)
+		self.dbpath = os.path.join(self.dbfolder, 'storage.db')
 		if os.path.exists(self.dbpath):
 			self.db = sqlite3.connect(self.dbpath)
 		else:
