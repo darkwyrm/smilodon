@@ -185,9 +185,8 @@ class ProfileManager:
 		'''
 		Creates a profile with the specified name. Profile names are not case-sensitive.
 
-		Returns:
-		"error" : string
-		"id" : uuid of folder for new profile
+		Returns: 
+		RetVal error state also containing "id", the uuid of folder for new profile
 		'''
 		if not name:
 			return RetVal(BadParameterValue, "BUG: name may not be empty")
@@ -204,14 +203,16 @@ class ProfileManager:
 			profile.isdefault = True
 			self.default_profile = name
 		
-		return self.save_profiles()
+		status = self.save_profiles()
+		if status.error():
+			return status
+		
+		status.set_value("id", profile.id)
+		return status
 
 	def delete_profile(self, name):
 		'''
 		Deletes the named profile and all files on disk contained in it.
-
-		Returns:
-		"error" : string
 		'''
 		if name == 'default':
 			return RetVal(BadParameterValue, "'default' is reserved")
@@ -241,9 +242,6 @@ class ProfileManager:
 	def rename_profile(self, oldname, newname):
 		'''
 		Renames a profile, leaving the profile ID unchanged.
-
-		Returns:
-		"error" : string
 		'''
 		
 		if not oldname or not newname:
