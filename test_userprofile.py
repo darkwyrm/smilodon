@@ -79,7 +79,7 @@ def test_pman_init():
 
 
 def test_pman_create():
-	'''Tests ProfileManager's create() methods'''
+	'''Tests ProfileManager's create() method'''
 	profile_test_folder = setup_test('pman_create')
 	pman = ProfileManager(profile_test_folder)
 
@@ -92,3 +92,46 @@ def test_pman_create():
 
 	status = pman.create_profile('secondary')
 	assert 'id' in status and status['id'], "Failed to get id of new profile"
+
+def test_pman_delete():
+	'''Tests ProfileManager's delete() method'''
+	profile_test_folder = setup_test('pman_delete')
+	pman = ProfileManager(profile_test_folder)
+
+	# Deletion tests: empty name (fail), existing profile, nonexistent profile
+	status = pman.create_profile('secondary')
+	assert not status.error(), "delete_profile: failed to create regular profile"
+
+	status = pman.delete_profile(None)
+	assert status.error(), "delete_profile: failed to handle empty name"
+
+	status = pman.delete_profile('secondary')
+	assert not status.error(), "delete_profile: failed to delete existing profile"
+
+	status = pman.delete_profile('secondary')
+	assert status.error(), "delete_profile: failed to handle nonexistent profile"
+
+def test_pman_rename():
+	'''Tests ProfileManager's rename() method'''
+	profile_test_folder = setup_test('pman_rename')
+	pman = ProfileManager(profile_test_folder)
+
+	# Rename tests: empty old name (fail), empty new name (fail), old name == new name, missing old
+	# name profile, existing new name profile, successful rename
+	status = pman.rename_profile(None, 'foo')
+	assert status.error(), "rename_profile: failed to handle empty old name"
+
+	status = pman.rename_profile('foo', None)
+	assert status.error(), "rename_profile: failed to handle empty new name"
+	
+	status = pman.rename_profile('secondary', 'secondary')
+	assert not status.error(), "rename_profile: failed to handle rename to self"
+
+	status = pman.create_profile('foo')
+	assert not status.error(), "rename_profile: failed to create test profile"
+
+	status = pman.rename_profile('primary', 'foo')
+	assert status.error(), "rename_profile: failed to handle existing new profile name"
+
+	status = pman.rename_profile('foo', 'secondary')
+	assert not status.error(), "rename_profile: failed to rename profile"

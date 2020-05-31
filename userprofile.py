@@ -257,7 +257,7 @@ class ProfileManager:
 		if index < 0:
 			return RetVal(ResourceNotFound, "%s doesn't exist" % oldname)
 
-		if self.__index_for_profile(new_squashed):
+		if self.__index_for_profile(new_squashed) >= 0:
 			return RetVal(ResourceExists, "%s already exists" % newname)
 
 		self.profiles[index].name = new_squashed
