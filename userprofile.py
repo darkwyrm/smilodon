@@ -320,7 +320,8 @@ class ProfileManager:
 		"port" : integer
 		'''
 		if self.active_index >= 0:
-			self.db.close()
+			if self.db:
+				self.db.close()
 			self.active_index = -1
 		
 		if not name:

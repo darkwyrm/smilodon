@@ -135,3 +135,21 @@ def test_pman_rename():
 
 	status = pman.rename_profile('foo', 'secondary')
 	assert not status.error(), "rename_profile: failed to rename profile"
+
+def test_pman_activate():
+	'''Tests ProfileManager's activate() method'''
+	profile_test_folder = setup_test('pman_activate')
+	pman = ProfileManager(profile_test_folder)
+
+	# Activate tests: empty name (fail), nonexistent name, successful call 
+	status = pman.create_profile('secondary')
+	assert not status.error(), "activate_profile: failed to create test profile"
+
+	status = pman.activate_profile(None)
+	assert status.error(), "activate_profile: failed to handle empty profile name"
+
+	status = pman.activate_profile('foo')
+	assert status.error(), "activate_profile: failed to handle nonexistent profile"
+	
+	status = pman.activate_profile('secondary')
+	assert not status.error(), "activate_profile: failed to activate profile"
