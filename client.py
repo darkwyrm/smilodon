@@ -2,6 +2,7 @@
 Anselus client'''
 import auth
 import clientlib
+from workspace import Workspace
 
 from encryption import Password
 from storage import ClientStorage
@@ -20,8 +21,7 @@ class AnselusClient:
 	def activate_profile(self, name):
 		'''Activates the specified profile'''
 
-		pman = self.fs.get_profile_manager()
-		status = pman.activate_profile(name)
+		status = self.fs.pman.activate_profile(name)
 		if status.error():
 			return status
 		
@@ -34,13 +34,11 @@ class AnselusClient:
 	
 	def get_active_profile(self):
 		'''Returns the name of the active profile'''
-		pman = self.fs.get_profile_manager()
-		return pman.get_active_profile()
+		return self.fs.pman.get_active_profile()
 
 	def get_profiles(self):
 		'''Gets the list of available profiles'''
-		pman = self.fs.get_profile_manager()
-		return pman.get_profiles()
+		return self.fs.pman.get_profiles()
 
 	def create_profile(self, name):
 		'''Creates a new profile'''
@@ -49,13 +47,11 @@ class AnselusClient:
 
 	def delete_profile(self, name):
 		'''Deletes the specified profile'''
-		pman = self.fs.get_profile_manager()
-		return pman.delete_profile(name)
+		return self.fs.pman.delete_profile(name)
 	
 	def rename_profile(self, oldname, newname):
 		'''Renames the specified profile'''
-		pman = self.fs.get_profile_manager()
-		status = pman.rename_profile(oldname, newname)
+		status = self.fs.pman.rename_profile(oldname, newname)
 		if status.error() != '':
 			return status
 		
@@ -65,13 +61,11 @@ class AnselusClient:
 	
 	def get_default_profile(self):
 		'''Gets the default profile'''
-		pman = self.fs.get_profile_manager()
-		return pman.get_default_profile()
+		return self.fs.pman.get_default_profile()
 		
 	def set_default_profile(self, name):
 		'''Sets the profile loaded on startup'''
-		pman = self.fs.get_profile_manager()
-		return pman.set_default_profile(name)
+		return self.fs.pman.set_default_profile(name)
 
 	def register_account(self, server, userpass):
 		'''Create a new account on the specified server.'''
@@ -100,8 +94,7 @@ class AnselusClient:
 		# Save all encryption keys into an encrypted 7-zip archive which uses the hash of the 
 		# user's password has the archive encryption password and upload the archive to the server.
 		
-		pman = self.fs.get_profile_manager()
-		if pman.get_profiles():
+		if self.fs.pman.get_profiles():
 			return { 'error' : 'an individual workspace already exists' }
 
 		# Parse server string. Should be in the form of (ip/domain):portnum
@@ -149,22 +142,11 @@ class AnselusClient:
 		if 'wid' not in regdata:
 			return { 'error' : 'BUG: bad data from clientlib.register()' }
 
-		status = pman.generate_profile_data(pman.get_active_profile(), server, 
-			regdata['wid'], pw)
+		w = Workspace(self.fs.pman.db, self.fs.pman.dbfolder)
+		status = w.generate(self.fs.pman.get_active_profile(), server, regdata['wid'], pw)
 		if status.error():
 			return status
 		
 		address = '/'.join([regdata['wid'], serverstring])
 		status = auth.add_device_session(self.fs.get_db(), address, regdata['devid'], regdata['session'])
 		return status
-	
-	def unregister_account(self):
-		'''Remove account from server. This does not delete any local files'''
-		# TODO: Fix
-		# status = self.fs.get_credentials()
-		# if status.error():
-		# 	return status
-		
-		# status = clientlib.unregister(self.socket, status['password'])
-		# return status
-		
