@@ -4,7 +4,7 @@ import pathlib
 
 import auth
 import encryption
-from retval import RetVal, ResourceExists, ResourceNotFound, ExceptionThrown
+from retval import RetVal, ResourceExists, ResourceNotFound, ExceptionThrown, BadParameterValue
 
 class Workspace:
 	'''Workspace provides high-level operations for managing workspace data.'''
@@ -13,6 +13,8 @@ class Workspace:
 		p = pathlib.Path(path)
 		self.path = p.absolute()
 		self.name = ''
+		self.wid = ''
+		self.domain = ''
 
 	def generate(self, name, server, wid, pw):
 		'''Creates all the data needed for an individual workspace account'''
@@ -185,8 +187,23 @@ class Workspace:
 
 	def set_friendly_name(self, name):
 		'''set_friendly_name() sets the human-friendly name for the workspace'''
-		# TODO: Implement set_friendly_name()
+		
+		if ' ' or '"' in name:
+			return RetVal(BadParameterValue, '" and space not permitted')
+		
+		cursor = self.db.cursor()
+		sqlcmd='''
+		UPDATE workspaces
+		SET friendly_address=?
+		WHERE wid=? and domain=?
+		'''
+		cursor.execute(sqlcmd, (name, self.wid, self.domain))
+		self.db.commit()
+
+		return RetVal()
 
 	def get_friendly_name(self):
 		'''get_friendly_name() sets the human-friendly name for the workspace'''
-		return self.name
+		out = RetVal()
+		out.set_value('name', self.name)
+		return out
