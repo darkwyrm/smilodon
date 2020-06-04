@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
+'''This is the main module'''
 
 import re
-import sys
 
 from prompt_toolkit import HTML
 from prompt_toolkit import PromptSession
@@ -41,10 +41,6 @@ class Shell:
 	'''The main shell class for the application.'''
 	def __init__(self):
 		self.state = ShellState()
-		status = self.state.client.activate_default_profile()
-		if status['error']:
-			print("Error loading profile information: %s" % status['error'])
-			sys.exit(1)
 		
 		self.lexer = re.compile(r'"[^"]+"|\S+')
 
@@ -55,7 +51,7 @@ class Shell:
 		while True:
 			try:
 				rawInput = session.prompt(HTML(
-					'<darkgreen>:)= | </darkgreen><yellow><b> > </b></yellow>' ),
+					'🐈<yellow><b> > </b></yellow>' ),
 					completer=commandCompleter)
 			except KeyboardInterrupt:
 				break
