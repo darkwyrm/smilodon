@@ -12,6 +12,7 @@ FilesystemError = 'FilesystemError'
 ResourceExists = 'ResourceExists'
 ResourceNotFound = 'ResourceNotFound'
 ExceptionThrown = 'ExceptionThrown'
+InternalError = 'InternalError'
 
 class RetVal:
 	'''The RetVal class enables better error checking and variable return values'''
@@ -37,6 +38,7 @@ class RetVal:
 		'''Sets the error value of the object'''
 		self._fields['_error'] = value
 		self._fields['_info'] = info
+		return self
 
 	def error(self):
 		'''Gets the error value of the object'''
@@ -45,26 +47,27 @@ class RetVal:
 	def set_info(self, value):
 		'''Sets the extra error information of the object.'''
 		self._fields['_info'] = value
+		return self
 
 	def info(self):
 		'''Gets the error value of the object'''
 		return self._fields['_info']
 
 	def set_value(self, name, value):
-		'''Adds a field to the object. Returns True if successful.'''
+		'''Adds a field to the object'''
 		if name == '_error':
 			return False
 		
 		self._fields[name] = value
-		return True
+		return self
 
 	def set_values(self, values):
-		'''Adds multiple dictionary fields to the object. Returns True if successful.'''
+		'''Adds multiple dictionary fields to the object.'''
 		for k,v in values.items():
 			if k in [ '_error', '_info' ]:
 				return False
 			self._fields[k] = v
-		return True
+		return self
 	
 	def has_value(self, s):
 		'''Tests if a specific value field has been returned'''
@@ -73,6 +76,7 @@ class RetVal:
 	def empty(self):
 		'''Empties the object of all values and clears any errors'''
 		self._fields = { '_error':OK, '_info':'' }
+		return self
 
 	def count(self):
 		'''Returns the number of values contained by the return value'''

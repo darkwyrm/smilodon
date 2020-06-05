@@ -4,19 +4,16 @@ from retval import RetVal, OK, BadParameterValue
 
 def test_setvalue():
 	'''Tests setvalue()'''
-	r = RetVal()
-	
-	assert r.set_value('foo','bar'), 'Failed to set RetVal value'
+	r = RetVal().set_value('foo','bar')
 	assert r['foo'] == 'bar', 'Failed to get RetVal value'
 
 def test_set_values():
 	'''Tests set_values'''
-	r = RetVal()
-	
-	assert r.set_values({
+	r = RetVal().set_values({
 		'foo' : 'bar',
 		'spam' : 'eggs'
-	}), 'Failed to set RetVal values'
+	})
+	
 	assert r['foo'] == 'bar' and r['spam'] == 'eggs', 'Failed to get RetVal values'
 
 def test_hasvalue():
