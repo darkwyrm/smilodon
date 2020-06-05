@@ -21,18 +21,18 @@ SignatureMissing = 'SignatureMissing'
 def generate_signing_key():
 	'''Generates a dictionary containing an Ed25519 key pair'''
 	key = nacl.signing.SigningKey.generate()
-	keypair = dict()
-	keypair['private'] = key.encode()
-	keypair['public'] = key.verify_key
+	keypair = RetVal()
+	keypair.set_value('private', key.encode())
+	keypair.set_value('public', key.verify_key)
 	return keypair
 
 
 def generate_encryption_key():
 	'''Generates a dictionary containing a Curve25519 encryption key pair'''
 	key = nacl.public.PrivateKey.generate()
-	keypair = dict()
-	keypair['private'] = key.encode()
-	keypair['public'] = key.public_key.encode()
+	keypair = RetVal()
+	keypair.set_value('private', key.encode())
+	keypair.set_value('public', key.public_key.encode())
 	return keypair
 
 class ComplianceException(Exception):

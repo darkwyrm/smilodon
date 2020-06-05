@@ -6,6 +6,7 @@ import nacl.public
 import nacl.pwhash
 import nacl.secret
 import nacl.utils
+from retval import RetVal, BadParameterValue
 
 class EncryptionKey:
 	'''Defines a generic interface to an Anselus encryption key, which contains more
@@ -127,12 +128,11 @@ class FolderMapping:
 def check_password_complexity(indata):
 	'''Checks the requested string as meeting the needed security standards.
 	
-	Returns: (dict)
-	error: string
+	Returns: RetVal
 	strength: string in [very weak', 'weak', 'medium', 'strong']
 	'''
 	if len(indata) < 8:
-		return { 'error' : 'Passphrase must be at least 8 characters.'}
+		return RetVal(BadParameterValue, 'Passphrase must be at least 8 characters.')
 	
 	strength_score = 0
 	strength_strings = [ 'error', 'very weak', 'weak', 'medium', 'strong', 'very strong']
@@ -158,9 +158,10 @@ def check_password_complexity(indata):
 
 	if (len(indata) < 12 and strength_score < 3) or strength_score < 2:
 		# If the passphrase is less than 12 characters, require complexity
-		return { 'error' : 'passphrase too weak', 'strength' : strength_strings[strength_score] }
-	
-	return { 'error' : '', 'strength' : strength_strings[strength_score] }
+		status = RetVal(BadParameterValue, 'passphrase too weak')
+		status.set_value('strength', strength_strings[strength_score])
+		return status
+	return RetVal().set_value('strength', strength_strings[strength_score])
 
 
 class Password:
@@ -173,11 +174,11 @@ class Password:
 	def Set(self, text):
 		'''
 		Takes the given password text, checks strength, and generates a hash
-		Returns: [dict]
-		error : string
+		Returns: RetVal
+		On success, field 'strength' is also returned
 		'''
 		status = check_password_complexity(text)
-		if status['error']:
+		if status.error():
 			return status
 		self.strength = status['strength']
 		self.hashstring = nacl.pwhash.argon2id.str(bytes(text, 'utf8')).decode('ascii')
@@ -191,11 +192,10 @@ class Password:
 		error : string
 		'''
 		self.hashstring = pwhash
-		return { 'error' : '' }
+		return RetVal()
 	
 	def Check(self, text):
 		'''
 		Checks the supplied password against the stored hash and returns a boolean match status.
 		'''
 		return nacl.pwhash.verify(self.hashstring.encode(), text.encode())
-

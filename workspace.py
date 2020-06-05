@@ -181,9 +181,7 @@ class Workspace:
 		folder.fid = fid
 		folder.Set(results[0], results[1], results[2], results[3])
 		
-		out = RetVal()
-		out.set_value('folder', folder)
-		return out
+		return RetVal().set_value('folder', folder)
 
 	def set_friendly_name(self, name):
 		'''set_friendly_name() sets the human-friendly name for the workspace'''
@@ -204,6 +202,4 @@ class Workspace:
 
 	def get_friendly_name(self):
 		'''get_friendly_name() sets the human-friendly name for the workspace'''
-		out = RetVal()
-		out.set_value('name', self.name)
-		return out
+		return RetVal().set_value('name', self.name)

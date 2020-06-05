@@ -5,6 +5,7 @@ import clientlib
 from workspace import Workspace
 
 from encryption import Password
+from retval import RetVal, InternalError
 from storage import ClientStorage
 
 class AnselusClient:
@@ -140,7 +141,7 @@ class AnselusClient:
 		
 		# Just a basic sanity check
 		if 'wid' not in regdata:
-			return { 'error' : 'BUG: bad data from clientlib.register()' }
+			return RetVal(InternalError, 'BUG: bad data from clientlib.register()')
 
 		w = Workspace(self.fs.pman.db, self.fs.pman.dbfolder)
 		status = w.generate(self.fs.pman.get_active_profile(), server, regdata['wid'], pw)

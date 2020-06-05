@@ -2,6 +2,8 @@
 
 import re
 
+from retval import RetVal, BadParameterValue
+
 # This function is needed because the Anselus admin ID is purposely nonconformant -- a user can
 # *never* accidentally get assigned the value, and for the purposes of the platform, version 
 # information doesn't matter.
@@ -20,6 +22,7 @@ def validate_uuid(indata):
 	
 	return True
 
+
 def split_address(address):
 	'''Splits an Anselus numeric address into its two parts.'''
 	parts = address.split('/')
@@ -27,9 +30,8 @@ def split_address(address):
 		not parts[0] or \
 		not parts[1] or \
 		not validate_uuid(parts[0]):
-		return { 'error' : 'Bad workspace address'}
-	return { 'error' : '',
-			'wid' : parts[0],
-			'domain' : parts[1]
-			}
-
+		return RetVal(BadParameterValue, 'Bad workspace address')
+	out = RetVal()
+	out.set_value('wid', parts[0])
+	out.set_value('domain', parts[1])
+	return out

@@ -3,6 +3,7 @@
 import base64
 
 import encryption
+from retval import RetVal, ResourceNotFound, ResourceExists, BadParameterValue
 import utils
 
 def get_credentials(db, wid, domain):
@@ -12,7 +13,7 @@ def get_credentials(db, wid, domain):
 		(wid,domain))
 	results = cursor.fetchone()
 	if not results or not results[0]:
-		return { 'error' : 'Workspace not found' }
+		return RetVal(ResourceNotFound)
 	
 	out = encryption.Password()
 	status = out.Assign(results[0])
@@ -27,13 +28,13 @@ def set_credentials(db, wid, domain, pw):
 	cursor.execute("SELECT wid FROM workspaces WHERE wid=? AND domain=?", (wid,domain))
 	results = cursor.fetchone()
 	if not results or not results[0]:
-		return False
+		return RetVal(ResourceNotFound)
 
 	cursor = db.cursor()
 	cursor.execute("UPDATE workspaces SET password=?,pwhashtype=? WHERE wid=? AND domain=?",
 		(pw.hashstring, pw.hashtype, wid, domain))
 	db.commit()
-	return True
+	return RetVal()
 
 
 def add_device_session(db, address, devid, session_str, devname=None):
@@ -43,21 +44,21 @@ def add_device_session(db, address, devid, session_str, devname=None):
 	# in most cases, bad data just corrupts the database integrity, not crash the program.
 	# We have to do some here to ensure there isn't a crash when the address is split.
 	parts = utils.split_address(address)
-	if parts['error']:
-		return False
+	if parts.error():
+		return parts
 
 	# address has to be valid and existing already
 	cursor = db.cursor()
 	cursor.execute("SELECT wid FROM workspaces WHERE wid=?", (parts['wid'],))
 	results = cursor.fetchone()
 	if not results or not results[0]:
-		return False
+		return RetVal(ResourceNotFound)
 
 	# Can't have a session on the server already
 	cursor.execute("SELECT address FROM sessions WHERE address=?", (address,))
 	results = cursor.fetchone()
 	if results:
-		return False
+		return RetVal(ResourceExists)
 	
 	cursor = db.cursor()
 	if devname:
@@ -67,7 +68,7 @@ def add_device_session(db, address, devid, session_str, devname=None):
 		cursor.execute('''INSERT INTO sessions(address,devid,session_str) VALUES(?,?,?)''',
 			(address, devid, session_str))
 	db.commit()
-	return True
+	return RetVal()
 
 
 def update_device_session(db, devid, session_str):
@@ -77,12 +78,12 @@ def update_device_session(db, devid, session_str):
 	cursor.execute("SELECT devid FROM sessions WHERE devid=?", (devid,))
 	results = cursor.fetchone()
 	if not results or not results[0]:
-		return False
+		return RetVal(ResourceNotFound)
 	
 	cursor = db.cursor()
 	cursor.execute('''UPDATE sessions SET session_str=? WHERE devid=?''', (session_str, devid))
 	db.commit()
-	return True
+	return RetVal()
 
 
 def remove_device_session(db, devid):
@@ -93,11 +94,11 @@ def remove_device_session(db, devid):
 	cursor.execute("SELECT devid FROM sessions WHERE devid=?", (devid,))
 	results = cursor.fetchone()
 	if not results or not results[0]:
-		return False
+		return RetVal(ResourceNotFound)
 
 	cursor.execute("DELETE FROM sessions WHERE devid=?", (devid,))
 	db.commit()
-	return True
+	return RetVal()
 
 
 def get_session_string(db, address):
@@ -107,9 +108,8 @@ def get_session_string(db, address):
 	cursor.execute("SELECT session_str FROM sessions WHERE address=?", (address,))
 	results = cursor.fetchone()
 	if not results or not results[0]:
-		return None
-	
-	return results[0]
+		return RetVal(ResourceNotFound)
+	return RetVal().set_value('sessionstring', results[0])
 
 
 def add_key(db, key, address):
@@ -121,28 +121,28 @@ def add_key(db, key, address):
 	Returns:
 	error : string
 	'''
-
 	cursor = db.cursor()
 	cursor.execute("SELECT keyid FROM keys WHERE keyid=?", (key.get_id(),))
 	results = cursor.fetchone()
 	if results:
-		return { 'error' : 'Key exists'}
+		return RetVal(ResourceExists)
 	
 	if key.get_type() == 'symmetric':
 		cursor.execute('''INSERT INTO keys(keyid,address,type,category,private,algorithm)
 			VALUES(?,?,?,?,?,?)''', (key.get_id(), address, key.get_type(), key.get_category(),
 				key.get_key85(), key.get_encryption_type()))
 		db.commit()
-		return { 'error' : '' }
+		return RetVal()
 	
 	if key.get_type() == 'asymmetric':
 		cursor.execute('''INSERT INTO keys(keyid,address,type,category,private,public,algorithm)
 			VALUES(?,?,?,?,?,?,?)''', (key.get_id(), address, key.get_type(), key.get_category(),
 				key.get_private_key85(), key.get_public_key85(), key.get_encryption_type()))
 		db.commit()
-		return { 'error' : '' }
+		return RetVal()
 	
-	return { 'error' : "Key must be 'asymmetric' or 'symmetric'" }
+	return RetVal(BadParameterValue, "Key must be 'asymmetric' or 'symmetric'")
+
 
 def remove_key(db, keyid):
 	'''Deletes an encryption key from a workspace.
@@ -156,11 +156,12 @@ def remove_key(db, keyid):
 	cursor.execute("SELECT keyid FROM keys WHERE keyid=?", (keyid,))
 	results = cursor.fetchone()
 	if not results or not results[0]:
-		return { 'error' : 'Key does not exist' }
+		return RetVal(ResourceNotFound)
 
 	cursor.execute("DELETE FROM keys WHERE keyid=?", (keyid,))
 	db.commit()
-	return { 'error' : '' }
+	return RetVal()
+
 
 def get_key(db, keyid):
 	'''Gets the specified key.
@@ -179,17 +180,17 @@ def get_key(db, keyid):
 		(keyid,))
 	results = cursor.fetchone()
 	if not results or not results[0]:
-		return { 'error' : 'Key not found' }
+		return RetVal(ResourceNotFound)
 	
 	if results[1] == 'asymmetric':
 		public = base64.b85decode(results[4])
 		private = base64.b85decode(results[3])
 		key = encryption.KeyPair(results[2],	public,	private, results[5])
-		return { 'error' : '', 'key' : key }
+		return RetVal().set_value('key', key)
 	
 	if results[1] == 'symmetric':
 		private = base64.b85decode(results[3])
 		key = encryption.SecretKey(results[2], private, results[5])
-		return { 'error' : '', 'key' : key }
+		return RetVal().set_value('key', key)
 	
-	return { 'error' : "Bad key type '%s'" % results[1] } 
+	return RetVal(BadParameterValue, "Key must be 'asymmetric' or 'symmetric'")
