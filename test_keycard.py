@@ -89,6 +89,21 @@ def test_orgcard_set_from_string():
 	''')
 	assert card.verify(card.fields['Primary-Signing-Key']), 'keycard failed to verify'
 
+def test_blake2():
+	'''Tests the blake2() method'''
+	card = keycard.OrgCard()
+	card.set_from_string('''Type:Organization
+	Name:Example, Inc.
+	Contact-Admin:admin/example.com
+	Primary-Signing-Key:fbqsEyXT`Sq?us{OgVygsK|zBP7njBmwT+Q_a*0E
+	Encryption-Key:0IaDFoy}NDe1@fzkg9z!5`@gclY20sRINMJd_{j!
+	Time-To-Live:30
+	Expires:20210507
+	Organization-Signature:ct1+I$3hcAikDsXP*%I)z0_9_VH;47DsPd-gsdzbq~LOqq(*1h#R$vC>jz~>_yOk<y4mG}ur^CVFLQ?p
+	''')
+	assert card.blake2() == "G%DjezjjNb_0}<q`x|bwC^{4n|8tk5ppQeYf<r<pj)I>`u>Zu57U1G44PiX-@|+!OW!" \
+							"vq?`Zv7>>=to3", \
+			'BLAKE2 hash for keycard did not match expected value'
 
 def test_usercard():
 	'''Tests the UserCard constructor'''

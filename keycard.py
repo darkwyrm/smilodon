@@ -5,6 +5,8 @@ import datetime
 
 import nacl.public
 import nacl.signing
+# Pylint doesn't detect blake2b() for whatever reason
+from pyblake2 import blake2b	# pylint: disable=no-name-in-module
 
 from retval import RetVal, BadParameterValue, BadParameterType
 
@@ -121,6 +123,11 @@ class __CardBase:
 		expiration = datetime.datetime.utcnow() + datetime.timedelta(numdays)
 		self.fields['Expires'] = expiration.strftime("%Y%m%d")
 		return RetVal()
+
+	def blake2(self):
+		'''Returns the BLAKE2b fingerprint for the keycard data encoded in base85.'''
+		data = str(self)
+		return base64.b85encode(blake2b(data.encode()).digest()).decode()
 
 
 class OrgCard(__CardBase):
@@ -391,7 +398,7 @@ class UserCard(__CardBase):
 			rv.set_error(InvalidKeycard)
 		
 		return rv
-
+		
 
 class Base85Encoder:
 	'''Base85 encoder for PyNaCl library'''
@@ -404,29 +411,3 @@ class Base85Encoder:
 	def decode(data):
 		'''Returns Base85 decoded data'''
 		return base64.b85decode(data)
-
-
-if __name__ == '__main__':
-	skey = nacl.signing.SigningKey(b'{Ue^0)?k`s(>pNG&Wg9f5b;VHN1^PC*c4-($G#>}',Base85Encoder)
-	crkey = nacl.public.PrivateKey(b'VyFX5PC~?eL5)>q|6W7ciRrOJw$etlej<tY$f+t_',Base85Encoder)
-	ekey = nacl.public.PrivateKey(b'Wsx6BC(HP~goS-C_`K=6Daqr97kapfc=vQUzi?KI',Base85Encoder)
-	org_skey = nacl.signing.SigningKey(b'JCfIfVhvn|k4Q%M2>@)ENbX%fE_+0Ml2%oz<Mss?',Base85Encoder)
-
-	card = UserCard()
-	card.set_from_string('''Type:User
-	Name:Corbin Simons
-	Workspace-ID:4418bf6c-000b-4bb3-8111-316e72030468
-	Workspace-Name:csimons/example.com
-	Domain:example.com
-	Contact-Request-Key:yBZ0{1fE9{2<b~#i^R+JT-yh-y5M(Wyw_)}_SZOn
-	Public-Encryption-Key:_`UC|vltn_%P5}~vwV^)oY){#uvQSSy(dOD_l(yE
-	Time-To-Live:7
-	Expires:20200812
-	User-Signature:K$&m~?|fdchy4GSTEiCoaF6WxM)ySeV|=#;M35}*wrQ5cSc)CC2l2gY*JF4-vLq(WFg8qE_qks56%nQl
-	Organization-Signature:G(8a}*krMSR($!Uq?=5Sk)J~w2uGGAOD~~<hvsAK7TvS>%>gP{answ=TXB;pakRinUvy1)>B7^4A2tyO
-	''')
-	rval = card.verify(skey.verify_key.encode(Base85Encoder), 'User')
-	print(rval.error())
-	rval = card.verify(org_skey.verify_key.encode(Base85Encoder), 'Organization')
-	print(rval.error())
-	print(card)
