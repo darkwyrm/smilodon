@@ -400,6 +400,14 @@ class ProfileManager:
 				"public" TEXT,
 				"algorithm" TEXT NOT NULL
 			);''', '''
+			CREATE table "keycards"(
+				"fingerprint" TEXT NOT NULL UNIQUE,
+				"fptype" TEXT NOT NULL,
+				"cardtype" TEXT NOT NULL,
+				"carddata" TEXT NOT NULL,
+				"identity" TEXT NOT NULL,
+				"expires" TEXT NOT NULL
+			);''', '''
 			CREATE table "messages"(
 				"id" TEXT NOT NULL UNIQUE,
 				"from"  TEXT NOT NULL,
