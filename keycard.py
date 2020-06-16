@@ -138,7 +138,7 @@ class OrgCard(__CardBase):
 		self.field_names = [
 			'Name',
 			'Street-Address',
-			'Extended-Addres',
+			'Extended-Address',
 			'City',
 			'Province',
 			'Postal-Code',
