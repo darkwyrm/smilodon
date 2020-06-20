@@ -1,4 +1,8 @@
+import os
 import sys
+
+import encryption
+import keycard
 
 class Validator:
 	'''Abstract class for validating input from the user.'''
@@ -42,7 +46,8 @@ class ValueIsInteger (Validator):
 
 def print_usage():
 	'''Prints usage information'''
-	print("%s: <org|user> <key basename>\nInteractively generate a keycard and associated keys.")
+	print("%s: <org|user> <key basename>\nInteractively generate a keycard and associated keys." % \
+			os.path.basename(__file__))
 
 def get_input(prompt, compare=Validator(), default_value=''):
 	'''Gets info from the user with an optional default value'''
@@ -93,11 +98,17 @@ def get_org_info():
 			'30')))
 	out.append(('Time-To-Live',get_input("Cache Update Period (days) [14]: ", ValueIsInteger(), '14')))
 	out.append(('Expires',get_input("Time Valid (days) [730]: ", ValueIsInteger(), '730')))
-
+	
 	return out
 
 def generate_org_card(userdata: list):
 	'''Generates an organizational keycard from supplied user data'''
+	print(userdata)
+	
+	lines = [ ':'.join([x[0],x[1]]) for x in userdata ]
+	card = keycard.OrgCard()
+	card.set_from_string('\n'.join(lines))
+	
 
 def get_user_info():
 	'''Gets all user input for a user and returns a list of tuples containing it all'''
@@ -110,6 +121,11 @@ def get_user_info():
 
 def generate_user_card(userdata: list):
 	'''Generates a user keycard from supplied user data'''
+	
+	print(userdata)
+	# Generate and save the necessary keys
+
+
 
 if __name__ == '__main__':
 	if len(sys.argv) < 3 or sys.argv[1].casefold() not in [ 'org', 'user' ]:
@@ -118,10 +134,16 @@ if __name__ == '__main__':
 
 	cardtype = sys.argv[1].casefold()
 	if cardtype == 'org':
-		info = get_org_info()
-		generate_org_card(info)
+		#info = get_org_info()
+		#generate_org_card(info)
+		generate_org_card([('Name', 'Acme, Inc.'), ('Street-Address', '1313 Mockingbird Lane'), 
+				('Extended-Address', ''), ('City', 'Schenectady'), ('Province', 'NY'), 
+				('Postal-Code', '12345'), ('Country', 'United States'), ('Domain', 'acme.com'), 
+				('Contact-Admin', 'admin/acme.com'), ('Contact-Abuse', 'admin/acme.com'), 
+				('Contact-Support', 'admin/acme.com'), ('Language', 'en'), 
+				('Website', 'www.acme.com'), ('Web-Access', 'webmail.acme.com'), 
+				('Anselus-Access', 'anselus.acme.com'), ('Item-Size-Limit', '30'), 
+				('Message-Size-Limit', '30'), ('Time-To-Live', '14'), ('Expires', '730')])
 	else:
 		info = get_user_info()
 		generate_user_card(info)
-	
-	print(info)
