@@ -5,6 +5,7 @@ import uuid
 import nacl.public
 import nacl.pwhash
 import nacl.secret
+import nacl.signing
 import nacl.utils
 from retval import RetVal, BadParameterValue
 
@@ -80,6 +81,26 @@ class KeyPair (EncryptionKey):
 	def get_private_key64(self):
 		'''Returns the private key encoded in base64'''
 		return self.private64
+
+
+class SigningPair (KeyPair):
+	'''Represents an asymmetric signing key pair'''
+	def __init__(self, category='', public=None, private=None, encryption=None):
+		if public and private and encryption:
+			super().__init__(category, keytype='asymmetric', enctype=encryption)
+			self.public = public
+			self.private = private
+			self.type = encryption
+		else:
+			super().__init__(category, keytype='asymmetric', enctype='Ed25519')
+			key = nacl.signing.SigningKey.generate()
+			self.public = key.verify_key
+			self.private = key
+		
+		self.public85 = base64.b85encode(bytes(self.public)).decode('utf8')
+		self.private85 = base64.b85encode(bytes(self.private)).decode('utf8')
+		self.public64 = base64.b64encode(bytes(self.public)).decode('utf8')
+		self.private64 = base64.b64encode(bytes(self.private)).decode('utf8')
 
 
 class SecretKey (EncryptionKey):
