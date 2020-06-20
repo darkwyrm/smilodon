@@ -10,7 +10,11 @@ import uuid
 import nacl.pwhash
 import nacl.secret
 
+from retval import RetVal, ExceptionThrown, ServerError, NetworkError, ResourceNotFound
 import utils
+
+AnsBadRequest = '400-BadRequest'
+
 
 # Number of seconds to wait for a client before timing out
 CONN_TIMEOUT = 900.0
@@ -24,13 +28,17 @@ READ_BUFFER_SIZE = 8192
 #	Returns: [dict] "error" : string
 def write_text(sock, text):
 	'''Sends a string over a socket'''
+
+	if not sock:
+		return RetVal(NetworkError, 'Invalid connection')
+	
 	try:
 		sock.send(text.encode())
 	except Exception as exc:
 		sock.close()
-		return { 'error' : exc.__str__() }
+		return RetVal(ExceptionThrown, exc.__str__())
 	
-	return { 'error' : '' }
+	return RetVal()
 
 
 # Read Text
@@ -38,35 +46,40 @@ def write_text(sock, text):
 #	Returns: [dict] "error" : string, "string" : string
 def read_text(sock):
 	'''Reads a string from the supplied socket'''
+
+	if not sock:
+		return RetVal(NetworkError, 'Invalid connection')
+	
 	try:
 		out = sock.recv(READ_BUFFER_SIZE)
 	except Exception as exc:
 		sock.close()
-		return { 'error' : exc.__str__(), 'string' : '' }
+		return RetVal(ExceptionThrown, exc.__str__()).set_value('string','')
 	
 	try:
 		out_string = out.decode()
 	except Exception as exc:
-		return { 'error' : exc.__str__(), 'string' : '' }
+		return RetVal(ExceptionThrown, exc.__str__()).set_value('string','')
 	
-	return { 'error' : '', 'string' : out_string }
+	return RetVal().set_value('string', out_string)
+
 
 # Read Response
 #	Requires: valid socket
-#	Returns: [dict] "error" : string, "errorcode" : int
+#	Returns: [dict] "error" : string, "code" : int
 def read_response(sock):
 	'''Reads a server response and returns a separated code and string'''
 	
 	response = read_text(sock)
-	if response['error']:
-		return { 'error' : response['error'], 'errorcode' : 0 }
+	if response.error():
+		return response
 	
 	try:
-		error_code = int(response['string'][0:3])
+		status_code = int(response['string'][0:3])
 	except:
-		return { 'error' : response['error'], 'errorcode' : 0 }
+		return RetVal(ServerError).set_value('response', response['string'])
 	
-	return { 'errorcode' : error_code, 'error' : response['error'] }
+	return RetVal().set_values({ 'status' : status_code, 'response' : response['string'] })
 
 # Connect
 #	Requires: host (hostname or IP)
@@ -75,39 +88,38 @@ def read_response(sock):
 #					
 def connect(host, port=2001):
 	'''Creates a connection to the server.'''
-	out_data = dict()
 	try:
 		sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		# Set a short timeout in case the server doesn't respond immediately,
 		# which is the expectation as soon as a client connects.
 		sock.settimeout(10.0)
 	except:
-		return { 'socket' : None, 'error' : "Couldn't create a socket" }
+		return RetVal(NetworkError, "Couldn't create a socket")
 	
-	out_data['socket'] = sock
+	out_data = RetVal()
+	out_data.set_value('socket', sock)
 	
 	try:
 		host_ip = socket.gethostbyname(host)
 	except socket.gaierror:
 		sock.close()
-		return { 'socket' : None, 'error' : "Couldn't locate host %s" % host }
+		return RetVal(ResourceNotFound, "Couldn't locate host %s" % host)
 	
-	out_data['ip'] = host_ip
+	out_data.set_value('ip', host_ip)
 	try:
 		sock.connect((host_ip, port))
-		out_data['error'] = ''
 		
 		hello = read_text(sock)
-		if hello:
-			hello = hello['string'].strip().split()
-			if len(hello) >= 3:
-				out_data['version'] = hello[2]
+		if not hello.error():
+			tempstr = hello['string'].strip().split()
+			if len(tempstr) >= 3:
+				out_data.set_value('version', tempstr[2])
 			else:
-				out_data['version'] = ''
+				out_data.set_value('version', '')
 
 	except Exception as exc:
 		sock.close()
-		return { 'socket' : None, 'error' : "Couldn't connect to host %s: %s" % (host, exc) }
+		return RetVal(NetworkError, "Couldn't connect to host %s: %s" % (host, exc))
 
 	# Set a timeout of 30 minutes
 	sock.settimeout(1800.0)
@@ -115,17 +127,14 @@ def connect(host, port=2001):
 	
 # Device
 #	Requires: device ID, session string
-#	Returns: [dict] "errorcode" : int, "error" : string
+#	Returns: [dict] "code" : int, "error" : string
 def device(sock, devid, session_str):
 	'''Completes the login process by submitting device ID and its session string.'''
 	if not utils.validate_uuid(devid):
-		return {
-			'error' : 'BAD REQUEST',
-			'errorcode' : 400
-		}
+		return RetVal(AnsBadRequest, 'Invalid device ID').set_value('code', 400)
 
 	response = write_text(sock, 'DEVICE %s %s\r\n' % (devid, session_str))
-	if not response['error']:
+	if response.error():
 		return response
 	
 	return read_response(sock)
@@ -136,47 +145,34 @@ def device(sock, devid, session_str):
 #	Returns: error string
 def disconnect(sock):
 	'''Disconnects by sending a QUIT command to the server'''
-	# TODO: rewrite to use read_data() and write_data()
-	if sock:
-		try:
-			sock.send('QUIT\r\n'.encode())
-		except Exception as exc:
-			sock.close()
-			return exc.__str__()
-	return ''
+	return write_text(sock, 'QUIT\r\n'.encode())
+
 
 # Exists
 #	Requires: one or more names to describe the path desired
-#	Returns: [dict] "exists" : bool, "errorcode" : int, "error" : string
+#	Returns: [dict] "exists" : bool, "code" : int, "error" : string
 def exists(sock, path):
 	'''Checks to see if a path exists on the server side.'''
-	try:
-		# TODO: rewrite to use read_data() and write_data()
-		sock.send(("EXISTS %s\r\n" % path).encode())
-		data = sock.recv(8192).decode()
-		if data:
-			tokens = data.strip().split()
-			if tokens[0] == '200':
-				return { 'exists' : True, 'error' : '', 'errorcode' : 200 }
+	status = write_text(sock, "EXISTS %s\r\n" % path)
+	if status.error():
+		return status
 	
-	except Exception as exc:
-		return { 'exists' : False, 'error' : "Failure checking path %s: %s" % (path, exc) }
+	status = read_response(sock)
+	if status['code'] == 200:
+		return status.set_value('exists', True)
 	
-	return {
-		'exists' : False,
-		'error' : ' '.join(tokens[1:]),
-		'errorcode' : tokens[0]
-	}
+	return status.set_value('exists', False)
+
 
 # Login
 #	Requires: numeric workspace ID
-#	Returns: [dict] "errorcode" : int, "error" : string
+#	Returns: [dict] "code" : int, "error" : string
 def login(sock, wid):
 	'''Starts the login process by sending the requested workspace ID.'''
 	if not utils.validate_uuid(wid):
 		return {
 			'error' : 'BAD REQUEST',
-			'errorcode' : 400
+			'code' : 400
 		}
 
 	response = write_text(sock, 'LOGIN %s\r\n' % wid)
@@ -185,16 +181,14 @@ def login(sock, wid):
 	
 	return read_response(sock)
 
+
 # Password
 #	Requires: workspace ID, password string
-#	Returns: [dict] "errorcode" : int, "error" : string
+#	Returns: [dict] "code" : int, "error" : string
 def password(sock, wid, pword):
 	'''Continues the login process by hashing a password and sending it to the server.'''
 	if not password or not utils.validate_uuid(wid):
-		return {
-			'error' : 'BAD REQUEST',
-			'errorcode' : 400
-		}
+		return RetVal(AnsBadRequest).set_value('code', 400)
 	
 	# The server will salt the hash we submit, but we'll salt anyway with the WID for extra safety.
 	pwhash = nacl.pwhash.argon2id.kdf(nacl.secret.SecretBox.KEY_SIZE,
@@ -202,7 +196,7 @@ def password(sock, wid, pword):
 							opslimit=nacl.pwhash.argon2id.OPSLIMIT_INTERACTIVE,
 							memlimit=nacl.pwhash.argon2id.MEMLIMIT_INTERACTIVE)	
 	response = write_text(sock, 'PASSWORD %s\r\n' % pwhash)
-	if not response['error']:
+	if response.error():
 		return response
 	
 	return read_response(sock)
@@ -210,7 +204,7 @@ def password(sock, wid, pword):
 
 # Register
 #	Requires: valid socket, password hash
-#	Returns: [dict] "wid": string, "devid" : string, "session" : string, "errorcode" : int,
+#	Returns: [dict] "wid": string, "devid" : string, "session" : string, "code" : int,
 # 			"error" : string
 def register(sock, pwhash):
 	'''Creates an account on the server.'''
@@ -230,27 +224,28 @@ def register(sock, pwhash):
 		
 		wid = str(uuid.uuid4())
 		response = write_text(sock, 'REGISTER %s %s\r\n' % (wid, pwhash))
-		if response['error']:
+		if response.error():
 			return response
 		
 		response = read_response(sock)
-		if response['errorcode'] in [ 304, 406 ]:	# Registration closed, Payment required
+		if response.error():
+			return response
+		
+		if response['code'] in [ 304, 406 ]:	# Registration closed, Payment required
 			break
 		
-		if response['errorcode'] in [ 101, 201]:	# Pending, Success
-			tokens = response['error'].split()
+		if response['code'] in [ 101, 201]:		# Pending, Success
+			tokens = response['response'].split()
 			if len(tokens) != 2 or not utils.validate_uuid(tokens[0]):
-				return { 'errorcode' : 300, 'error' : 'INTERNAL SERVER ERROR' }
-			response['wid'] = wid
-			response['devid'] = tokens[0]
-			response['session'] = tokens[1]
+				return { 'code' : 300, 'error' : 'INTERNAL SERVER ERROR' }
+			response.set_values({ 'wid':wid, 'devid':tokens[0], 'session':tokens[1] })
 			break
 		
-		if response['errorcode'] == 408:	# WID exists
+		if response['code'] == 408:	# WID exists
 			tries = tries + 1
 		else:
 			# Something we didn't expect
-			break
+			return RetVal(ServerError, "Unexpected server response")
 	
 	return response
 
@@ -263,7 +258,7 @@ def unregister(sock, pwhash):
 	'''
 
 	response = write_text(sock, 'UNREGISTER %s\r\n' % pwhash)
-	if response['error']:
+	if response.error():
 		return response
 	
 	response = read_response(sock)
