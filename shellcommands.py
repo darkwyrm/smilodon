@@ -198,6 +198,7 @@ class CommandLogin(BaseCommand):
 		self.description = 'Log into the connected server.'
 
 	def execute(self, pshell_state):
+		# TODO: Implement LOGIN
 		return 'Unimplemented'
 
 
@@ -287,10 +288,24 @@ class CommandRegister(BaseCommand):
 		if len(self.tokenList) != 1:
 			print(self.helpInfo)
 			return ''
-		# status = clib.register(pshell_state.sock, self.tokenList[1])
-
-
-		return 'Unimplemented'
+		status = pshell_state.client.register_account(pshell_state.sock, self.tokenList[1])
+		
+		returncodes = {
+			304:"This server does not allow self-registration.",
+			406:"This server requires payment before registration can be completed.",
+			101:"Registration request sent. Awaiting approval.",
+			300: "Registration unsuccessful. The server had an error. Please contact technical " \
+				"support for the organization for assistance. Sorry!",
+			408:"This workspace already exists on the server. Registration is not needed."
+		}
+		if status['code'] == 201:
+			# 201 - Registered
+			# TODO: finish handling registration
+			pass
+		elif status['code'] in returncodes.keys():
+			return returncodes[status['code']]
+		
+		return ''
 
 
 class CommandShell(BaseCommand):
