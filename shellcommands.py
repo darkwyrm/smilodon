@@ -9,6 +9,7 @@ import sys
 from prompt_toolkit import print_formatted_text, HTML
 
 import helptext
+from retval import RetVal
 from shellbase import BaseCommand, gShellCommands
 
 class CommandEmpty(BaseCommand):
@@ -228,32 +229,32 @@ class CommandProfile(BaseCommand):
 
 		if verb == 'create':
 			status = pshell_state.client.create_profile(self.tokenList[1])
-			if status['error']:
-				print("Couldn't create profile: %s" % status['error'])
+			if status.error():
+				print("Couldn't create profile: %s" % status.info())
 		elif verb == 'delete':
 			print("This will delete the profile and all of its files. It can't be undone.")
-			choice = input("Really delete profile %s? [y/N] " % self.tokenList[1]).casefold()
+			choice = input("Really delete profile '%s'? [y/N] " % self.tokenList[1]).casefold()
 			if choice in [ 'y', 'yes' ]:
 				status = pshell_state.client.delete_profile(self.tokenList[1])
-				if status['error']:
-					print("Couldn't delete profile: %s" % status['error'])
+				if status.error():
+					print("Couldn't delete profile: %s" % status.info())
 				else:
 					print("Profile '%s' has been deleted" % self.tokenList[1])
 		elif verb == 'set':
 			status = pshell_state.client.activate_profile(self.tokenList[1])
-			if status['error']:
-				print("Couldn't activate profile: %s" % status['error'])
+			if status.error():
+				print("Couldn't activate profile: %s" % status.info())
 		elif verb == 'setdefault':
 			status = pshell_state.client.set_default_profile(self.tokenList[1])
-			if status['error']:
-				print("Couldn't set profile as default: %s" % status['error'])
+			if status.error():
+				print("Couldn't set profile as default: %s" % status.info())
 		elif verb == 'rename':
 			if len(self.tokenList) != 3:
 				print(self.get_help())
 				return ''
 			status = pshell_state.client.rename_profile(self.tokenList[1], self.tokenList[2])
-			if status['error']:
-				print("Couldn't rename profile: %s" % status['error'])
+			if status.error():
+				print("Couldn't rename profile: %s" % status.info())
 		else:
 			print(self.get_help())
 		return ''
