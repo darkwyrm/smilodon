@@ -13,6 +13,8 @@ ResourceExists = 'ResourceExists'
 ResourceNotFound = 'ResourceNotFound'
 ExceptionThrown = 'ExceptionThrown'
 InternalError = 'InternalError'
+NetworkError = 'NetworkError'
+ServerError = 'ServerError'
 
 class RetVal:
 	'''The RetVal class enables better error checking and variable return values'''
