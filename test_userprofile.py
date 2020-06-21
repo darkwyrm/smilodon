@@ -55,6 +55,19 @@ def test_profile_class():
 			profile.port == 2001, "set_dict() assignments did not match test data."
 
 
+def test_profile_dbinit():
+	'''Test the Profile class database initializer'''
+
+	profile_test_folder = setup_test('profile_dbinit')
+	profile = Profile(profile_test_folder)
+	profile.name = 'Primary'
+	profile.id = 'ca7149eb-e533-4de6-90b1-3b0181d6fa16'
+	profile.wid = 'b5a9367e-680d-46c0-bb2c-73932a6d4007'
+	profile.domain = 'example.com'
+
+	assert profile.reset_db()
+
+
 def test_pman_init():
 	'''Tests initialization of ProfileManager objects. Oddly enough, this 
 	tests a lot of parts of the class'''

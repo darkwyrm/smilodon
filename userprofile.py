@@ -86,6 +86,9 @@ class Profile:
 		'''This function reinitializes the database to empty, taking a path to the file used by the 
 		SQLite database. Returns a handle to an open SQLite3 connection.
 		'''
+		if not os.path.exists(self.path):
+			os.mkdir(self.path)
+		
 		dbpath = os.path.join(self.path, 'storage.db')
 		if os.path.exists(dbpath):
 			try:
