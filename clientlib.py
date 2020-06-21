@@ -206,7 +206,7 @@ def password(sock, wid, pword):
 #	Requires: valid socket, password hash
 #	Returns: [dict] "wid": string, "devid" : string, "session" : string, "code" : int,
 # 			"error" : string
-def register(sock, pwhash):
+def register(sock, pwhash, keytype, devkey):
 	'''Creates an account on the server.'''
 	
 	# This construct is a little strange, but it is to work around the minute possibility that
@@ -222,8 +222,11 @@ def register(sock, pwhash):
 		if not tries % 10:
 			time.sleep(3.0)
 		
+		# Technically, the active profile already has a WID, but it is not attached to a domain and
+		# doesn't matter as a result. Rather than adding complexity, we just generate a new UUID
+		# and always return the replacement value
 		wid = str(uuid.uuid4())
-		response = write_text(sock, 'REGISTER %s %s\r\n' % (wid, pwhash))
+		response = write_text(sock, 'REGISTER %s %s %s %s\r\n' % (wid, pwhash, keytype, devkey))
 		if response.error():
 			return response
 		
@@ -247,7 +250,7 @@ def register(sock, pwhash):
 			# Something we didn't expect
 			return RetVal(ServerError, "Unexpected server response")
 	
-	return response
+	return response.set_value('wid', wid)
 
 
 def unregister(sock, pwhash):

@@ -1,5 +1,6 @@
 # pylint: disable=unused-argument,too-many-branches
 import collections
+from getpass import getpass
 from glob import glob
 import os
 import platform
@@ -8,8 +9,8 @@ import sys
 
 from prompt_toolkit import print_formatted_text, HTML
 
+from encryption import check_password_complexity
 import helptext
-from retval import RetVal
 from shellbase import BaseCommand, gShellCommands
 
 class CommandEmpty(BaseCommand):
@@ -289,7 +290,24 @@ class CommandRegister(BaseCommand):
 		if len(self.tokenList) != 1:
 			print(self.helpInfo)
 			return ''
-		status = pshell_state.client.register_account(pshell_state.sock, self.tokenList[1])
+		
+		print("Please enter a passphrase. Please use at least 10 characters with a combination" \
+			"of uppercase and lowercase letters and preferably a number and/or symbol. You can "
+			"even use non-English letters, such as ß, ñ, Ω, and Ç!")
+		
+		password_needed = True
+		while password_needed:
+			password = getpass()
+			confirmation = getpass("Confirm password: ")
+			if password == confirmation:
+				status = check_password_complexity(password)
+				if status['strength'] in [ 'very weak', 'weak' ]:
+					print("Unfortunately, the password you entered was too weak. Please " \
+							"use another.")
+					continue
+				password_needed = False
+		
+		status = pshell_state.client.register_account(self.tokenList[0], password)
 		
 		returncodes = {
 			304:"This server does not allow self-registration.",
@@ -299,6 +317,7 @@ class CommandRegister(BaseCommand):
 				"support for the organization for assistance. Sorry!",
 			408:"This workspace already exists on the server. Registration is not needed."
 		}
+		
 		if status['code'] == 201:
 			# 201 - Registered
 			# TODO: finish handling registration

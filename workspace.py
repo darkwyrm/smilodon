@@ -19,8 +19,12 @@ class Workspace:
 	def generate(self, name, server, wid, pw):
 		'''Creates all the data needed for an individual workspace account'''
 		
+		self.name = name
+		self.wid = wid
+		self.domain = server
+
 		# Add workspace
-		status = self.add_to_db(wid, server, pw)
+		status = self.add_to_db(pw)
 		if status.error():
 			return status
 		
@@ -64,7 +68,7 @@ class Workspace:
 		try:
 			self.path.mkdir(parents=True, exist_ok=True)
 		except Exception as e:
-			self.remove_from_db(wid, server)
+			self.remove_from_db()
 			return RetVal(ExceptionThrown, e.__str__())
 		
 		self.path.joinpath('files').mkdir(exist_ok=True)
@@ -73,33 +77,33 @@ class Workspace:
 		self.set_friendly_name(name)
 		return RetVal()
 
-	def add_to_db(self, wid, domain, pw):
+	def add_to_db(self, pw):
 		'''Adds a workspace to the storage database'''
 
 		cursor = self.db.cursor()
-		cursor.execute("SELECT wid FROM workspaces WHERE wid=?", (wid,))
+		cursor.execute("SELECT wid FROM workspaces WHERE wid=?", (self.wid,))
 		results = cursor.fetchone()
 		if results:
-			return RetVal(ResourceExists, wid)
+			return RetVal(ResourceExists, self.wid)
 		
 		cursor.execute('''INSERT INTO workspaces(wid,domain,password,pwhashtype,type)
-			VALUES(?,?,?,?,?)''', (wid, domain, pw.hashstring, pw.hashtype, "single"))
+			VALUES(?,?,?,?,?)''', (self.wid, self.domain, pw.hashstring, pw.hashtype, "single"))
 		self.db.commit()
 		return RetVal()
 
-	def remove_from_db(self, wid, domain):
+	def remove_from_db(self):
 		'''
 		Removes ALL DATA associated with a workspace. Don't call this unless you mean to erase
 		all evidence that a particular workspace ever existed.
 		'''
 		cursor = self.db.cursor()
-		cursor.execute("SELECT wid FROM workspaces WHERE wid=? AND domain=?", (wid,domain))
+		cursor.execute("SELECT wid FROM workspaces WHERE wid=? AND domain=?", (self.wid,self.domain))
 		results = cursor.fetchone()
 		if not results or not results[0]:
-			return RetVal(ResourceNotFound, "%s/%s" % (wid, domain))
+			return RetVal(ResourceNotFound, "%s/%s" % (self.wid, self.domain))
 		
-		address = '/'.join([wid,domain])
-		cursor.execute("DELETE FROM workspaces WHERE wid=? AND domain=?", (wid,domain))
+		address = '/'.join([self.wid,self.domain])
+		cursor.execute("DELETE FROM workspaces WHERE wid=? AND domain=?", (self.wid,self.domain))
 		cursor.execute("DELETE FROM folders WHERE address=?", (address,))
 		cursor.execute("DELETE FROM sessions WHERE address=?", (address,))
 		cursor.execute("DELETE FROM keys WHERE address=?", (address,))
