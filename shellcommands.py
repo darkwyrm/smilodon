@@ -102,7 +102,6 @@ class CommandExit(BaseCommand):
 		return { "x":"exit", "q":"exit" }
 
 	def execute(self, pshell_state):
-		pshell_state.client.disconnect()
 		sys.exit(0)
 
 
