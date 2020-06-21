@@ -1,6 +1,7 @@
 '''The userprofile module handles user profile management'''
 import json
 import os
+import pathlib
 import platform
 import shutil
 import sqlite3
@@ -14,14 +15,19 @@ InvalidProfile = 'InvalidProfile'
 
 class Profile:
 	'''Encapsulates data for user profiles'''
-	def __init__(self, name=''):
-		self.name = name
+	def __init__(self, path: str):
+		if not path:
+			raise ValueError('path may not be empty')
+		
+		self.name = os.path.basename(path)
+		self.path = path
 		self.isdefault = False
 		self.id = ''
 		self.wid = ''
 		self.domain = ''
 		self.port = 2001
-	
+		self.db = None
+
 	def __str__(self):
 		return str(self.as_dict())
 
@@ -37,6 +43,20 @@ class Profile:
 		'''Returns the identity workspace address for the profile including port'''
 		return ':'.join([self.address(),self.port])
 	
+	def activate(self):
+		'''Connects the profile to its associated database'''
+		dbpath = os.path.join(self.path, 'storage.db')
+		if os.path.exists(dbpath):
+			self.db = sqlite3.connect(dbpath)
+		else:
+			self.reset_db()
+	
+	def deactivate(self):
+		'''Disconnects the profile from its associated database'''
+		if self.db:
+			self.db.close()
+			self.db = None
+	
 	def as_dict(self):
 		'''Returns the state of the profile as JSON'''
 		return {
@@ -48,7 +68,7 @@ class Profile:
 			'port' : self.port
 		}
 	
-	def set_from_dict(self, data):
+	def set_from_dict(self, data: dict):
 		'''Assigns profile data from a JSON string'''
 		
 		for k,v in data.items():
@@ -61,6 +81,105 @@ class Profile:
 			return True
 		
 		return False
+
+	def reset_db(self):
+		'''This function reinitializes the database to empty, taking a path to the file used by the 
+		SQLite database. Returns a handle to an open SQLite3 connection.
+		'''
+		dbpath = os.path.join(self.path, 'storage.db')
+		if os.path.exists(dbpath):
+			try:
+				os.remove(dbpath)
+			except Exception as e:
+				print('Unable to delete old database %s: %s' % (dbpath, e))
+		
+		db = sqlite3.connect(dbpath)
+		cursor = db.cursor()
+
+		sqlcmds = [ '''
+			CREATE TABLE workspaces (
+				"wid" TEXT NOT NULL UNIQUE,
+				"friendly_address" TEXT,
+				"domain" TEXT,
+				"password" TEXT,
+				"pwhashtype" TEXT,
+				"type" TEXT
+			);''', '''
+			CREATE table "folders"(
+				"fid" TEXT NOT NULL UNIQUE,
+				"address" TEXT NOT NULL,
+				"keyid" TEXT NOT NULL,
+				"path" TEXT NOT NULL,
+				"permissions" TEXT NOT NULL
+			);''', '''
+			CREATE table "sessions"(
+				"address" TEXT NOT NULL,
+				"devid" TEXT NOT NULL,
+				"devname" TEXT,
+				"keytype" TEXT NOT NULL,
+				"public_key" TEXT NOT NULL,
+				"private_key" TEXT NOT NULL
+			);''', '''
+			CREATE table "keys"(
+				"keyid" TEXT NOT NULL UNIQUE,
+				"address" TEXT NOT NULL,
+				"type" TEXT NOT NULL,
+				"category" TEXT NOT NULL,
+				"private" TEXT NOT NULL,
+				"public" TEXT,
+				"algorithm" TEXT NOT NULL
+			);''', '''
+			CREATE table "keycards"(
+				"fingerprint" TEXT NOT NULL UNIQUE,
+				"fptype" TEXT NOT NULL,
+				"cardtype" TEXT NOT NULL,
+				"carddata" TEXT NOT NULL,
+				"identity" TEXT NOT NULL,
+				"expires" TEXT NOT NULL
+			);''', '''
+			CREATE table "messages"(
+				"id" TEXT NOT NULL UNIQUE,
+				"from"  TEXT NOT NULL,
+				"address" TEXT NOT NULL,
+				"cc"  TEXT,
+				"bcc" TEXT,
+				"date" TEXT NOT NULL,
+				"thread_id" TEXT NOT NULL,
+				"subject" TEXT,
+				"body" TEXT,
+				"attachments" TEXT
+			);''', '''
+			CREATE TABLE "contacts" (
+				"id"	TEXT NOT NULL,
+				"sensitivity"	TEXT NOT NULL,
+				"source"	TEXT NOT NULL,
+				"fieldname"	TEXT,
+				"fieldvalue"	TEXT
+			);''', '''
+			CREATE TABLE "notes" (
+				"id"	TEXT NOT NULL UNIQUE,
+				"address" TEXT,
+				"title"	TEXT,
+				"body"	TEXT,
+				"notebook"	TEXT,
+				"tags"	TEXT,
+				"created"	TEXT NOT NULL,
+				"updated"	TEXT,
+				"attachments"	TEXT
+			);''', '''
+			CREATE TABLE "files" (
+				"id"	TEXT NOT NULL UNIQUE,
+				"name"	TEXT NOT NULL,
+				"type"	TEXT NOT NULL,
+				"path"	TEXT NOT NULL
+			);'''
+		]
+
+		for sqlcmd in sqlcmds:
+			cursor = db.cursor()
+			cursor.execute(sqlcmd)
+		db.commit()
+		return db
 
 
 class ProfileManager:
@@ -84,10 +203,6 @@ class ProfileManager:
 		self.active_index = -1
 		self.profile_id = ''
 		
-		self.db = None
-		self.dbfolder = ''
-		self.dbpath = ''
-
 		# Activate the default profile. If one doesn't exist, create one
 		self.error_state = self.load_profiles()
 		
@@ -157,7 +272,7 @@ class ProfileManager:
 
 			profiles = list()
 			for item in profile_data:
-				profile = Profile()
+				profile = Profile(os.path.join(profile_list_path, item['name']))
 				profile.set_from_dict(item)
 				profiles.append(profile)
 				if profile.isdefault:
@@ -166,10 +281,6 @@ class ProfileManager:
 			self.profiles = profiles
 		return RetVal()
 	
-	def get_db(self):
-		'''Returns a handle to the profile manager's database connection'''
-		return self.db
-
 	def __index_for_profile(self, name):
 		'''Returns the numeric index of the named profile. Returns -1 on error'''
 		if not name:
@@ -195,7 +306,7 @@ class ProfileManager:
 		if self.__index_for_profile(name_squashed) >= 0:
 			return RetVal(ResourceExists, name)
 
-		profile = Profile(name)
+		profile = Profile(os.path.join(self.profile_folder, name_squashed))
 		profile.make_id()
 		self.profiles.append(profile)
 
@@ -226,10 +337,9 @@ class ProfileManager:
 			return RetVal(ResourceNotFound, "%s doesn't exist" % name)
 
 		profile = self.profiles.pop(itemindex)
-		profile_path = os.path.join(self.profile_folder, profile.id)
-		if os.path.exists(profile_path):
+		if os.path.exists(profile.path):
 			try:
-				shutil.rmtree(profile_path)
+				shutil.rmtree(profile.path)
 			except Exception as e:
 				return RetVal(ExceptionThrown, e.__str__())
 		
@@ -260,7 +370,24 @@ class ProfileManager:
 		if self.__index_for_profile(new_squashed) >= 0:
 			return RetVal(ResourceExists, "%s already exists" % newname)
 
+		if index == self.active_index:
+			self.profiles[index].deactivate()
+
+		oldpath = pathlib.Path(self.profiles[index].path)
+		newpath = oldpath.parent.joinpath(new_squashed)
+		try:
+			os.rename(oldpath, newpath)
+		except Exception as e:
+			if index == self.active_index:
+				self.profiles[index].activate()
+			return RetVal(ExceptionThrown, str(e))
+
 		self.profiles[index].name = new_squashed
+		self.profiles[index].path = newpath
+		
+		if index == self.active_index:
+			self.profiles[index].activate()
+		
 		return self.save_profiles()
 	
 	def get_profiles(self):
@@ -320,8 +447,7 @@ class ProfileManager:
 		"port" : integer
 		'''
 		if self.active_index >= 0:
-			if self.db:
-				self.db.close()
+			self.profiles[self.active_index].deactivate()
 			self.active_index = -1
 		
 		if not name:
@@ -332,15 +458,10 @@ class ProfileManager:
 		if active_index < 0:
 			return RetVal(ResourceNotFound, "%s doesn't exist" % name_squashed)
 		
-		self.dbfolder = os.path.join(self.profile_folder, name_squashed)
-		self.dbpath = os.path.join(self.dbfolder, 'storage.db')
-		if os.path.exists(self.dbpath):
-			self.db = sqlite3.connect(self.dbpath)
-		else:
-			self.reset_db()
 		self.profile_id = name_squashed
 
 		self.active_index = active_index
+		self.profiles[self.active_index].activate()
 		
 		out = RetVal()
 		out.set_values({
@@ -355,100 +476,3 @@ class ProfileManager:
 		if self.active_index >= 0:
 			return self.profiles[self.active_index]
 		return ''
-
-	def reset_db(self):
-		'''This function reinitializes the database to empty, taking a path to the file used by the 
-		SQLite database. Returns a handle to an open SQLite3 connection.
-		'''
-		if os.path.exists(self.dbpath):
-			try:
-				os.remove(self.dbpath)
-			except Exception as e:
-				print('Unable to delete old database %s: %s' % (self.dbpath, e))
-		
-		db = sqlite3.connect(self.dbpath)
-		cursor = db.cursor()
-
-		sqlcmds = [ '''
-			CREATE TABLE workspaces (
-				"wid" TEXT NOT NULL UNIQUE,
-				"friendly_address" TEXT,
-				"domain" TEXT,
-				"password" TEXT,
-				"pwhashtype" TEXT,
-				"type" TEXT
-			);''', '''
-			CREATE table "folders"(
-				"fid" TEXT NOT NULL UNIQUE,
-				"address" TEXT NOT NULL,
-				"keyid" TEXT NOT NULL,
-				"path" TEXT NOT NULL,
-				"permissions" TEXT NOT NULL
-			);''', '''
-			CREATE table "sessions"(
-				"address" TEXT NOT NULL,
-				"devid" TEXT NOT NULL,
-				"devname" TEXT,
-				"session_str" TEXT NOT NULL
-			);''', '''
-			CREATE table "keys"(
-				"keyid" TEXT NOT NULL UNIQUE,
-				"address" TEXT NOT NULL,
-				"type" TEXT NOT NULL,
-				"category" TEXT NOT NULL,
-				"private" TEXT NOT NULL,
-				"public" TEXT,
-				"algorithm" TEXT NOT NULL
-			);''', '''
-			CREATE table "keycards"(
-				"fingerprint" TEXT NOT NULL UNIQUE,
-				"fptype" TEXT NOT NULL,
-				"cardtype" TEXT NOT NULL,
-				"carddata" TEXT NOT NULL,
-				"identity" TEXT NOT NULL,
-				"expires" TEXT NOT NULL
-			);''', '''
-			CREATE table "messages"(
-				"id" TEXT NOT NULL UNIQUE,
-				"from"  TEXT NOT NULL,
-				"address" TEXT NOT NULL,
-				"cc"  TEXT,
-				"bcc" TEXT,
-				"date" TEXT NOT NULL,
-				"thread_id" TEXT NOT NULL,
-				"subject" TEXT,
-				"body" TEXT,
-				"attachments" TEXT
-			);''', '''
-			CREATE TABLE "contacts" (
-				"id"	TEXT NOT NULL,
-				"sensitivity"	TEXT NOT NULL,
-				"source"	TEXT NOT NULL,
-				"fieldname"	TEXT,
-				"fieldvalue"	TEXT
-			);''', '''
-			CREATE TABLE "notes" (
-				"id"	TEXT NOT NULL UNIQUE,
-				"address" TEXT,
-				"title"	TEXT,
-				"body"	TEXT,
-				"notebook"	TEXT,
-				"tags"	TEXT,
-				"created"	TEXT NOT NULL,
-				"updated"	TEXT,
-				"attachments"	TEXT
-			);''', '''
-			CREATE TABLE "files" (
-				"id"	TEXT NOT NULL UNIQUE,
-				"name"	TEXT NOT NULL,
-				"type"	TEXT NOT NULL,
-				"path"	TEXT NOT NULL
-			);'''
-		]
-
-		for sqlcmd in sqlcmds:
-			cursor = db.cursor()
-			cursor.execute(sqlcmd)
-		db.commit()
-		return db
-

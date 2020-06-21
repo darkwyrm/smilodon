@@ -26,7 +26,8 @@ def test_profile_class():
 	'''Test the Profile class. It's not big or complicated, so several 
 	tests are grouped together into one'''
 
-	profile = Profile()
+	profile_test_folder = setup_test('profile_class')
+	profile = Profile(profile_test_folder)
 	profile.name = 'Primary'
 	profile.id = 'ca7149eb-e533-4de6-90b1-3b0181d6fa16'
 	profile.wid = 'b5a9367e-680d-46c0-bb2c-73932a6d4007'
@@ -44,7 +45,7 @@ def test_profile_class():
 	}
 	assert profile.as_dict() == test_dict, "Output did not match test data"
 
-	profile = Profile()
+	profile = Profile(profile_test_folder)
 	profile.set_from_dict(test_dict)
 	assert 	profile.name == 'Primary' and \
 			profile.isdefault is False and \
