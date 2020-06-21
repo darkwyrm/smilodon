@@ -36,9 +36,15 @@ def set_credentials(db, wid, domain, pw):
 	db.commit()
 	return RetVal()
 
-
-def add_device_session(db, address, devid, session_str, devname=None):
+def add_device_session(db, address: str, devid: str, keytype: str, public_key: str, 
+		private_key: str, devname=''):
 	'''Adds a device to a workspace'''
+
+	if not address or not devid or not keytype or not public_key or not private_key:
+		return RetVal(BadParameterValue, "Empty parameter")
+	
+	if keytype != 'curve25519':
+		return RetVal(BadParameterValue, "keytype must be 'curve25519'")
 
 	# Normally we don't validate the input, relying on the caller to ensure valid data because
 	# in most cases, bad data just corrupts the database integrity, not crash the program.
@@ -46,7 +52,7 @@ def add_device_session(db, address, devid, session_str, devname=None):
 	parts = utils.split_address(address)
 	if parts.error():
 		return parts
-
+	
 	# address has to be valid and existing already
 	cursor = db.cursor()
 	cursor.execute("SELECT wid FROM workspaces WHERE wid=?", (parts['wid'],))
@@ -62,26 +68,15 @@ def add_device_session(db, address, devid, session_str, devname=None):
 	
 	cursor = db.cursor()
 	if devname:
-		cursor.execute('''INSERT INTO sessions(address,devid,session_str,devname) VALUES(?,?,?,?)''',
-			(address, devid, session_str, devname))
+		cursor.execute('''INSERT INTO sessions(
+				address, devid, keytype, public_key, private_key, devname) 
+				VALUES(?,?,?,?,?,?)''',
+				(address, devid, keytype, public_key, private_key, devname))
 	else:
-		cursor.execute('''INSERT INTO sessions(address,devid,session_str) VALUES(?,?,?)''',
-			(address, devid, session_str))
-	db.commit()
-	return RetVal()
-
-
-def update_device_session(db, devid, session_str):
-	'''Updates the session id for a device'''
-
-	cursor = db.cursor()
-	cursor.execute("SELECT devid FROM sessions WHERE devid=?", (devid,))
-	results = cursor.fetchone()
-	if not results or not results[0]:
-		return RetVal(ResourceNotFound)
-	
-	cursor = db.cursor()
-	cursor.execute('''UPDATE sessions SET session_str=? WHERE devid=?''', (session_str, devid))
+		cursor.execute('''INSERT INTO sessions(
+				address, devid, keytype, public_key, private_key) 
+				VALUES(?,?,?,?,?)''',
+				(address, devid, keytype, public_key, private_key))
 	db.commit()
 	return RetVal()
 
@@ -101,15 +96,24 @@ def remove_device_session(db, devid):
 	return RetVal()
 
 
-def get_session_string(db, address):
-	'''The device can have sessions on multiple servers, but it can only have one on each 
-	server. Return the session string for the specified address or None if not found.'''
+def get_session_public_key(db, address):
+	'''Returns the public key for the device for a session'''
 	cursor = db.cursor()
-	cursor.execute("SELECT session_str FROM sessions WHERE address=?", (address,))
+	cursor.execute("SELECT public_key FROM sessions WHERE address=?", (address,))
 	results = cursor.fetchone()
 	if not results or not results[0]:
 		return RetVal(ResourceNotFound)
-	return RetVal().set_value('sessionstring', results[0])
+	return RetVal().set_value('key', results[0])
+
+
+def get_session_private_key(db, address):
+	'''Returns the private key for the device for a session'''
+	cursor = db.cursor()
+	cursor.execute("SELECT private_key FROM sessions WHERE address=?", (address,))
+	results = cursor.fetchone()
+	if not results or not results[0]:
+		return RetVal(ResourceNotFound)
+	return RetVal().set_value('key', results[0])
 
 
 def add_key(db, key, address):
