@@ -275,7 +275,7 @@ class ProfileManager:
 
 			profiles = list()
 			for item in profile_data:
-				profile = Profile(os.path.join(profile_list_path, item['name']))
+				profile = Profile(os.path.join(self.profile_folder, item['name']))
 				profile.set_from_dict(item)
 				profiles.append(profile)
 				if profile.isdefault:
