@@ -153,7 +153,8 @@ def check_password_complexity(indata):
 	strength: string in [very weak', 'weak', 'medium', 'strong']
 	'''
 	if len(indata) < 8:
-		return RetVal(BadParameterValue, 'Passphrase must be at least 8 characters.')
+		return RetVal(BadParameterValue, 'Passphrase must be at least 8 characters.') \
+			.set_value('strength', 'very weak')
 	
 	strength_score = 0
 	strength_strings = [ 'error', 'very weak', 'weak', 'medium', 'strong', 'very strong']
