@@ -222,7 +222,7 @@ class CommandProfile(BaseCommand):
 				print("Profiles:")
 				profiles = pshell_state.client.get_profiles()
 				for profile in profiles:
-					print(profile)
+					print(profile.name)
 			else:
 				print(self.get_help())
 			return ''
