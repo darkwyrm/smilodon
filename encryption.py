@@ -42,6 +42,7 @@ class EncryptionKey:
 class KeyPair (EncryptionKey):
 	'''Represents an assymmetric encryption key pair'''
 	def __init__(self, category='', public=None, private=None, encryption=None):
+		# TODO: refactor initialization to prevent double key generation for SigningPair
 		if public and private and encryption:
 			super().__init__(category, keytype='asymmetric', enctype=encryption)
 			self.public = public
@@ -87,12 +88,13 @@ class SigningPair (KeyPair):
 	'''Represents an asymmetric signing key pair'''
 	def __init__(self, category='', public=None, private=None, encryption=None):
 		if public and private and encryption:
-			super().__init__(category, keytype='asymmetric', enctype=encryption)
+			super().__init__(category)
 			self.public = public
 			self.private = private
-			self.type = encryption
+			self.enc_type = encryption
 		else:
-			super().__init__(category, keytype='asymmetric', enctype='Ed25519')
+			super().__init__(category)
+			self.enc_type = 'ed25519'
 			key = nacl.signing.SigningKey.generate()
 			self.public = key.verify_key
 			self.private = key
