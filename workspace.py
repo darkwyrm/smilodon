@@ -201,6 +201,7 @@ class Workspace:
 		'''
 		cursor.execute(sqlcmd, (name, self.wid, self.domain))
 		self.db.commit()
+		self.name = name
 
 		return RetVal()
 
