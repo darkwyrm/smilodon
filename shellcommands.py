@@ -327,6 +327,19 @@ class CommandRegister(BaseCommand):
 		return ''
 
 
+class CommandSetInfo(BaseCommand):
+	'''Set workspace information'''
+	def __init__(self, raw_input=None, ptoken_list=None):
+		BaseCommand.__init__(self,raw_input,ptoken_list)
+		self.name = 'setinfo'
+		self.helpInfo = helptext.setinfo_cmd
+		self.description = 'Set workspace information'
+
+	def execute(self, pshell_state):
+		# TODO: Implement
+		return ''
+
+
 class CommandShell(BaseCommand):
 	'''Perform shell commands'''
 	def __init__(self, raw_input=None, ptoken_list=None):
