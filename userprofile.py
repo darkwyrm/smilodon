@@ -102,7 +102,7 @@ class Profile:
 		sqlcmds = [ '''
 			CREATE TABLE workspaces (
 				"wid" TEXT NOT NULL UNIQUE,
-				"friendly_address" TEXT,
+				"userid" TEXT,
 				"domain" TEXT,
 				"password" TEXT,
 				"pwhashtype" TEXT,

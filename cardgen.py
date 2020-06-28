@@ -115,7 +115,7 @@ def get_user_info():
 	out = list()
 	out.append(('Name', get_input("Name (optional, but recommended): ")))
 	out.append(('Workspace-Name', get_input(
-			"Friendly Anselus Address (optional, but recommended): ")))
+			"User ID (optional, but recommended): ")))
 	out.append(('Domain', get_input("Domain: ", ValueNotEmpty())))
 	return out
 

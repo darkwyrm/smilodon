@@ -74,7 +74,7 @@ class Workspace:
 		self.path.joinpath('files').mkdir(exist_ok=True)
 		self.path.joinpath('files','attachments').mkdir(exist_ok=True)
 
-		self.set_friendly_name(name)
+		self.set_userid(name)
 		return RetVal()
 
 	def add_to_db(self, pw):
@@ -187,8 +187,8 @@ class Workspace:
 		
 		return RetVal().set_value('folder', folder)
 
-	def set_friendly_name(self, name):
-		'''set_friendly_name() sets the human-friendly name for the workspace'''
+	def set_userid(self, name):
+		'''set_userid() sets the human-friendly name for the workspace'''
 		
 		if ' ' or '"' in name:
 			return RetVal(BadParameterValue, '" and space not permitted')
@@ -196,7 +196,7 @@ class Workspace:
 		cursor = self.db.cursor()
 		sqlcmd='''
 		UPDATE workspaces
-		SET friendly_address=?
+		SET userid=?
 		WHERE wid=? and domain=?
 		'''
 		cursor.execute(sqlcmd, (name, self.wid, self.domain))
@@ -204,6 +204,6 @@ class Workspace:
 
 		return RetVal()
 
-	def get_friendly_name(self):
-		'''get_friendly_name() sets the human-friendly name for the workspace'''
+	def get_userid(self):
+		'''get_userid() gets the human-friendly name for the workspace'''
 		return RetVal().set_value('name', self.name)

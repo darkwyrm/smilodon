@@ -52,5 +52,5 @@ Aliases: ` , sh'''
 setinfo_cmd = '''Usage: setinfo <infotype> <value>
 Sets contact information for the profile. Available information which can be set is listed below:
 
-address - the "friendly name" for the workspace, i.e. the non-numeric part of a person's Anselus address which is what is usually shared with other people.
+userid - the "friendly name" for the workspace, i.e. the non-numeric part of a person's Anselus address which is what is usually shared with other people.
 '''
