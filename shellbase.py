@@ -1,3 +1,4 @@
+'''Provides the command processing API'''
 # pylint: disable=unused-argument
 
 from glob import glob
@@ -41,7 +42,7 @@ class BaseCommand:
 	
 	def set(self, raw_input=None, ptoken_list=None):
 		'''Sets the input and does some basic parsing'''
-		if raw_input is None or len(raw_input) == 0:
+		if not raw_input:
 			self.rawCommand = ''
 			self.tokenList = list()
 		else:
@@ -59,7 +60,7 @@ class BaseCommand:
 	
 	def __init__(self, raw_input=None, ptoken_list=None):
 		self.set(raw_input,ptoken_list)
-		if raw_input and len(raw_input) > 0:
+		if raw_input:
 			self.name = raw_input.split(' ')
 		self.helpInfo = ''
 		self.description = ''

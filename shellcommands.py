@@ -1,3 +1,4 @@
+'''Contains the implementations for shell commands'''
 # pylint: disable=unused-argument,too-many-branches
 import collections
 from getpass import getpass
@@ -46,7 +47,7 @@ class CommandChDir(BaseCommand):
 		return { "cd":"chdir" }
 
 	def execute(self, pshell_state):
-		if len(self.tokenList) > 0:
+		if self.tokenList:
 			newDir = ''
 			if '~' in self.tokenList[0]:
 				if platform.system().casefold() == 'windows':
@@ -118,7 +119,7 @@ class CommandHelp(BaseCommand):
 		return { "?":"help" }
 
 	def execute(self, pshell_state):
-		if len(self.tokenList) > 0:
+		if self.tokenList:
 			# help <keyword>
 			for cmdName in self.tokenList:
 				if len(cmdName) < 1:
@@ -212,7 +213,7 @@ class CommandProfile(BaseCommand):
 		self.description = 'Manage profiles.'
 	
 	def execute(self, pshell_state):
-		if len(self.tokenList) == 0:
+		if not self.tokenList:
 			print('Active profile: %s' % pshell_state.client.get_active_profile())
 			return ''
 
@@ -336,7 +337,7 @@ class CommandSetInfo(BaseCommand):
 		self.description = 'Set workspace information'
 
 	def execute(self, pshell_state):
-		# TODO: Implement
+		# TODO: Implement SETINFO
 		return ''
 
 
