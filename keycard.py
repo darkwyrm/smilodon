@@ -71,18 +71,16 @@ class __CardBase:
 		to be noncompliant, the noncompliant field is also returned'''
 
 		if self.type != 'User' and self.type != 'Organization':
-			return RetVal(UnsupportedKeycardType)
+			return RetVal(UnsupportedKeycardType).set_info('Unsupported card type %s' % self.type)
 		
 		# Check for existence of required fields
 		for field in self.required_fields:
 			if field not in self.fields or not self.fields[field]:
-				rv = RetVal(RequiredFieldMissing)
-				rv['field'] = field
-				return rv
+				return RetVal(RequiredFieldMissing).set_info('Missing field %s' % field)
 		
 		return RetVal()
 	
-	def set_from_string(self, text):
+	def set_from_string(self, text: str):
 		'''Takes a string representation of the keycard and parses it into fields and signatures.'''
 		if not text:
 			self.fields = dict()
@@ -98,8 +96,15 @@ class __CardBase:
 			if len(parts) > 1:
 				self.fields[parts[0]] = parts[1]
 
+	def set_field(self, field_name: str, field_value: str):
+		'''Takes a dictionary of fields to be assigned to the object. Any field which is not part 
+		of the official spec is assigned but otherwise ignored.'''
+		self.fields[field_name] = field_value
+		
+		# Any kind of editing invalidates the signatures
+		self.signatures = dict()
 
-	def set_fields(self, fields):
+	def set_fields(self, fields: dict):
 		'''Takes a dictionary of fields to be assigned to the object. Any field which is not part 
 		of the official spec is assigned but otherwise ignored.'''
 		for field in fields:
@@ -172,7 +177,7 @@ class OrgCard(__CardBase):
 		self.fields['Time-To-Live'] = '30'
 		self.set_expiration()
 
-	def set_from_string(self, text):
+	def set_from_string(self, text: str):
 		'''Initializes the keycard from string data'''
 		super().set_from_string(text)
 		if 'Organization-Signature' in self.fields:
@@ -206,7 +211,7 @@ class OrgCard(__CardBase):
 			lines.append('Organization-Signature:' + self.signatures['Organization'])
 		return '\n'.join(lines)
 
-	def sign(self, signing_key):
+	def sign(self, signing_key: bytes):
 		'''Adds the organizational signature to the  Note that for any change in the 
 		keycard fields, this call must be made afterward.'''
 		if not signing_key:
@@ -221,7 +226,7 @@ class OrgCard(__CardBase):
 		self.signatures['Organization'] = signed.signature.decode()
 		return RetVal()
 
-	def verify(self, verify_key):
+	def verify(self, verify_key: bytes):
 		'''Verifies the signature, given a verification key'''
 		if 'Organization' not in self.signatures or not self.signatures['Organization']:
 			return RetVal(SignatureMissing)
@@ -272,18 +277,14 @@ class UserCard(__CardBase):
 			return rv
 		
 		if 'User' not in self.signatures or not self.signatures['User']:
-			rv.set_error(SignatureMissing)
-			rv['field'] = 'User-Signature'
-			return rv
+			return RetVal(SignatureMissing, 'User-Signature')
 		
 		if 'Organization' not in self.signatures or not self.signatures['Organization']:
-			rv.set_error(SignatureMissing)
-			rv['field'] = 'Organization-Signature'
-			return rv
+			return RetVal(SignatureMissing, 'Organization-Signature')
 		
 		return rv
 
-	def set_from_string(self, text):
+	def set_from_string(self, text: str):
 		'''Initializes the keycard from string data'''
 		super().set_from_string(text)
 		
@@ -312,7 +313,7 @@ class UserCard(__CardBase):
 		
 		return '\n'.join(lines)
 
-	def sign(self, signing_key, sigtype):
+	def sign(self, signing_key: bytes, sigtype: str):
 		'''Adds a signature to the  Note that for any change in the keycard fields, this 
 		call must be made afterward. Note that successive signatures are deleted, such that 
 		updating a User signature will delete the Organization signature which depends on it. The 
@@ -355,7 +356,7 @@ class UserCard(__CardBase):
 		self.signatures[sigtype] = signed.signature.decode()
 		return RetVal()
 
-	def verify(self, verify_key, sigtype):
+	def verify(self, verify_key: bytes, sigtype: str):
 		'''Verifies a signature, given a verification key'''
 		rv = RetVal()
 		if not verify_key:
