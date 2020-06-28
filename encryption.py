@@ -42,7 +42,6 @@ class EncryptionKey:
 class KeyPair (EncryptionKey):
 	'''Represents an assymmetric encryption key pair'''
 	def __init__(self, category='', public=None, private=None, encryption=None):
-		# TODO: refactor initialization to prevent double key generation for SigningPair
 		if public and private and encryption:
 			super().__init__(category, keytype='asymmetric', enctype=encryption)
 			self.public = public
@@ -84,26 +83,48 @@ class KeyPair (EncryptionKey):
 		return self.private64
 
 
-class SigningPair (KeyPair):
+class SigningPair (EncryptionKey):
 	'''Represents an asymmetric signing key pair'''
 	def __init__(self, category='', public=None, private=None, encryption=None):
 		if public and private and encryption:
-			super().__init__(category)
+			super().__init__(category, keytype='asymmetric', enctype=encryption)
 			self.public = public
 			self.private = private
-			self.enc_type = encryption
+			self.type = encryption
 		else:
-			super().__init__(category)
-			self.enc_type = 'ed25519'
+			super().__init__(category, keytype='asymmetric', enctype='ed25519')
 			key = nacl.signing.SigningKey.generate()
-			self.public = key.verify_key
-			self.private = key
+			self.public = key.verify_key.encode()
+			self.private = key.encode()
 		
 		self.public85 = base64.b85encode(bytes(self.public)).decode('utf8')
 		self.private85 = base64.b85encode(bytes(self.private)).decode('utf8')
 		self.public64 = base64.b64encode(bytes(self.public)).decode('utf8')
 		self.private64 = base64.b64encode(bytes(self.private)).decode('utf8')
 
+	def get_public_key(self):
+		'''Returns the binary data representing the public half of the key'''
+		return self.public
+	
+	def get_public_key85(self):
+		'''Returns the public key encoded in base85'''
+		return self.public85
+	
+	def get_public_key64(self):
+		'''Returns the public key encoded in base64'''
+		return self.public64
+	
+	def get_private_key(self):
+		'''Returns the binary data representing the private half of the key'''
+		return self.private
+
+	def get_private_key85(self):
+		'''Returns the private key encoded in base85'''
+		return self.private85
+
+	def get_private_key64(self):
+		'''Returns the private key encoded in base64'''
+		return self.private64
 
 class SecretKey (EncryptionKey):
 	'''Represents a secret key used by symmetric encryption'''
