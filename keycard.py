@@ -25,7 +25,7 @@ def generate_signing_key():
 	key = nacl.signing.SigningKey.generate()
 	keypair = RetVal()
 	keypair.set_value('private', key.encode())
-	keypair.set_value('public', key.verify_key)
+	keypair.set_value('public', key.verify_key.encode())
 	return keypair
 
 
