@@ -3,7 +3,7 @@ Anselus client'''
 import socket
 
 import auth
-import clientlib
+import serverconn
 from encryption import Password, KeyPair
 from retval import RetVal, InternalError, BadParameterValue, ResourceExists
 from storage import ClientStorage
@@ -28,10 +28,10 @@ class AnselusClient:
 			return status
 		
 		if self.socket:
-			clientlib.disconnect(self.socket)
+			serverconn.disconnect(self.socket)
 		self.socket = None
 		
-		status = clientlib.connect(status['host'],status['port'])
+		status = serverconn.connect(status['host'],status['port'])
 		return status
 	
 	def get_active_profile(self):
@@ -129,14 +129,14 @@ class AnselusClient:
 		# Add the device to the workspace
 		devkey = KeyPair()
 
-		conndata = clientlib.connect(host, port)
+		conndata = serverconn.connect(host, port)
 		if conndata.error():
 			return conndata
 		
-		regdata = clientlib.register(conndata['socket'], pw.hashstring, devkey.type, devkey.public85)
+		regdata = serverconn.register(conndata['socket'], pw.hashstring, devkey.type, devkey.public85)
 		if regdata.error():
 			return regdata
-		clientlib.disconnect(conndata['socket'])
+		serverconn.disconnect(conndata['socket'])
 
 		# Possible status codes from register()
 		# 304 - Registration closed
@@ -150,7 +150,7 @@ class AnselusClient:
 		
 		# Just a basic sanity check
 		if 'wid' not in regdata:
-			return RetVal(InternalError, 'BUG: bad data from clientlib.register()') \
+			return RetVal(InternalError, 'BUG: bad data from serverconn.register()') \
 					.set_value('code', 300)
 
 		w = Workspace(self.fs.pman.get_active_profile().db, self.fs.pman.get_active_profile().path)
