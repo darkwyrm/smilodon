@@ -245,7 +245,7 @@ class UserCard(__CardBase):
 		self.field_names = [
 			'Name',
 			'Workspace-ID',
-			'Workspace-Name',
+			'User-ID',
 			'Domain',
 			'Contact-Request-Key',
 			'Public-Encryption-Key',
