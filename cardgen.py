@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+'''Generates a root user or organizational keycard after asking some questions.'''
+
 import os
 import sys
 import uuid
