@@ -1,8 +1,12 @@
+#!/usr/bin/env python3
 import os
 import sys
+import uuid
 
 import encryption
 import keycard
+# Pylint doesn't detect the RetVal usage for whatever reason
+import retval	# pylint: disable=unused-import
 
 class Validator:
 	'''Abstract class for validating input from the user.'''
@@ -46,7 +50,7 @@ class ValueIsInteger (Validator):
 
 def print_usage():
 	'''Prints usage information'''
-	print("%s: <org|user> <key basename>\nInteractively generate a keycard and associated keys." % \
+	print("%s: <org|user> <directory>\nInteractively generate a keycard and associated keys." % \
 			os.path.basename(__file__))
 
 def get_input(prompt, compare=Validator(), default_value=''):
@@ -101,49 +105,214 @@ def get_org_info():
 	
 	return out
 
-def generate_org_card(userdata: list):
+
+def generate_org_card(userdata: list, path: str):
 	'''Generates an organizational keycard from supplied user data'''
-	print(userdata)
+	ekey = encryption.KeyPair()
+	skey = encryption.SigningPair()
 	
-	lines = [ ':'.join([x[0],x[1]]) for x in userdata ]
+	if not os.path.exists(path):
+		raise OSError("Path doesn't exist")
+
+	if not os.path.isdir(path):
+		raise OSError("Path must be a directory")
+	
+	outpath = os.path.join(path, 'org_signing.priv.key')
+	with open(outpath, 'w') as f:
+		f.writelines([
+			"KEYTYPE: %s B85\n" % skey.enc_type.upper(),
+			"----- BEGIN PRIVATE KEY -----\n",
+			skey.get_private_key85() + '\n',
+			"----- END PRIVATE KEY -----\n"
+		])
+	
+	outpath = os.path.join(path, 'org_signing.key')
+	with open(outpath, 'w') as f:
+		f.writelines([
+			"KEYTYPE: %s B85\n" % skey.enc_type.upper(),
+			"----- BEGIN PRIVATE KEY -----\n",
+			skey.get_private_key85() + '\n',
+			"----- END PRIVATE KEY -----\n"
+		])
+	
+	print("Saved signing keys to org_signing.*")
+	
+	outpath = os.path.join(path, 'org_encryption.priv.key')
+	with open(outpath, 'w') as f:
+		f.writelines([
+			"KEYTYPE: %s B85\n" % ekey.enc_type.upper(),
+			"----- BEGIN PRIVATE KEY -----\n",
+			ekey.get_private_key85() + '\n',
+			"----- END PRIVATE KEY -----\n"
+		])
+	
+	outpath = os.path.join(path, 'org_encryption.key')
+	with open(outpath, 'w') as f:
+		f.writelines([
+			"KEYTYPE: %s B85\n" % ekey.enc_type.upper(),
+			"----- BEGIN PUBLIC KEY -----\n",
+			ekey.get_public_key85() + '\n',
+			"----- END PUBLIC KEY -----\n"
+		])
+	
+	print("Saved encryption keys to org_encryption.*")
+
 	card = keycard.OrgCard()
-	card.set_from_string('\n'.join(lines))
+	for item in userdata:
+		card.set_field(item[0], item[1])
+	card.set_field("Primary-Signing-Key", skey.get_public_key85())
+	card.set_field("Encryption-Key", ekey.get_public_key85())
+	
+	status = card.sign(skey.get_private_key())
+	if status.error():
+		if status.info():
+			print("Org card signature failure: %s" % status.info())
+		else:
+			print("Org card signature failure: %s" % status.error())
+	
+	status = card.is_compliant()
+	if status.error():
+		if status.info():
+			print("Org card not compliant: %s" % status.info())
+		else:
+			print("Org card not compliant: %s" % status.error())
+	
+	outpath = os.path.join(path, 'org.keycard')
+	with open(outpath, 'w') as f:
+		f.write(str(card) + '\n')
 	
 
 def get_user_info():
 	'''Gets all user input for a user and returns a list of tuples containing it all'''
 	out = list()
 	out.append(('Name', get_input("Name (optional, but recommended): ")))
-	out.append(('Workspace-Name', get_input(
+	out.append(('User-ID', get_input(
 			"User ID (optional, but recommended): ")))
+	
+	wid = get_input("Workspace ID (leave empty to generate): ")
+	if not wid:
+		wid = str(uuid.uuid4())
+	out.append(('Workspace-ID', wid))
 	out.append(('Domain', get_input("Domain: ", ValueNotEmpty())))
 	return out
 
-def generate_user_card(userdata: list):
-	'''Generates a user keycard from supplied user data'''
+
+def generate_user_card(userdata: list, path: str):
+	'''Generates a user keycard from supplied user data and a directory'''
 	
-	print(userdata)
 	# Generate and save the necessary keys
+	ekey = encryption.KeyPair()
+	crkey = encryption.KeyPair()
+	skey = encryption.SigningPair()
+
+	if not os.path.exists(path):
+		raise OSError("Path doesn't exist")
+
+	if not os.path.isdir(path):
+		raise OSError("Path must be a directory")
+	
+	outpath = os.path.join(path, 'user_encryption.priv.key')
+	with open(outpath, 'w') as f:
+		f.writelines([
+			"KEYTYPE: %s B85\n" % ekey.enc_type.upper(),
+			"----- BEGIN PRIVATE KEY -----\n",
+			ekey.get_private_key85() + '\n',
+			"----- END PRIVATE KEY -----\n"
+		])
+	
+	outpath = os.path.join(path, 'user_encryption.key')
+	with open(outpath, 'w') as f:
+		f.writelines([
+			"KEYTYPE: %s B85\n" % ekey.enc_type.upper(),
+			"----- BEGIN PUBLIC KEY -----\n",
+			ekey.get_public_key85() + '\n',
+			"----- END PUBLIC KEY -----\n"
+		])
+	
+	print("Saved encryption keys to user_encryption.*")
+
+	outpath = os.path.join(path, 'user_request.priv.key')
+	with open(outpath, 'w') as f:
+		f.writelines([
+			"KEYTYPE: %s B85\n" % crkey.enc_type.upper(),
+			"----- BEGIN PRIVATE KEY -----\n",
+			crkey.get_private_key85() + '\n',
+			"----- END PRIVATE KEY -----\n"
+		])
+	
+	outpath = os.path.join(path, 'user_request.key')
+	with open(outpath, 'w') as f:
+		f.writelines([
+			"KEYTYPE: %s B85\n" % crkey.enc_type.upper(),
+			"----- BEGIN PUBLIC KEY -----\n",
+			crkey.get_public_key85() + '\n',
+			"----- END PUBLIC KEY -----\n"
+		])
+	
+	print("Saved contact request keys to user_request.*")
+
+	outpath = os.path.join(path, 'user_signing.priv.key')
+	with open(outpath, 'w') as f:
+		f.writelines([
+			"KEYTYPE: %s B85\n" % skey.enc_type.upper(),
+			"----- BEGIN PRIVATE KEY -----\n",
+			skey.get_private_key85() + '\n',
+			"----- END PRIVATE KEY -----\n"
+		])
+	
+	outpath = os.path.join(path, 'user_signing.key')
+	with open(outpath, 'w') as f:
+		f.writelines([
+			"KEYTYPE: %s B85\n" % skey.enc_type.upper(),
+			"----- BEGIN PUBLIC KEY -----\n",
+			skey.get_private_key85() + '\n',
+			"----- END PUBLIC KEY -----\n"
+		])
+	
+	print("Saved signing keys to user_signing.*")
+
+	card = keycard.UserCard()
+	for item in userdata:
+		card.set_field(item[0], item[1])
+	card.set_fields({
+		"Contact-Request-Key" : crkey.get_public_key85(),
+		"Public-Encryption-Key" : ekey.get_public_key85(),
+	})
+	
+	outpath = os.path.join(path, 'user.keycard')
+	with open(outpath, 'w') as f:
+		f.write(str(card) + '\n')
 
 
+debug_app = False
 
 if __name__ == '__main__':
+	if debug_app:
+		if sys.argv[1] == 'org':
+			generate_org_card([('Name', 'Acme, Inc.'), ('Street-Address', '1313 Mockingbird Lane'), 
+					('Extended-Address', ''), ('City', 'Schenectady'), ('Province', 'NY'), 
+					('Postal-Code', '12345'), ('Country', 'United States'), ('Domain', 'acme.com'), 
+					('Contact-Admin', 'admin/acme.com'), ('Contact-Abuse', 'admin/acme.com'), 
+					('Contact-Support', 'admin/acme.com'), ('Language', 'en'), 
+					('Website', 'www.acme.com'), ('Web-Access', 'webmail.acme.com'), 
+					('Anselus-Access', 'anselus.acme.com'), ('Item-Size-Limit', '30'), 
+					('Message-Size-Limit', '30'), ('Time-To-Live', '14'), ('Expires', '730')],
+					'foo')
+		else:
+			generate_user_card([('Name', 'Jon Yoder'), ('User-ID', 'jyoder'),
+					('Workspace-ID', 'ab9ec7a7-d3d0-4bba-a203-b421418a78f0'),
+					('Domain', 'example.com')],
+					'foo')
+		sys.exit(0)
+	
 	if len(sys.argv) < 3 or sys.argv[1].casefold() not in [ 'org', 'user' ]:
 		print_usage()
 		sys.exit(0)
 
 	cardtype = sys.argv[1].casefold()
 	if cardtype == 'org':
-		#info = get_org_info()
-		#generate_org_card(info)
-		generate_org_card([('Name', 'Acme, Inc.'), ('Street-Address', '1313 Mockingbird Lane'), 
-				('Extended-Address', ''), ('City', 'Schenectady'), ('Province', 'NY'), 
-				('Postal-Code', '12345'), ('Country', 'United States'), ('Domain', 'acme.com'), 
-				('Contact-Admin', 'admin/acme.com'), ('Contact-Abuse', 'admin/acme.com'), 
-				('Contact-Support', 'admin/acme.com'), ('Language', 'en'), 
-				('Website', 'www.acme.com'), ('Web-Access', 'webmail.acme.com'), 
-				('Anselus-Access', 'anselus.acme.com'), ('Item-Size-Limit', '30'), 
-				('Message-Size-Limit', '30'), ('Time-To-Live', '14'), ('Expires', '730')])
+		info = get_org_info()
+		generate_org_card(info, sys.argv[2])
 	else:
 		info = get_user_info()
-		generate_user_card(info)
+		generate_user_card(info, sys.argv[2])
