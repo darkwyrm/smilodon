@@ -159,6 +159,7 @@ class OrgCard(__CardBase):
 			'Contact-Support',
 			'Language',
 			'Website',
+			'Encoding',
 			'Primary-Signing-Key',
 			'Primary-Signing-Algorithm',
 			'Secondary-Signing-Key',
@@ -183,6 +184,7 @@ class OrgCard(__CardBase):
 			'Expires'
 		]
 		self.fields['Time-To-Live'] = '30'
+		self.fields['Encoding'] = 'base85'
 		self.set_expiration()
 
 	def set_from_string(self, text: str):
@@ -271,12 +273,14 @@ class UserCard(__CardBase):
 		self.required_fields = [
 			'Workspace-ID',
 			'Domain',
+			'Encoding',
 			'Contact-Request-Key',
 			'Public-Encryption-Key',
 			'Time-To-Live',
 			'Expires'
 		]
 		self.fields['Time-To-Live'] = '7'
+		self.fields['Encoding'] = 'base85'
 		self.set_expiration()
 
 	def is_compliant(self):
