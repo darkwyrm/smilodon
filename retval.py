@@ -6,8 +6,10 @@ NoError = ''
 
 # When either of these are returned and more than one parameter is needed by the function,
 # the field 'parameter' will also be returned and will contain the name of the bad parameter
+BadData = 'BadData'
 BadParameterValue = 'BadParameterValue'
 BadParameterType = 'BadParameterType'
+EmptyData = 'EmptyData'
 FilesystemError = 'FilesystemError'
 ResourceExists = 'ResourceExists'
 ResourceNotFound = 'ResourceNotFound'
