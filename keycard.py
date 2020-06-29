@@ -2,6 +2,7 @@
 
 import base64
 import datetime
+import hashlib
 
 import nacl.public
 import nacl.signing
@@ -130,9 +131,14 @@ class __CardBase:
 		return RetVal()
 
 	def blake2(self):
-		'''Returns the BLAKE2b fingerprint for the keycard data encoded in base85.'''
+		'''Returns a 512-bit BLAKE2b fingerprint for the keycard data encoded in base85.'''
 		data = str(self)
 		return base64.b85encode(blake2b(data.encode()).digest()).decode()
+
+	def sha256(self):
+		'''Returns a SHA256 fingerprint for the keycard data encoded in base85.'''
+		data = str(self)
+		return base64.b85encode(hashlib.sha256(data.encode()).digest()).decode()
 
 
 class OrgCard(__CardBase):
