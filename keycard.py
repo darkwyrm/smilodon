@@ -3,13 +3,14 @@
 import base64
 import datetime
 import hashlib
+import os
 
 import nacl.public
 import nacl.signing
 # Pylint doesn't detect blake2b() for whatever reason
 from pyblake2 import blake2b	# pylint: disable=no-name-in-module
 
-from retval import RetVal, BadParameterValue, BadParameterType
+from retval import RetVal, BadData, BadParameterValue, BadParameterType, EmptyData, ResourceNotFound
 
 UnsupportedKeycardType = 'UnsupportedKeycardType'
 InvalidKeycard = 'InvalidKeycard'
@@ -20,6 +21,8 @@ NotCompliant = 'NotCompliant'
 RequiredFieldMissing = 'RequiredFieldMissing'
 SignatureMissing = 'SignatureMissing'
 
+
+# TODO: force loading and saving with \r\n line endings to prevent signature invalidation
 
 def generate_signing_key():
 	'''Generates a dictionary containing an Ed25519 key pair'''
@@ -414,6 +417,32 @@ class UserCard(__CardBase):
 		
 		return rv
 		
+
+def load_keycard(path: str):
+	'''Loads and returns a keycard, given a path'''
+	if not os.path.exists(path):
+		return RetVal(ResourceNotFound, "%s doesn't exist" % path)
+	
+	fdata = None
+	with open(path, 'rb') as f:
+		fsize = os.stat(path).st_size
+		if not fsize:
+			return RetVal(EmptyData)
+		rawdata = f.read(fsize)
+		if rawdata:
+			fdata = rawdata.decode()
+	
+	card = None
+	if "Type:Organization" in fdata:
+		card = OrgCard()
+	elif "Type:User" in fdata:
+		card = UserCard()
+	else:
+		return RetVal(BadData, 'Bad keycard type')
+	card.set_from_string(fdata)
+
+	return RetVal().set_value('card', card)
+
 
 class Base85Encoder:
 	'''Base85 encoder for PyNaCl library'''
