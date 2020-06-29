@@ -1,4 +1,6 @@
+'''Holds classes designed for working with encryption keys'''
 import base64
+import os
 import re
 import uuid
 
@@ -7,7 +9,72 @@ import nacl.pwhash
 import nacl.secret
 import nacl.signing
 import nacl.utils
-from retval import RetVal, BadParameterValue
+from retval import RetVal, BadData, BadParameterValue, ExceptionThrown, ResourceExists
+
+# TODO: Add support for more than just ed25519/curve25519/salsa20
+
+def __loadfile(path: str):
+	'''Loads data from a key file. This is intended to handle all the common code needed for 
+	reading any key file. It returns several fields:
+	keytype : str - the type of key and should be PUBLIC, PRIVATE, or SECRET
+	enctype : str - encryption type
+	encoding : str - type of encoding, which should be 85 or 64'''
+	if not path:
+		return RetVal(BadParameterValue, 'path may not be empty')
+	
+	lines = None
+	try:
+		with open(path, 'r') as f:
+			lines = f.readlines()
+	except Exception as e:
+		return RetVal(ExceptionThrown, str(e))
+	
+	# Validate the data.
+
+	# The format for a key file is expected as follows:
+	# 1. First line must be 'ENCTYPE:' followed by the format in all lowercase
+	# 2. Second line must be '----- BEGIN <keytype> KEY <enctype> -----' where keytype is either
+	#		'PUBLIC' or 'PRIVATE' and enctype is either '64' or '85'
+	# 3. Third line is the encoded key all on one line
+	# 4. Fourth line is '----- END <keytype> KEY -----'
+
+	for i in range(0, len(lines)):
+		lines[i] = lines[i].strip()
+		if not lines[i]:
+			del lines[i]
+			i = i - 1
+	
+	if len(lines) < 4:
+		return RetVal(BadData, 'Key may only have 4 lines')
+
+	if not lines[0].startswith('ENCTYPE:'):
+		return RetVal(BadData, "First line of key must start with 'ENCTYPE:'")
+	
+	if not re.match('-{5} BEGIN (PRIVATE|PUBLIC|SECRET) KEY (85|64)', lines[1]):
+		return RetVal(BadData, "Second line of key must be "
+				"----- BEGIN (PUBLIC|PRIVATE|SECRET) KEY (85|64) -----'")
+	
+	if not re.match('-{5} END (PRIVATE|PUBLIC|SECRET) KEY', lines[4]):
+		return RetVal(BadData, "Fourth line of key must be "
+				"----- END (PUBLIC|PRIVATE|SECRET) KEY -----'")
+
+	# Now that the general format has been validated, attempt to actually decode and load
+	# the key data
+	parts = lines[0].split('ENCTYPE:')
+	if parts != 2 or parts[0]:
+		return RetVal(BadData, 'Bad first line: %s' % lines[0])
+	
+	m = re.match('-{5} BEGIN (PRIVATE|PUBLIC|SECRET) KEY (85|64)', lines[1])
+
+	r = RetVal()
+	r.set_values({
+		'enctype' : parts[1],
+		'keytype' : m.groups[0],
+		'encoding' : m.groups[1]
+	})
+
+	return r
+
 
 class EncryptionKey:
 	'''Defines a generic interface to an Anselus encryption key, which contains more
@@ -17,7 +84,7 @@ class EncryptionKey:
 		self.id = str(uuid.uuid4())
 		self.enc_type = enctype
 		self.type = keytype
-
+	
 	def get_category(self):
 		'''Returns a string containing the category of the key.'''
 		return self.category
@@ -125,6 +192,57 @@ class SigningPair (EncryptionKey):
 	def get_private_key64(self):
 		'''Returns the private key encoded in base64'''
 		return self.private64
+
+	def load(self, path: str):
+		'''Loads the key from a file'''
+		status = __loadfile(path)
+		if status.error():
+			return status
+		
+		if status['keytype'] == 'SECRET' or status['enctype'] != 'ed25519':
+			return RetVal(BadParameterValue, "Keyfile type does not match object")
+		
+		# TODO: Fix this -- need to load 2 files for asymmetric keys and 1 for symmetric
+
+
+	def save(self, path: str, keytype: str, encoding='base85'):
+		'''Saves the key to a file'''
+		if not path:
+			return RetVal(BadParameterValue, 'path may not be empty')
+		
+		if keytype not in [ 'public', 'private' ]:
+			return RetVal(BadParameterValue, "keytype must be 'public' or 'private'")
+		
+		if encoding not in [ 'base64', 'base85' ]:
+			return RetVal(BadParameterValue, "encoding must be 'base64' or 'base85'")
+		
+		if os.path.exists(path):
+			return RetVal(ResourceExists, '%s exists' % path)
+
+		try:
+			fhandle = open(path, 'w')
+			fhandle.write("ENCTYPE: %s\n" % self.enc_type.upper())
+			fhandle.write('----- BEGIN %s KEY -----\n' % keytype.upper())
+			
+			if keytype == 'public':
+				if encoding == 'base85':
+					fhandle.write(self.get_public_key85() + '\n')
+				else:
+					fhandle.write(self.get_public_key64() + '\n')
+			else:
+				if encoding == 'base85':
+					fhandle.write(self.get_private_key85() + '\n')
+				else:
+					fhandle.write(self.get_private_key64() + '\n')
+
+			fhandle.write('----- END %s KEY -----\n' % keytype.upper())
+			fhandle.close()
+		
+		except Exception as e:
+			return RetVal(ExceptionThrown, str(e))
+
+		return RetVal()
+
 
 class SecretKey (EncryptionKey):
 	'''Represents a secret key used by symmetric encryption'''
