@@ -170,7 +170,9 @@ class OrgCard(__CardBase):
 			'Item-Size-Limit',
 			'Message-Size-Limit',
 			'Time-To-Live',
-			'Expires'
+			'Expires',
+			'Hash-Type',
+			'Hash-ID'
 		]
 		self.required_fields = [
 			'Name',
@@ -262,7 +264,9 @@ class UserCard(__CardBase):
 			'Public-Encryption-Key',
 			'Alternate-Encryption-Key',
 			'Time-To-Live',
-			'Expires'
+			'Expires',
+			'Hash-Type',
+			'Hash-ID'
 		]
 		self.required_fields = [
 			'Workspace-ID',
