@@ -58,7 +58,7 @@ class Profile:
 			self.db = None
 	
 	def as_dict(self):
-		'''Returns the state of the profile as JSON'''
+		'''Returns the state of the profile as a dictionary'''
 		return {
 			'name' : self.name,
 			'isdefault' : self.isdefault,
@@ -69,7 +69,7 @@ class Profile:
 		}
 	
 	def set_from_dict(self, data: dict):
-		'''Assigns profile data from a JSON string'''
+		'''Assigns profile data from a dictionary'''
 		
 		for k,v in data.items():
 			if k in [ 'name', 'isdefault', 'id', 'wid', 'domain', 'port' ]:
