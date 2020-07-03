@@ -1,5 +1,6 @@
 '''Holds classes designed for working with encryption keys'''
 import base64
+import json
 import os
 import re
 import uuid
@@ -205,13 +206,10 @@ class SigningPair (EncryptionKey):
 		# TODO: Fix this -- need to load 2 files for asymmetric keys and 1 for symmetric
 
 
-	def save(self, path: str, keytype: str, encoding='base85'):
+	def save(self, path: str, encoding='base85'):
 		'''Saves the key to a file'''
 		if not path:
 			return RetVal(BadParameterValue, 'path may not be empty')
-		
-		if keytype not in [ 'public', 'private' ]:
-			return RetVal(BadParameterValue, "keytype must be 'public' or 'private'")
 		
 		if encoding not in [ 'base64', 'base85' ]:
 			return RetVal(BadParameterValue, "encoding must be 'base64' or 'base85'")
@@ -219,23 +217,22 @@ class SigningPair (EncryptionKey):
 		if os.path.exists(path):
 			return RetVal(ResourceExists, '%s exists' % path)
 
+		outdata = {
+			'type' : 'signingpair',
+			'encryption' : self.enc_type,
+			'encoding' : encoding
+		}
+
+		if encoding == 'base85':
+			outdata['publickey'] = self.get_public_key85()
+			outdata['privatekey'] = self.get_private_key85()
+		else:
+			outdata['publickey'] = self.get_public_key64()
+			outdata['privatekey'] = self.get_private_key64()
+			
 		try:
 			fhandle = open(path, 'w')
-			fhandle.write("ENCTYPE: %s\n" % self.enc_type.upper())
-			fhandle.write('----- BEGIN %s KEY -----\n' % keytype.upper())
-			
-			if keytype == 'public':
-				if encoding == 'base85':
-					fhandle.write(self.get_public_key85() + '\n')
-				else:
-					fhandle.write(self.get_public_key64() + '\n')
-			else:
-				if encoding == 'base85':
-					fhandle.write(self.get_private_key85() + '\n')
-				else:
-					fhandle.write(self.get_private_key64() + '\n')
-
-			fhandle.write('----- END %s KEY -----\n' % keytype.upper())
+			json.dump(outdata, fhandle, ensure_ascii=False, indent=1)
 			fhandle.close()
 		
 		except Exception as e:
