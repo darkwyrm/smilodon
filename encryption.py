@@ -40,7 +40,7 @@ __signing_pair_schema = {
 	}
 }
 
-__secret_pair_schema = {
+__secret_key_schema = {
 	'type' : 'object',
 	'properties' : {
 		'type' : {	'type' : 'string', 'pattern' : 'secretkey' },
@@ -279,60 +279,6 @@ class SigningPair (EncryptionKey):
 		return RetVal()
 
 
-class SecretKey (EncryptionKey):
-	'''Represents a secret key used by symmetric encryption'''
-	def __init__(self, category='', key=None, encryption=None):
-		if key and encryption:
-			super().__init__(category, keytype='symmetric', enctype=encryption)
-			self.key = key
-			self.type = encryption
-		else:
-			super().__init__(category, keytype='symmetric', enctype='salsa20')
-			self.key = nacl.utils.random(nacl.secret.SecretBox.KEY_SIZE)
-		self.key85 = base64.b85encode(bytes(self.key)).decode('utf8')
-		self.key64 = base64.b64encode(bytes(self.key)).decode('utf8')
-
-	def get_key85(self):
-		'''Returns the key encoded in base85'''
-		return self.key85
-	
-	def get_key64(self):
-		'''Returns the key encoded in base64'''
-		return self.key64
-	
-	def save(self, path: str, encoding='base85'):
-		'''Saves the key to a file'''
-		if not path:
-			return RetVal(BadParameterValue, 'path may not be empty')
-		
-		if encoding not in [ 'base64', 'base85' ]:
-			return RetVal(BadParameterValue, "encoding must be 'base64' or 'base85'")
-		
-		if os.path.exists(path):
-			return RetVal(ResourceExists, '%s exists' % path)
-
-		outdata = {
-			'type' : 'secretkey',
-			'encryption' : self.enc_type,
-			'encoding' : encoding
-		}
-
-		if encoding == 'base85':
-			outdata['key'] = self.get_key85()
-		else:
-			outdata['key'] = self.get_key64()
-			
-		try:
-			fhandle = open(path, 'w')
-			json.dump(outdata, fhandle, ensure_ascii=False, indent=1)
-			fhandle.close()
-		
-		except Exception as e:
-			return RetVal(ExceptionThrown, str(e))
-
-		return RetVal()
-
-
 def load_signingpair(path: str) -> RetVal:
 	'''Instantiates a signing pair from a file'''
 	if not path:
@@ -375,6 +321,101 @@ def load_signingpair(path: str) -> RetVal:
 			return RetVal(BadData, 'Failure to base64 decode key data')
 	
 	return RetVal().set_value('keypair', SigningPair('', public_key, private_key, indata['encryption']))
+
+
+class SecretKey (EncryptionKey):
+	'''Represents a secret key used by symmetric encryption'''
+	def __init__(self, category='', key=None, encryption=None):
+		if key and encryption:
+			super().__init__(category, keytype='symmetric', enctype=encryption)
+			self.key = key
+			self.type = encryption
+		else:
+			super().__init__(category, keytype='symmetric', enctype='salsa20')
+			self.key = nacl.utils.random(nacl.secret.SecretBox.KEY_SIZE)
+		self.key85 = base64.b85encode(bytes(self.key)).decode('utf8')
+		self.key64 = base64.b64encode(bytes(self.key)).decode('utf8')
+
+	def get_key85(self) -> str:
+		'''Returns the key encoded in base85'''
+		return self.key85
+	
+	def get_key64(self) -> str:
+		'''Returns the key encoded in base64'''
+		return self.key64
+	
+	def save(self, path: str, encoding='base85') -> RetVal:
+		'''Saves the key to a file'''
+		if not path:
+			return RetVal(BadParameterValue, 'path may not be empty')
+		
+		if encoding not in [ 'base64', 'base85' ]:
+			return RetVal(BadParameterValue, "encoding must be 'base64' or 'base85'")
+		
+		if os.path.exists(path):
+			return RetVal(ResourceExists, '%s exists' % path)
+
+		outdata = {
+			'type' : 'secretkey',
+			'encryption' : self.enc_type,
+			'encoding' : encoding
+		}
+
+		if encoding == 'base85':
+			outdata['key'] = self.get_key85()
+		else:
+			outdata['key'] = self.get_key64()
+			
+		try:
+			fhandle = open(path, 'w')
+			json.dump(outdata, fhandle, ensure_ascii=False, indent=1)
+			fhandle.close()
+		
+		except Exception as e:
+			return RetVal(ExceptionThrown, str(e))
+
+		return RetVal()
+
+
+def load_secretkey(path: str) -> RetVal:
+	'''Instantiates a secret key from a file'''
+	if not path:
+		return RetVal(BadParameterValue, 'path may not be empty')
+	
+	if not os.path.exists(path):
+		return RetVal(ResourceNotFound, '%s exists' % path)
+	
+	indata = None
+	try:
+		with open(path, "r") as fhandle:
+			indata = json.load(fhandle)
+	
+	except Exception as e:
+		return RetVal(ExceptionThrown, e)
+	
+	if not isinstance(indata, dict):
+		return RetVal(BadData, 'File does not contain an Anselus JSON secret key')
+
+	try:
+		jsonschema.validate(indata, __secret_key_schema)
+	except jsonschema.ValidationError:
+		return RetVal(BadData, "file data does not validate")
+	except jsonschema.SchemaError:
+		return RetVal(InternalError, "BUG: invalid SecretKey schema")
+
+	key = None
+	if indata['encoding'] == 'base85':
+		try:
+			key = base64.b85decode(indata['key'].encode())
+		except Exception as e:
+			return RetVal(BadData, 'Failure to base85 decode key data')
+	else:
+		try:
+			key = base64.b64decode(indata['key'].encode())
+		except Exception as e:
+			return RetVal(BadData, 'Failure to base64 decode key data')
+	
+	return RetVal().set_value('key', SecretKey('', key, indata['encryption']))
 
 
 class FolderMapping:

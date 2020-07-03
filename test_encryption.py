@@ -114,7 +114,7 @@ def test_signpair_save():
 
 	keypair_path = os.path.join(test_folder, 'testpair.json')
 	status = sp.save(keypair_path)
-	assert not status.error(), "Failed to create saved encryption pair file"
+	assert not status.error(), "Failed to create saved signing pair file"
 
 	fhandle = open(keypair_path)
 	filedata = json.load(fhandle)
@@ -150,3 +150,54 @@ def test_signpair_load():
 	assert testpair.enc_type == kp.enc_type, "Loaded data does not match input data"
 	assert testpair.get_public_key85() == public85, "Loaded data does not match input data"
 	assert testpair.get_private_key85() == private85, "Loaded data does not match input data"
+
+
+def test_secretkey_base():
+	'''Tests base initialization of the SecretKey class'''
+	sk = encryption.SecretKey()
+	assert base64.b64decode(sk.key64.encode()) == sk.key, "key64 does not match key"
+	assert base64.b85decode(sk.key85.encode()) == sk.key, "key85 does not match key"
+
+
+def test_secretkey_save():
+	'''Tests the save code of the SecretKey class'''
+	test_folder = setup_test('encryption_secretkey_save')
+
+	key85 = "J~T^ko3HCFb$1Z7NudpcJA-dzDpF52IF1Oysh+CY"
+	key = base64.b85decode(key85.encode())
+	sk = encryption.SecretKey('', key, 'salsa20')
+
+	key_path = os.path.join(test_folder, 'testkey.json')
+	status = sk.save(key_path)
+	assert not status.error(), "Failed to create saved encryption pair file"
+
+	fhandle = open(key_path)
+	filedata = json.load(fhandle)
+	fhandle.close()
+
+	assert filedata['type'] == 'secretkey', "Saved data does not match input data"
+	assert filedata['encryption'] == 'salsa20', "Saved data does not match input data"
+	assert filedata['encoding'] == 'base85', "Saved data does not match input data"
+	assert filedata['key'] == key85, "Saved data does not match input data"
+
+
+def test_secretkey_load():
+	'''Tests the load code of the SecretKey class'''
+	test_folder = setup_test('encryption_secretkey_load')
+
+	key85 = "J~T^ko3HCFb$1Z7NudpcJA-dzDpF52IF1Oysh+CY"
+	key = base64.b85decode(key85.encode())
+	sk = encryption.SecretKey('', key, 'salsa20')
+
+	key_path = os.path.join(test_folder, 'testkey.json')
+	status = sk.save(key_path)
+	assert not status.error(), "Failed to create saved encryption pair file"
+
+	status = encryption.load_secretkey(key_path)
+	assert not status.error(), "Failed to load secret key file"
+
+	testpair = status['key']
+
+	assert testpair.type == sk.type, "Loaded data does not match input data"
+	assert testpair.enc_type == sk.enc_type, "Loaded data does not match input data"
+	assert testpair.get_key85() == key85, "Loaded data does not match input data"
