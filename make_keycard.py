@@ -202,10 +202,11 @@ def generate_user_card(userdata: list, path: str):
 
 
 debug_app = False
+debug_org = False
 
 if __name__ == '__main__':
 	if debug_app:
-		if sys.argv[1] == 'org':
+		if debug_org:
 			generate_org_card([('Name', 'Acme, Inc.'), ('Street-Address', '1313 Mockingbird Lane'), 
 					('Extended-Address', ''), ('City', 'Schenectady'), ('Province', 'NY'), 
 					('Postal-Code', '12345'), ('Country', 'United States'), ('Domain', 'acme.com'), 
