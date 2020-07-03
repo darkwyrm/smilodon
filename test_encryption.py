@@ -29,13 +29,13 @@ def setup_test(name):
 def test_keypair_base():
 	'''Tests base initialization of the KeyPair class'''
 	kp = encryption.KeyPair()
-	assert base64.b64decode(kp.public64.encode()) == kp.public.encode(), \
+	assert base64.b64decode(kp.public64.encode()) == kp.public, \
 			"public64 does not match public key"
-	assert base64.b64decode(kp.private64.encode()) == kp.private.encode(), \
+	assert base64.b64decode(kp.private64.encode()) == kp.private, \
 			"private64 does not match private key"
-	assert base64.b85decode(kp.public85.encode()) == kp.public.encode(), \
+	assert base64.b85decode(kp.public85.encode()) == kp.public, \
 			"public85 does not match public key"
-	assert base64.b85decode(kp.private85.encode()) == kp.private.encode(), \
+	assert base64.b85decode(kp.private85.encode()) == kp.private, \
 			"private85 does not match private key"
 
 
@@ -92,13 +92,13 @@ def test_keypair_load():
 def test_signpair_base():
 	'''Tests base initialization of the SigningPair class'''
 	sp = encryption.SigningPair()
-	assert base64.b64decode(sp.public64.encode()) == sp.public.encode(), \
+	assert base64.b64decode(sp.public64.encode()) == sp.public, \
 			"public64 does not match public key"
-	assert base64.b64decode(sp.private64.encode()) == sp.private.encode(), \
+	assert base64.b64decode(sp.private64.encode()) == sp.private, \
 			"private64 does not match private key"
-	assert base64.b85decode(sp.public85.encode()) == sp.public.encode(), \
+	assert base64.b85decode(sp.public85.encode()) == sp.public, \
 			"public85 does not match public key"
-	assert base64.b85decode(sp.private85.encode()) == sp.private.encode(), \
+	assert base64.b85decode(sp.private85.encode()) == sp.private, \
 			"private85 does not match private key"
 
 

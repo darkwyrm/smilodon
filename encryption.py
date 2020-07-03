@@ -90,8 +90,8 @@ class KeyPair (EncryptionKey):
 		else:
 			super().__init__(category, keytype='asymmetric', enctype='curve25519')
 			key = nacl.public.PrivateKey.generate()
-			self.public = key.public_key
-			self.private = key
+			self.public = key.public_key.encode()
+			self.private = key.encode()
 		
 		self.public85 = base64.b85encode(bytes(self.public)).decode('utf8')
 		self.private85 = base64.b85encode(bytes(self.private)).decode('utf8')
@@ -212,8 +212,8 @@ class SigningPair (EncryptionKey):
 		else:
 			super().__init__(category, keytype='asymmetric', enctype='ed25519')
 			key = nacl.signing.SigningKey.generate()
-			self.public = key.verify_key
-			self.private = key
+			self.public = key.verify_key.encode()
+			self.private = key.encode()
 		
 		self.public85 = base64.b85encode(bytes(self.public)).decode('utf8')
 		self.private85 = base64.b85encode(bytes(self.private)).decode('utf8')
