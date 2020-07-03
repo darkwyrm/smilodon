@@ -119,45 +119,11 @@ def generate_org_card(userdata: list, path: str):
 	if not os.path.isdir(path):
 		raise OSError("Path must be a directory")
 	
-	outpath = os.path.join(path, 'org_signing.priv.key')
-	with open(outpath, 'w') as f:
-		f.writelines([
-			"ENCTYPE: %s\n" % skey.enc_type.upper(),
-			"----- BEGIN PRIVATE KEY 85 -----\n",
-			skey.get_private_key85() + '\n',
-			"----- END PRIVATE KEY 85 -----\n"
-		])
+	skey.save(os.path.join(path, 'org_signing_keypair.jk'))
+	print("Saved signing key org_signing_keypair.jk")
 	
-	outpath = os.path.join(path, 'org_signing.key')
-	with open(outpath, 'w') as f:
-		f.writelines([
-			"ENCTYPE: %s\n" % skey.enc_type.upper(),
-			"----- BEGIN PRIVATE KEY 85 -----\n",
-			skey.get_private_key85() + '\n',
-			"----- END PRIVATE KEY 85 -----\n"
-		])
-	
-	print("Saved signing keys to org_signing.*")
-	
-	outpath = os.path.join(path, 'org_encryption.priv.key')
-	with open(outpath, 'w') as f:
-		f.writelines([
-			"ENCTYPE: %s\n" % ekey.enc_type.upper(),
-			"----- BEGIN PRIVATE KEY 85 -----\n",
-			ekey.get_private_key85() + '\n',
-			"----- END PRIVATE KEY 85 -----\n"
-		])
-	
-	outpath = os.path.join(path, 'org_encryption.key')
-	with open(outpath, 'w') as f:
-		f.writelines([
-			"ENCTYPE: %s\n" % ekey.enc_type.upper(),
-			"----- BEGIN PUBLIC KEY 85 -----\n",
-			ekey.get_public_key85() + '\n',
-			"----- END PUBLIC KEY 85 -----\n"
-		])
-	
-	print("Saved encryption keys to org_encryption.*")
+	ekey.save(os.path.join(path, 'org_encryption_keypair.jk'))
+	print("Saved encryption key to org_encryption_keypair.jk")
 
 	card = keycard.OrgCard()
 	for item in userdata:
@@ -213,65 +179,14 @@ def generate_user_card(userdata: list, path: str):
 	if not os.path.isdir(path):
 		raise OSError("Path must be a directory")
 	
-	outpath = os.path.join(path, 'user_encryption.priv.key')
-	with open(outpath, 'w') as f:
-		f.writelines([
-			"ENCTYPE: %s\n" % ekey.enc_type.upper(),
-			"----- BEGIN PRIVATE KEY 85 -----\n",
-			ekey.get_private_key85() + '\n',
-			"----- END PRIVATE KEY 85 -----\n"
-		])
+	skey.save(os.path.join(path, 'user_signing_keypair.jk'))
+	print("Saved signing key user_signing_keypair.jk")
 	
-	outpath = os.path.join(path, 'user_encryption.key')
-	with open(outpath, 'w') as f:
-		f.writelines([
-			"ENCTYPE: %s\n" % ekey.enc_type.upper(),
-			"----- BEGIN PUBLIC KEY 85 -----\n",
-			ekey.get_public_key85() + '\n',
-			"----- END PUBLIC KEY 85 -----\n"
-		])
-	
-	print("Saved encryption keys to user_encryption.*")
+	ekey.save(os.path.join(path, 'user_encryption_keypair.jk'))
+	print("Saved encryption key to user_encryption_keypair.jk")
 
-	outpath = os.path.join(path, 'user_request.priv.key')
-	with open(outpath, 'w') as f:
-		f.writelines([
-			"ENCTYPE: %s\n" % crkey.enc_type.upper(),
-			"----- BEGIN PRIVATE KEY 85 -----\n",
-			crkey.get_private_key85() + '\n',
-			"----- END PRIVATE KEY 85 -----\n"
-		])
-	
-	outpath = os.path.join(path, 'user_request.key')
-	with open(outpath, 'w') as f:
-		f.writelines([
-			"ENCTYPE: %s\n" % crkey.enc_type.upper(),
-			"----- BEGIN PUBLIC KEY 85 -----\n",
-			crkey.get_public_key85() + '\n',
-			"----- END PUBLIC KEY 85 -----\n"
-		])
-	
-	print("Saved contact request keys to user_request.*")
-
-	outpath = os.path.join(path, 'user_signing.priv.key')
-	with open(outpath, 'w') as f:
-		f.writelines([
-			"ENCTYPE: %s\n" % skey.enc_type.upper(),
-			"----- BEGIN PRIVATE KEY 85 -----\n",
-			skey.get_private_key85() + '\n',
-			"----- END PRIVATE KEY 85 -----\n"
-		])
-	
-	outpath = os.path.join(path, 'user_signing.key')
-	with open(outpath, 'w') as f:
-		f.writelines([
-			"ENCTYPE: %s\n" % skey.enc_type.upper(),
-			"----- BEGIN PUBLIC KEY 85 -----\n",
-			skey.get_private_key85() + '\n',
-			"----- END PUBLIC KEY 85 -----\n"
-		])
-	
-	print("Saved signing keys to user_signing.*")
+	ekey.save(os.path.join(path, 'user_crequest_keypair.jk'))
+	print("Saved contact request key to user_crequest_keypair.jk")
 
 	card = keycard.UserCard()
 	for item in userdata:
