@@ -5,77 +5,50 @@ import os
 import re
 import uuid
 
+import jsonschema
+
 import nacl.public
 import nacl.pwhash
 import nacl.secret
 import nacl.signing
 import nacl.utils
-from retval import RetVal, BadData, BadParameterValue, ExceptionThrown, ResourceExists
+from retval import RetVal, BadData, BadParameterValue, ExceptionThrown, InternalError, \
+		ResourceExists, ResourceNotFound
 
 # TODO: Add support for more than just ed25519/curve25519/salsa20
 
-def __loadfile(path: str):
-	'''Loads data from a key file. This is intended to handle all the common code needed for 
-	reading any key file. It returns several fields:
-	keytype : str - the type of key and should be PUBLIC, PRIVATE, or SECRET
-	enctype : str - encryption type
-	encoding : str - type of encoding, which should be 85 or 64'''
-	if not path:
-		return RetVal(BadParameterValue, 'path may not be empty')
-	
-	lines = None
-	try:
-		with open(path, 'r') as f:
-			lines = f.readlines()
-	except Exception as e:
-		return RetVal(ExceptionThrown, str(e))
-	
-	# Validate the data.
+# JSON schemas used to validate keyfile data
+__encryption_pair_schema = {
+	'type' : 'object',
+	'properties' : {
+		'type' : {	'type' : 'string', 'pattern' : 'encryptionpair' },
+		'encoding' : { 'type' : 'string', 'pattern' : 'base64|base85'},
+		'encryption' : { 'type' : 'string', 'pattern' : 'curve25519' },
+		'publickey' : { 'type' : 'string' },
+		'privatekey' : { 'type' : 'string' },
+	}
+}
 
-	# The format for a key file is expected as follows:
-	# 1. First line must be 'ENCTYPE:' followed by the format in all lowercase
-	# 2. Second line must be '----- BEGIN <keytype> KEY <enctype> -----' where keytype is either
-	#		'PUBLIC' or 'PRIVATE' and enctype is either '64' or '85'
-	# 3. Third line is the encoded key all on one line
-	# 4. Fourth line is '----- END <keytype> KEY -----'
+__signing_pair_schema = {
+	'type' : 'object',
+	'properties' : {
+		'type' : {	'type' : 'string', 'pattern' : 'signingpair' },
+		'encoding' : { 'type' : 'string', 'pattern' : 'base64|base85'},
+		'encryption' : { 'type' : 'string', 'pattern' : 'ed25519' },
+		'publickey' : { 'type' : 'string' },
+		'privatekey' : { 'type' : 'string' },
+	}
+}
 
-	for i in range(0, len(lines)):
-		lines[i] = lines[i].strip()
-		if not lines[i]:
-			del lines[i]
-			i = i - 1
-	
-	if len(lines) < 4:
-		return RetVal(BadData, 'Key may only have 4 lines')
-
-	if not lines[0].startswith('ENCTYPE:'):
-		return RetVal(BadData, "First line of key must start with 'ENCTYPE:'")
-	
-	if not re.match('-{5} BEGIN (PRIVATE|PUBLIC|SECRET) KEY (85|64)', lines[1]):
-		return RetVal(BadData, "Second line of key must be "
-				"----- BEGIN (PUBLIC|PRIVATE|SECRET) KEY (85|64) -----'")
-	
-	if not re.match('-{5} END (PRIVATE|PUBLIC|SECRET) KEY', lines[4]):
-		return RetVal(BadData, "Fourth line of key must be "
-				"----- END (PUBLIC|PRIVATE|SECRET) KEY -----'")
-
-	# Now that the general format has been validated, attempt to actually decode and load
-	# the key data
-	parts = lines[0].split('ENCTYPE:')
-	if parts != 2 or parts[0]:
-		return RetVal(BadData, 'Bad first line: %s' % lines[0])
-	
-	m = re.match('-{5} BEGIN (PRIVATE|PUBLIC|SECRET) KEY (85|64)', lines[1])
-
-	r = RetVal()
-	r.set_values({
-		'enctype' : parts[1],
-		'keytype' : m.groups[0],
-		'encoding' : m.groups[1]
-	})
-
-	return r
-
+__secret_pair_schema = {
+	'type' : 'object',
+	'properties' : {
+		'type' : {	'type' : 'string', 'pattern' : 'secretkey' },
+		'encoding' : { 'type' : 'string', 'pattern' : 'base64|base85'},
+		'encryption' : { 'type' : 'string', 'pattern' : 'salsa20' },
+		'key' : { 'type' : 'string' }
+	}
+}
 
 class EncryptionKey:
 	'''Defines a generic interface to an Anselus encryption key, which contains more
@@ -114,7 +87,6 @@ class KeyPair (EncryptionKey):
 			super().__init__(category, keytype='asymmetric', enctype=encryption)
 			self.public = public
 			self.private = private
-			self.type = encryption
 		else:
 			super().__init__(category, keytype='asymmetric', enctype='curve25519')
 			key = nacl.public.PrivateKey.generate()
@@ -126,29 +98,107 @@ class KeyPair (EncryptionKey):
 		self.public64 = base64.b64encode(bytes(self.public)).decode('utf8')
 		self.private64 = base64.b64encode(bytes(self.private)).decode('utf8')
 
-	def get_public_key(self):
+	def get_public_key(self) -> bytes:
 		'''Returns the binary data representing the public half of the key'''
 		return self.public
 	
-	def get_public_key85(self):
+	def get_public_key85(self) -> str:
 		'''Returns the public key encoded in base85'''
 		return self.public85
 	
-	def get_public_key64(self):
+	def get_public_key64(self) -> str:
 		'''Returns the public key encoded in base64'''
 		return self.public64
 	
-	def get_private_key(self):
+	def get_private_key(self) -> bytes:
 		'''Returns the binary data representing the private half of the key'''
 		return self.private
 
-	def get_private_key85(self):
+	def get_private_key85(self) -> str:
 		'''Returns the private key encoded in base85'''
 		return self.private85
 
-	def get_private_key64(self):
+	def get_private_key64(self) -> str:
 		'''Returns the private key encoded in base64'''
 		return self.private64
+
+	def save(self, path: str, encoding='base85'):
+		'''Saves the keypair to a file'''
+		if not path:
+			return RetVal(BadParameterValue, 'path may not be empty')
+		
+		if encoding not in [ 'base64', 'base85' ]:
+			return RetVal(BadParameterValue, "encoding must be 'base64' or 'base85'")
+		
+		if os.path.exists(path):
+			return RetVal(ResourceExists, '%s exists' % path)
+
+		outdata = {
+			'type' : 'encryptionpair',
+			'encryption' : self.enc_type,
+			'encoding' : encoding
+		}
+
+		if encoding == 'base85':
+			outdata['publickey'] = self.get_public_key85()
+			outdata['privatekey'] = self.get_private_key85()
+		else:
+			outdata['publickey'] = self.get_public_key64()
+			outdata['privatekey'] = self.get_private_key64()
+			
+		try:
+			fhandle = open(path, 'w')
+			json.dump(outdata, fhandle, ensure_ascii=False, indent=1)
+			fhandle.close()
+		
+		except Exception as e:
+			return RetVal(ExceptionThrown, str(e))
+
+		return RetVal()
+
+
+def load_encryptionpair(path: str) -> RetVal:
+	'''Instantiates a keypair from a file'''
+	if not path:
+		return RetVal(BadParameterValue, 'path may not be empty')
+	
+	if not os.path.exists(path):
+		return RetVal(ResourceNotFound, '%s exists' % path)
+	
+	indata = None
+	try:
+		with open(path, "r") as fhandle:
+			indata = json.load(fhandle)
+	
+	except Exception as e:
+		return RetVal(ExceptionThrown, e)
+	
+	if not isinstance(indata, dict):
+		return RetVal(BadData, 'File does not contain an Anselus JSON keypair')
+
+	try:
+		jsonschema.validate(indata, __encryption_pair_schema)
+	except jsonschema.ValidationError:
+		return RetVal(BadData, "file data does not validate")
+	except jsonschema.SchemaError:
+		return RetVal(InternalError, "BUG: invalid EncryptionPair schema")
+
+	public_key = None
+	private_key = None
+	if indata['encoding'] == 'base85':
+		try:
+			public_key = base64.b85decode(indata['publickey'].encode())
+			private_key = base64.b85decode(indata['privatekey'].encode())
+		except Exception as e:
+			return RetVal(BadData, 'Failure to base85 decode key data')
+	else:
+		try:
+			public_key = base64.b64decode(indata['publickey'].encode())
+			private_key = base64.b64decode(indata['privatekey'].encode())
+		except Exception as e:
+			return RetVal(BadData, 'Failure to base64 decode key data')
+	
+	return RetVal().set_value('keypair', KeyPair('', public_key, private_key, indata['encryption']))
 
 
 class SigningPair (EncryptionKey):
@@ -162,49 +212,37 @@ class SigningPair (EncryptionKey):
 		else:
 			super().__init__(category, keytype='asymmetric', enctype='ed25519')
 			key = nacl.signing.SigningKey.generate()
-			self.public = key.verify_key.encode()
-			self.private = key.encode()
+			self.public = key.verify_key
+			self.private = key
 		
 		self.public85 = base64.b85encode(bytes(self.public)).decode('utf8')
 		self.private85 = base64.b85encode(bytes(self.private)).decode('utf8')
 		self.public64 = base64.b64encode(bytes(self.public)).decode('utf8')
 		self.private64 = base64.b64encode(bytes(self.private)).decode('utf8')
 
-	def get_public_key(self):
+	def get_public_key(self) -> bytes:
 		'''Returns the binary data representing the public half of the key'''
 		return self.public
 	
-	def get_public_key85(self):
+	def get_public_key85(self) -> str:
 		'''Returns the public key encoded in base85'''
 		return self.public85
 	
-	def get_public_key64(self):
+	def get_public_key64(self) -> str:
 		'''Returns the public key encoded in base64'''
 		return self.public64
 	
-	def get_private_key(self):
+	def get_private_key(self) -> bytes:
 		'''Returns the binary data representing the private half of the key'''
 		return self.private
 
-	def get_private_key85(self):
+	def get_private_key85(self) -> str:
 		'''Returns the private key encoded in base85'''
 		return self.private85
 
-	def get_private_key64(self):
+	def get_private_key64(self) -> str:
 		'''Returns the private key encoded in base64'''
 		return self.private64
-
-	def load(self, path: str):
-		'''Loads the key from a file'''
-		status = __loadfile(path)
-		if status.error():
-			return status
-		
-		if status['keytype'] == 'SECRET' or status['enctype'] != 'ed25519':
-			return RetVal(BadParameterValue, "Keyfile type does not match object")
-		
-		# TODO: Fix this -- need to load 2 files for asymmetric keys and 1 for symmetric
-
 
 	def save(self, path: str, encoding='base85'):
 		'''Saves the key to a file'''
@@ -262,6 +300,82 @@ class SecretKey (EncryptionKey):
 		'''Returns the key encoded in base64'''
 		return self.key64
 	
+	def save(self, path: str, encoding='base85'):
+		'''Saves the key to a file'''
+		if not path:
+			return RetVal(BadParameterValue, 'path may not be empty')
+		
+		if encoding not in [ 'base64', 'base85' ]:
+			return RetVal(BadParameterValue, "encoding must be 'base64' or 'base85'")
+		
+		if os.path.exists(path):
+			return RetVal(ResourceExists, '%s exists' % path)
+
+		outdata = {
+			'type' : 'secretkey',
+			'encryption' : self.enc_type,
+			'encoding' : encoding
+		}
+
+		if encoding == 'base85':
+			outdata['key'] = self.get_key85()
+		else:
+			outdata['key'] = self.get_key64()
+			
+		try:
+			fhandle = open(path, 'w')
+			json.dump(outdata, fhandle, ensure_ascii=False, indent=1)
+			fhandle.close()
+		
+		except Exception as e:
+			return RetVal(ExceptionThrown, str(e))
+
+		return RetVal()
+
+
+def load_signingpair(path: str) -> RetVal:
+	'''Instantiates a signing pair from a file'''
+	if not path:
+		return RetVal(BadParameterValue, 'path may not be empty')
+	
+	if not os.path.exists(path):
+		return RetVal(ResourceNotFound, '%s exists' % path)
+	
+	indata = None
+	try:
+		with open(path, "r") as fhandle:
+			indata = json.load(fhandle)
+	
+	except Exception as e:
+		return RetVal(ExceptionThrown, e)
+	
+	if not isinstance(indata, dict):
+		return RetVal(BadData, 'File does not contain an Anselus JSON signing pair')
+
+	try:
+		jsonschema.validate(indata, __signing_pair_schema)
+	except jsonschema.ValidationError:
+		return RetVal(BadData, "file data does not validate")
+	except jsonschema.SchemaError:
+		return RetVal(InternalError, "BUG: invalid SigningPair schema")
+
+	public_key = None
+	private_key = None
+	if indata['encoding'] == 'base85':
+		try:
+			public_key = base64.b85decode(indata['publickey'].encode())
+			private_key = base64.b85decode(indata['privatekey'].encode())
+		except Exception as e:
+			return RetVal(BadData, 'Failure to base85 decode key data')
+	else:
+		try:
+			public_key = base64.b64decode(indata['publickey'].encode())
+			private_key = base64.b64decode(indata['privatekey'].encode())
+		except Exception as e:
+			return RetVal(BadData, 'Failure to base64 decode key data')
+	
+	return RetVal().set_value('keypair', SigningPair('', public_key, private_key, indata['encryption']))
+
 
 class FolderMapping:
 	'''Represents the mapping of a server-side path to a local one'''
