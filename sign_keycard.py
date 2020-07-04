@@ -21,7 +21,7 @@ if __name__ == '__main__':
 			print("User keycard load failure: %s" % status.info())
 			sys.exit(0)
 		else:
-			print("User keycard:\n%s\n" % str(status['card']))
+			print("User keycard:\n%s\n" % status['card'].make_bytestring(3).decode())
 		user_card = status['card']
 		
 		status = encryption.load_signingpair('testcards/user_signing_keypair.jk')
@@ -41,6 +41,5 @@ if __name__ == '__main__':
 		org_key = status['keypair']
 
 		user_card.sign(user_key.private, 'User')
-		print("After user signature:\n%s\n" % str(user_card))
 		user_card.sign(org_key.private, 'Organization')
-		print("After organization signature:\n%s\n" % str(user_card))
+		user_card.save('testcards/user_signed.keycard', True)
