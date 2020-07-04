@@ -7,7 +7,7 @@ import os
 import nacl.public
 import nacl.signing
 
-from retval import RetVal, BadData, BadParameterValue, BadParameterType, EmptyData, \
+from retval import RetVal, BadData, BadParameterValue, EmptyData, \
 		ExceptionThrown, ResourceNotFound, ResourceExists
 
 UnsupportedKeycardType = 'UnsupportedKeycardType'
