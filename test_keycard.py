@@ -36,7 +36,9 @@ def test_orgcard():
 	card.set_fields({
 		'Name':'Example, Inc.',
 		'Contact-Admin':'admin/example.com',
+		'Primary-Signing-Algorithm':'ed25519',
 		'Primary-Signing-Key':'l<V_`qb)QM=K#F>u-GCs?W1+>^nl1*#!%$NRxP-6',
+		'Encryption-Key-Algorithm':'curve25519',
 		'Encryption-Key':'9+8r$)N}={KFhGD3H2rv<q8$72b4A$K!DN;bGrvt'
 	})
 	rv = card.is_compliant()
@@ -57,8 +59,11 @@ def test_set_fields():
 		'Contact-Admin':'admin/example.com',
 		'Language':'English',
 		'Website':'https://www.example.com',
+		'Primary-Signing-Algorithm':'ed25519',
 		'Primary-Signing-Key':'l<V_`qb)QM=K#F>u-GCs?W1+>^nl1*#!%$NRxP-6',
+		'Secondary-Signing-Algorithm':'ed25519',
 		'Secondary-Signing-Key':'`D7QV39R926R3nf<NjU;pi)80xJxvj#1&iWD0!%6',
+		'Encryption-Key-Algorithm':'curve25519',
 		'Encryption-Key':'9+8r$)N}={KFhGD3H2rv<q8$72b4A$K!DN;bGrvt',
 		'Web-Access':'mail.example.com:2081',
 		'Mail-Access':'mail.example.com:2001',
@@ -94,8 +99,11 @@ def test_load_keycard():
 		'Contact-Admin':'admin/example.com',
 		'Language':'English',
 		'Website':'https://www.example.com',
+		'Primary-Signing-Algorithm':'ed25519',
 		'Primary-Signing-Key':'l<V_`qb)QM=K#F>u-GCs?W1+>^nl1*#!%$NRxP-6',
+		'Secondary-Signing-Algorithm':'ed25519',
 		'Secondary-Signing-Key':'`D7QV39R926R3nf<NjU;pi)80xJxvj#1&iWD0!%6',
+		'Encryption-Key-Algorithm':'curve25519',
 		'Encryption-Key':'9+8r$)N}={KFhGD3H2rv<q8$72b4A$K!DN;bGrvt',
 		'Web-Access':'mail.example.com:2081',
 		'Mail-Access':'mail.example.com:2001',
@@ -130,7 +138,9 @@ def test_orgcard_sign_verify():
 		'Contact-Admin':'admin/example.com',
 		'Language':'English',
 		'Website':'https://www.example.com',
+		'Primary-Signing-Algorithm':'ed25519',
 		'Primary-Signing-Key':skey.verify_key.encode(Base85Encoder).decode(),
+		'Encryption-Key-Algorithm':'curve25519',
 		'Encryption-Key':ekey.public_key.encode(Base85Encoder).decode(),
 		'Web-Access':'mail.example.com:2081',
 		'Mail-Access':'mail.example.com:2001',
@@ -160,7 +170,11 @@ def test_usercard():
 	card.set_fields({
 		'Workspace-ID':'00000000-1111-2222-3333-444444444444',
 		'Domain':'example.com',
-		'Contact-Request-Key':'fbqsEyXT`Sq?us{OgVygsK|zBP7njBmwT+Q_a*0E',
+		'Contact-Request-Signing-Algorithm':'ed25519',
+		'Contact-Request-Signing-Key':'7dfD==!Jmt4cDtQDBxYa7(dV|N$}8mYwe$=RZuW|',
+		'Contact-Request-Encryption-Algorithm':'curve25519',
+		'Contact-Request-Encryption-Key':'fbqsEyXT`Sq?us{OgVygsK|zBP7njBmwT+Q_a*0E',
+		'Public-Encryption-Algorithm':'curve25519',
 		'Public-Encryption-Key':'0IaDFoy}NDe1@fzkg9z!5`@gclY20sRINMJd_{j!',
 	})
 	card.signatures['User'] = 'TestBadUserSig'
@@ -177,7 +191,11 @@ def test_usercard_bytestring():
 		'Name':'Corbin Simons',
 		'Workspace-ID':'4418bf6c-000b-4bb3-8111-316e72030468',
 		'Domain':'example.com',
-		'Contact-Request-Key':'yBZ0{1fE9{2<b~#i^R+JT-yh-y5M(Wyw_)}_SZOn',
+		'Contact-Request-Signing-Algorithm':'ed25519',
+		'Contact-Request-Signing-Key':'7dfD==!Jmt4cDtQDBxYa7(dV|N$}8mYwe$=RZuW|',
+		'Contact-Request-Encryption-Algorithm':'curve25519',
+		'Contact-Request-Encryption-Key':'yBZ0{1fE9{2<b~#i^R+JT-yh-y5M(Wyw_)}_SZOn',
+		'Public-Encryption-Algorithm':'curve25519',
 		'Public-Encryption-Key':'_`UC|vltn_%P5}~vwV^)oY){#uvQSSy(dOD_l(yE',
 		'Expires':'20201002'
 	})
@@ -186,7 +204,11 @@ def test_usercard_bytestring():
 		b'Name:Corbin Simons\r\n' \
 		b'Workspace-ID:4418bf6c-000b-4bb3-8111-316e72030468\r\n' \
 		b'Domain:example.com\r\n' \
-		b'Contact-Request-Key:yBZ0{1fE9{2<b~#i^R+JT-yh-y5M(Wyw_)}_SZOn\r\n' \
+		b'Contact-Request-Signing-Algorithm:ed25519\r\n' \
+		b'Contact-Request-Signing-Key:7dfD==!Jmt4cDtQDBxYa7(dV|N$}8mYwe$=RZuW|\r\n' \
+		b'Contact-Request-Encryption-Algorithm:curve25519\r\n' \
+		b'Contact-Request-Encryption-Key:yBZ0{1fE9{2<b~#i^R+JT-yh-y5M(Wyw_)}_SZOn\r\n' \
+		b'Public-Encryption-Algorithm:curve25519\r\n' \
 		b'Public-Encryption-Key:_`UC|vltn_%P5}~vwV^)oY){#uvQSSy(dOD_l(yE\r\n' \
 		b'Time-To-Live:7\r\n' \
 		b'Expires:20201002\r\n'
@@ -197,19 +219,24 @@ def test_usercard_bytestring():
 def test_usercard_sign():
 	'''Tests the signing of a user keycard'''
 	skey = nacl.signing.SigningKey(b'{Ue^0)?k`s(>pNG&Wg9f5b;VHN1^PC*c4-($G#>}', Base85Encoder)
-	crkey = nacl.public.PrivateKey(b'VyFX5PC~?eL5)>q|6W7ciRrOJw$etlej<tY$f+t_', Base85Encoder)
-	ekey = nacl.public.PrivateKey(b'Wsx6BC(HP~goS-C_`K=6Daqr97kapfc=vQUzi?KI', Base85Encoder)
+	# crskey = nacl.signing.SigningKey(b'GS30y3fdJX0H7t&p(!m3oXqlZI1ghz+o!B7Y92Y%', Base85Encoder)
+	# crekey = nacl.public.PrivateKey(b'VyFX5PC~?eL5)>q|6W7ciRrOJw$etlej<tY$f+t_', Base85Encoder)
+	# ekey = nacl.public.PrivateKey(b'Wsx6BC(HP~goS-C_`K=6Daqr97kapfc=vQUzi?KI', Base85Encoder)
 
 	card = keycard.UserCard()
 	card.set_fields({
 		'Name':'Corbin Simons',
 		'Workspace-ID':'4418bf6c-000b-4bb3-8111-316e72030468',
 		'Domain':'example.com',
-		'Contact-Request-Key':'yBZ0{1fE9{2<b~#i^R+JT-yh-y5M(Wyw_)}_SZOn',
+		'Contact-Request-Signing-Algorithm':'ed25519',
+		'Contact-Request-Signing-Key':'7dfD==!Jmt4cDtQDBxYa7(dV|N$}8mYwe$=RZuW|',
+		'Contact-Request-Encryption-Algorithm':'curve25519',
+		'Contact-Request-Encryption-Key':'yBZ0{1fE9{2<b~#i^R+JT-yh-y5M(Wyw_)}_SZOn',
+		'Public-Encryption-Algorithm':'curve25519',
 		'Public-Encryption-Key':'_`UC|vltn_%P5}~vwV^)oY){#uvQSSy(dOD_l(yE',
 		'Expires':'20201002'
 	})
-	expected_sig = '$;+=k5z$;&wbf6!yIC_2bGw+N7AV)wxA=P2F7RL1wSCvR7`9#y3l^W+&CcUst{nQot^t%djKs>Es^~%u'
+	expected_sig = '#sl4;saPEf*w~PxituHuiXrgP^tko9uO8kib;Wt$>*r(ECw8K;>Uq7zlAWx9%D9HU)`HV87@6Ht5elCJ'
 	
 	rv = card.sign(skey.encode(), 'User')
 	assert not rv.error(), 'Unexpected RetVal error %s' % rv.error()
@@ -222,20 +249,25 @@ def test_usercard_sign_verify():
 	test_folder = setup_test('keycard_user_sign_verify')
 
 	skey = nacl.signing.SigningKey(b'{Ue^0)?k`s(>pNG&Wg9f5b;VHN1^PC*c4-($G#>}', Base85Encoder)
-	crkey = nacl.public.PrivateKey(b'VyFX5PC~?eL5)>q|6W7ciRrOJw$etlej<tY$f+t_', Base85Encoder)
-	ekey = nacl.public.PrivateKey(b'Wsx6BC(HP~goS-C_`K=6Daqr97kapfc=vQUzi?KI', Base85Encoder)
+	# crskey = nacl.signing.SigningKey(b'GS30y3fdJX0H7t&p(!m3oXqlZI1ghz+o!B7Y92Y%', Base85Encoder)
+	# crkey = nacl.public.PrivateKey(b'VyFX5PC~?eL5)>q|6W7ciRrOJw$etlej<tY$f+t_', Base85Encoder)
+	# ekey = nacl.public.PrivateKey(b'Wsx6BC(HP~goS-C_`K=6Daqr97kapfc=vQUzi?KI', Base85Encoder)
 
 	card = keycard.UserCard()
 	card.set_fields({
 		'Name':'Corbin Simons',
 		'Workspace-ID':'4418bf6c-000b-4bb3-8111-316e72030468',
 		'Domain':'example.com',
-		'Contact-Request-Key':'yBZ0{1fE9{2<b~#i^R+JT-yh-y5M(Wyw_)}_SZOn',
+		'Contact-Request-Signing-Algorithm':'ed25519',
+		'Contact-Request-Signing-Key':'7dfD==!Jmt4cDtQDBxYa7(dV|N$}8mYwe$=RZuW|',
+		'Contact-Request-Encryption-Algorithm':'curve25519',
+		'Contact-Request-Encryption-Key':'yBZ0{1fE9{2<b~#i^R+JT-yh-y5M(Wyw_)}_SZOn',
+		'Public-Encryption-Algorithm':'curve25519',
 		'Public-Encryption-Key':'_`UC|vltn_%P5}~vwV^)oY){#uvQSSy(dOD_l(yE',
 		'Expires':'20201002'
 	})
 
-	expected_sig = '$;+=k5z$;&wbf6!yIC_2bGw+N7AV)wxA=P2F7RL1wSCvR7`9#y3l^W+&CcUst{nQot^t%djKs>Es^~%u'
+	expected_sig = '#sl4;saPEf*w~PxituHuiXrgP^tko9uO8kib;Wt$>*r(ECw8K;>Uq7zlAWx9%D9HU)`HV87@6Ht5elCJ'
 
 	rv = card.sign(skey.encode(), 'User')
 	assert not rv.error(), 'Unexpected RetVal error %s' % rv.error()
@@ -271,4 +303,3 @@ def test_usercard_sign_verify():
 
 	rv = testcard.verify(org_skey.verify_key.encode(), 'Organization')
 	assert not rv.error(), 'test keycard failed to org verify'
-
