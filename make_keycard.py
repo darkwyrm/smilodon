@@ -128,7 +128,9 @@ def generate_org_card(userdata: list, path: str):
 	card = keycard.OrgCard()
 	for item in userdata:
 		card.set_field(item[0], item[1])
+	card.set_field("Primary-Signing-Algorithm", 'ed25519')
 	card.set_field("Primary-Signing-Key", skey.get_public_key85())
+	card.set_field("Encryption-Algorithm", 'curve25519')
 	card.set_field("Encryption-Key", ekey.get_public_key85())
 	
 	status = card.sign(skey.get_private_key())
@@ -168,7 +170,8 @@ def generate_user_card(userdata: list, path: str):
 	
 	# Generate and save the necessary keys
 	ekey = encryption.KeyPair()
-	crkey = encryption.KeyPair()
+	crskey = encryption.SigningPair()
+	crekey = encryption.KeyPair()
 	skey = encryption.SigningPair()
 
 	if not os.path.exists(path):
@@ -183,22 +186,29 @@ def generate_user_card(userdata: list, path: str):
 	ekey.save(os.path.join(path, 'user_encryption_keypair.jk'))
 	print("Saved encryption key to user_encryption_keypair.jk")
 
-	ekey.save(os.path.join(path, 'user_crequest_keypair.jk'))
-	print("Saved contact request key to user_crequest_keypair.jk")
+	crskey.save(os.path.join(path, 'user_crsigning_keypair.jk'))
+	print("Saved signing key user_crsigning_keypair.jk")
+	
+	crekey.save(os.path.join(path, 'user_crencryption_keypair.jk'))
+	print("Saved contact request key to user_crencryption_keypair.jk")
 
 	card = keycard.UserCard()
 	for item in userdata:
 		card.set_field(item[0], item[1])
 	card.set_fields({
-		"Contact-Request-Key" : crkey.get_public_key85(),
-		"Public-Encryption-Key" : ekey.get_public_key85(),
+		"Contact-Request-Signing-Algorithm" : crskey.enc_type,
+		"Contact-Request-Signing-Key" : crskey.get_public_key85(),
+		"Contact-Request-Encryption-Algorithm" : crekey.enc_type,
+		"Contact-Request-Encryption-Key" : crekey.get_public_key85(),
+		"Public-Encryption-Algorithm" : ekey.enc_type,
+		"Public-Encryption-Key" : ekey.get_public_key85()
 	})
 	
 	card.save(os.path.join(path, 'user.keycard'), True)
 
 
-debug_app = False
-debug_org = True
+debug_app = True
+debug_org = False
 
 if __name__ == '__main__':
 	if debug_app:
