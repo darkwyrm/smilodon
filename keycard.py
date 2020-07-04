@@ -154,28 +154,23 @@ class OrgCard(__CardBase):
 		if include_signatures:
 			if 'Organization' in self.signatures and self.signatures['Organization']:
 				lines.append(b'Organization-Signature:' + self.signatures['Organization'].encode())
+		lines.append(b'')
+		
 		return b'\r\n'.join(lines)
 
-	def save(self, path : str) -> RetVal:
+	def save(self, path : str, clobber = False) -> RetVal:
 		'''Saves to the specified path, forcing CRLF line endings to prevent any weird behavior 
 		caused by line endings invalidating signatures.'''
 
 		if not path:
 			return RetVal(BadParameterValue, 'path may not be empty')
 		
-		if os.path.exists(path):
+		if os.path.exists(path) and not clobber:
 			return RetVal(ResourceExists)
 		
 		try:
-			with open(path, 'w', newline='\r\n') as f:
-				f.write("%s:%s\n" % ("Type",self.type))
-
-				for field in self.field_names:
-					if field in self.fields and self.fields[field]:
-						f.write("%s:%s\n" % (field, self.fields[field]))
-				
-				if 'Organization' in self.signatures and self.signatures['Organization']:
-					f.write('Organization-Signature:' + self.signatures['Organization'] + '\n')
+			with open(path, 'wb') as f:
+				f.write(self.make_bytestring(True))
 		
 		except Exception as e:
 			return RetVal(ExceptionThrown, str(e))
@@ -270,42 +265,29 @@ class UserCard(__CardBase):
 		if include_signatures > 0 and 'Custody' in self.signatures:
 			lines.append(b''.join([b'Custody-Signature:',
 							self.signatures['Custody'].encode()]))
-		if include_signatures > 1:
-			if 'User' not in self.signatures:
-				raise ComplianceException('missing user signature')
-			
+		if include_signatures > 1 and 'User' in self.signatures:
 			lines.append(b''.join([b'User-Signature:',
 							self.signatures['User'].encode()]))
-		if include_signatures > 2:
-			if 'Organization' not in self.signatures:
-				raise ComplianceException('missing organization signature')
+		if include_signatures > 2 and 'Organization' in self.signatures:
 			lines.append(b''.join([b'Organization-Signature:',
 							self.signatures['Organization'].encode()]))
 
 		lines.append(b'')
 		return b'\r\n'.join(lines)
 
-	def save(self, path : str) -> RetVal:
+	def save(self, path : str, clobber = False) -> RetVal:
 		'''Saves to the specified path, forcing CRLF line endings to prevent any weird behavior 
 		caused by line endings invalidating signatures.'''
 
 		if not path:
 			return RetVal(BadParameterValue, 'path may not be empty')
 		
-		if os.path.exists(path):
+		if os.path.exists(path) and not clobber:
 			return RetVal(ResourceExists)
 		
 		try:
-			with open(path, 'w', newline='\r\n') as f:
-				f.write("%s:%s\n" % ("Type",self.type))
-
-				for field in self.field_names:
-					if field in self.fields and self.fields[field]:
-						f.write("%s:%s\n" % (field, self.fields[field]))
-				
-				for sig in [ 'Custody', 'User', 'Organization' ]:
-					if sig in self.signatures and self.signatures[sig]:
-						f.write(''.join([sig, '-Signature:', self.signatures[sig], '\n']))
+			with open(path, 'wb') as f:
+				f.write(self.make_bytestring(3))
 		
 		except Exception as e:
 			return RetVal(ExceptionThrown, str(e))
