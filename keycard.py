@@ -2,15 +2,13 @@
 
 import base64
 import datetime
-import hashlib
 import os
 
 import nacl.public
 import nacl.signing
-# Pylint doesn't detect blake2b() for whatever reason
-from pyblake2 import blake2b	# pylint: disable=no-name-in-module
 
-from retval import RetVal, BadData, BadParameterValue, BadParameterType, EmptyData, ResourceNotFound
+from retval import RetVal, BadData, BadParameterValue, BadParameterType, EmptyData, \
+		ExceptionThrown, ResourceNotFound, ResourceExists
 
 UnsupportedKeycardType = 'UnsupportedKeycardType'
 InvalidKeycard = 'InvalidKeycard'
@@ -22,28 +20,8 @@ RequiredFieldMissing = 'RequiredFieldMissing'
 SignatureMissing = 'SignatureMissing'
 
 
-# TODO: force loading and saving with \r\n line endings to prevent signature invalidation
-
-def generate_signing_key():
-	'''Generates a dictionary containing an Ed25519 key pair'''
-	key = nacl.signing.SigningKey.generate()
-	keypair = RetVal()
-	keypair.set_value('private', key.encode())
-	keypair.set_value('public', key.verify_key.encode())
-	return keypair
-
-
-def generate_encryption_key():
-	'''Generates a dictionary containing a Curve25519 encryption key pair'''
-	key = nacl.public.PrivateKey.generate()
-	keypair = RetVal()
-	keypair.set_value('private', key.encode())
-	keypair.set_value('public', key.public_key.encode())
-	return keypair
-
 class ComplianceException(Exception):
 	'''Custom exception for spec compliance failures'''
-
 
 class __CardBase:
 	'''Represents an organizational keycard'''
@@ -54,22 +32,6 @@ class __CardBase:
 		self.type = ''
 		self.signatures = dict()
 
-	def __str__(self):
-		lines = list()
-		if self.type:
-			lines.append("Type:" + self.type)
-		
-		for field in self.field_names:
-			# Although fields aren't technically required to be in a certain order, keycards are 
-			# meant to be human-readable, so order matters in that sense.
-			if field in self.fields and self.fields[field]:
-				lines.append("%s:%s" % (field, self.fields[field]))
-		
-		# To ensure that the entire thing ends in a newline
-		lines.append('')
-
-		return '\n'.join(lines)
-	
 	def is_compliant(self):
 		'''Checks the fields to ensure that it meets spec requirements. If a field causes it 
 		to be noncompliant, the noncompliant field is also returned'''
@@ -84,22 +46,6 @@ class __CardBase:
 		
 		return RetVal()
 	
-	def set_from_string(self, text: str):
-		'''Takes a string representation of the keycard and parses it into fields and signatures.'''
-		if not text:
-			self.fields = dict()
-			self.signatures = dict()
-			return
-		
-		lines = text.split('\n')
-		for line in lines:
-			line = line.strip()
-			if not line:
-				continue
-			parts = line.split(':', 1)
-			if len(parts) > 1:
-				self.fields[parts[0]] = parts[1]
-
 	def set_field(self, field_name: str, field_value: str):
 		'''Takes a dictionary of fields to be assigned to the object. Any field which is not part 
 		of the official spec is assigned but otherwise ignored.'''
@@ -132,17 +78,6 @@ class __CardBase:
 		expiration = datetime.datetime.utcnow() + datetime.timedelta(numdays)
 		self.fields['Expires'] = expiration.strftime("%Y%m%d")
 		return RetVal()
-
-	def blake2(self):
-		'''Returns a 512-bit BLAKE2b fingerprint for the keycard data encoded in base85.'''
-		data = str(self)
-		return base64.b85encode(blake2b(data.encode()).digest()).decode()
-
-	def sha256(self):
-		'''Returns a SHA256 fingerprint for the keycard data encoded in base85.'''
-		data = str(self)
-		return base64.b85encode(hashlib.sha256(data.encode()).digest()).decode()
-
 
 class OrgCard(__CardBase):
 	'''Represents an organizational keycard'''
@@ -190,13 +125,6 @@ class OrgCard(__CardBase):
 		self.fields['Encoding'] = 'base85'
 		self.set_expiration()
 
-	def set_from_string(self, text: str):
-		'''Initializes the keycard from string data'''
-		super().set_from_string(text)
-		if 'Organization-Signature' in self.fields:
-			self.signatures['Organization'] = self.fields['Organization-Signature']
-			del self.fields['Organization-Signature']
-
 	def is_compliant(self):
 		'''Checks the fields to ensure that it meets spec requirements. If a field causes it 
 		to be noncompliant, the noncompliant field is also returned'''
@@ -211,31 +139,57 @@ class OrgCard(__CardBase):
 		
 		return RetVal()
 
-	def __str__(self):
+	def make_bytestring(self, include_signatures : bool) -> bytes:
+		'''Creates a byte string from the fields in the keycard. Because this doesn't use the 
+		string version of join(), it is not affected by Python's line ending handling, which is
+		critical to ensure that signatures are not invalidated.'''
 		lines = list()
 		if self.type:
-			lines.append("Type:" + self.type)
-		
+			lines.append(b':'.join([b'Type', self.type.encode()]))
+
 		for field in self.field_names:
 			if field in self.fields and self.fields[field]:
-				lines.append("%s:%s" % (field, self.fields[field]))
+				lines.append(b':'.join([field.encode(), self.fields[field].encode()]))
 		
-		if 'Organization' in self.signatures and self.signatures['Organization']:
-			lines.append('Organization-Signature:' + self.signatures['Organization'])
-		return '\n'.join(lines)
+		if include_signatures:
+			if 'Organization' in self.signatures and self.signatures['Organization']:
+				lines.append(b'Organization-Signature:' + self.signatures['Organization'].encode())
+		return b'\r\n'.join(lines)
 
+	def save(self, path : str) -> RetVal:
+		'''Saves to the specified path, forcing CRLF line endings to prevent any weird behavior 
+		caused by line endings invalidating signatures.'''
+
+		if not path:
+			return RetVal(BadParameterValue, 'path may not be empty')
+		
+		if os.path.exists(path):
+			return RetVal(ResourceExists)
+		
+		try:
+			with open(path, 'w', newline='\r\n') as f:
+				f.write("%s:%s\n" % ("Type",self.type))
+
+				for field in self.field_names:
+					if field in self.fields and self.fields[field]:
+						f.write("%s:%s\n" % (field, self.fields[field]))
+				
+				if 'Organization' in self.signatures and self.signatures['Organization']:
+					f.write('Organization-Signature:' + self.signatures['Organization'] + '\n')
+		
+		except Exception as e:
+			return RetVal(ExceptionThrown, str(e))
+
+		return RetVal()
+	
 	def sign(self, signing_key: bytes):
 		'''Adds the organizational signature to the  Note that for any change in the 
 		keycard fields, this call must be made afterward.'''
 		if not signing_key:
 			return RetVal(BadParameterValue)
 		
-		if not isinstance(signing_key, bytes):
-			return RetVal(BadParameterType)
-		
-		base = super().__str__()
 		key = nacl.signing.SigningKey(signing_key)
-		signed = key.sign(base.encode(), Base85Encoder)
+		signed = key.sign(self.make_bytestring(True), Base85Encoder)
 		self.signatures['Organization'] = signed.signature.decode()
 		return RetVal()
 
@@ -245,10 +199,9 @@ class OrgCard(__CardBase):
 			return RetVal(SignatureMissing)
 		
 		rv = RetVal()
-		base = super().__str__()
 		vkey = nacl.signing.VerifyKey(Base85Encoder.decode(verify_key))
 		try:
-			vkey.verify(base.encode(), Base85Encoder.decode(self.signatures['Organization']))
+			vkey.verify(self.make_bytestring(True), Base85Encoder.decode(self.signatures['Organization']))
 		except nacl.exceptions.BadSignatureError:
 			rv.set_error(InvalidKeycard)
 		
@@ -301,80 +254,104 @@ class UserCard(__CardBase):
 		
 		return rv
 
-	def set_from_string(self, text: str):
-		'''Initializes the keycard from string data'''
-		super().set_from_string(text)
-		
-		signatures = {
-			'User-Signature':'User',
-			'Custody-Signature':'Custody',
-			'Organization-Signature':'Organization'
-		}
-		for k,v in signatures.items():
-			if k in self.fields:
-				self.signatures[v] = self.fields[k]
-				del self.fields[k]
-		
-	def __str__(self):
+	def make_bytestring(self, include_signatures : int) -> bytes:
+		'''Creates a byte string from the fields in the keycard. Because this doesn't use join(), 
+		it is not affected by Python's line ending handling, which is critical in ensuring that 
+		signatures are not invalidated. The second parameterm, include_signatures, specifies 
+		which signatures to include. 0 = None, 1 = Custody only, 2 = Custody + User, 3+ = all'''
 		lines = list()
 		if self.type:
-			lines.append("Type:" + self.type)
-		
+			lines.append(b':'.join([b'Type', self.type.encode()]))
+
 		for field in self.field_names:
 			if field in self.fields and self.fields[field]:
-				lines.append("%s:%s" % (field, self.fields[field]))
+				lines.append(b':'.join([field.encode(), self.fields[field].encode()]))
 		
-		for sig in [ 'Custody', 'User', 'Organization' ]:
-			if sig in self.signatures and self.signatures[sig]:
-				lines.append(''.join([sig, '-Signature:', self.signatures[sig]]))
-		
-		return '\n'.join(lines)
+		if include_signatures > 0 and 'Custody' in self.signatures:
+			lines.append(b''.join([b'Custody-Signature:',
+							self.signatures['Custody'].encode()]))
+		if include_signatures > 1:
+			if 'User' not in self.signatures:
+				raise ComplianceException('missing user signature')
+			
+			lines.append(b''.join([b'User-Signature:',
+							self.signatures['User'].encode()]))
+		if include_signatures > 2:
+			if 'Organization' not in self.signatures:
+				raise ComplianceException('missing organization signature')
+			lines.append(b''.join([b'Organization-Signature:',
+							self.signatures['Organization'].encode()]))
 
+		lines.append(b'')
+		return b'\r\n'.join(lines)
+
+	def save(self, path : str) -> RetVal:
+		'''Saves to the specified path, forcing CRLF line endings to prevent any weird behavior 
+		caused by line endings invalidating signatures.'''
+
+		if not path:
+			return RetVal(BadParameterValue, 'path may not be empty')
+		
+		if os.path.exists(path):
+			return RetVal(ResourceExists)
+		
+		try:
+			with open(path, 'w', newline='\r\n') as f:
+				f.write("%s:%s\n" % ("Type",self.type))
+
+				for field in self.field_names:
+					if field in self.fields and self.fields[field]:
+						f.write("%s:%s\n" % (field, self.fields[field]))
+				
+				for sig in [ 'Custody', 'User', 'Organization' ]:
+					if sig in self.signatures and self.signatures[sig]:
+						f.write(''.join([sig, '-Signature:', self.signatures[sig], '\n']))
+		
+		except Exception as e:
+			return RetVal(ExceptionThrown, str(e))
+
+		return RetVal()
+	
 	def sign(self, signing_key: bytes, sigtype: str):
 		'''Adds a signature to the  Note that for any change in the keycard fields, this 
 		call must be made afterward. Note that successive signatures are deleted, such that 
 		updating a User signature will delete the Organization signature which depends on it. The 
 		sigtype must be Custody, User, or Organization, and the type is case-sensitive.'''
-		rv = RetVal()
 		if not signing_key:
-			rv.set_error(BadParameterValue)
-			rv['parameter'] = 'signing_key'
-			return rv 
+			return RetVal(BadParameterValue, 'signing key')
 		
 		if sigtype not in ['Custody', 'User', 'Organization']:
-			rv.set_error(BadParameterValue)
-			rv['parameter'] = 'sigtype'
-			return rv 
-		
-		if not isinstance(signing_key, bytes):
-			rv.set_error(BadParameterType)
-			rv['parameter'] = 'signing_key'
-			return rv 
+			return RetVal(BadParameterValue, 'sigtype')
 		
 		key = nacl.signing.SigningKey(signing_key)
-		parts = [ super().__str__() ]
 		
 		if sigtype == 'Custody':
 			if 'User' in self.signatures:
 				del self.signatures['User']
-				del self.signatures['Organization']
-		
-		if sigtype == 'User':
+			
 			if 'Organization' in self.signatures:
 				del self.signatures['Organization']
-			if 'Custody' in self.signatures and self.signatures['Custody']:
-				parts.append('Custody-Signature:' + self.signatures['Custody'] + '\n')
+		
+		elif sigtype == 'User':
+			if 'Organization' in self.signatures:
+				del self.signatures['Organization']
+		
 		elif sigtype == 'Organization':
 			if not self.signatures['User']:
 				raise ComplianceException
-			parts.append('User-Signature:' + self.signatures['User'] + '\n')
 		
-		signed = key.sign(''.join(parts).encode(), Base85Encoder)
+		sig_map = {
+			'Custody' : 0,
+			'User' : 1,
+			'Organization' : 2
+		}
+		signed = key.sign(self.make_bytestring(sig_map[sigtype]), Base85Encoder)
 		self.signatures[sigtype] = signed.signature.decode()
 		return RetVal()
 
 	def verify(self, verify_key: bytes, sigtype: str):
 		'''Verifies a signature, given a verification key'''
+	
 		rv = RetVal()
 		if not verify_key:
 			rv.set_error(BadParameterValue)
@@ -386,32 +363,27 @@ class UserCard(__CardBase):
 			rv['parameter'] = 'sigtype'
 			return rv 
 		
-		if not isinstance(verify_key, bytes):
-			rv.set_error(BadParameterType)
-			rv['parameter'] = 'verify_key'
-			return rv 
-		
 		vkey = nacl.signing.VerifyKey(verify_key)
-		parts = [ super().__str__() ]
 		
-		if 'Custody' in self.signatures:
-			if self.signatures['Custody']:
-				parts.append('Custody-Signature:' + self.signatures['Custody'] + '\n')
-			else:
-				# The Custody-Signature field must be populated if it exists
-				rv.set_error(NotCompliant)
-				rv['field'] = 'Custody-Signature'
-				return rv
+		if 'Custody' in self.signatures and not self.signatures['Custody']:
+			# The Custody-Signature field must be populated if it exists
+			rv.set_error(NotCompliant)
+			rv['field'] = 'Custody-Signature'
+			return rv
 		
 		if sigtype == 'Organization':
 			if 'User' not in self.signatures or not self.signatures['User']:
 				rv.set_error(NotCompliant)
 				rv['field'] = 'User-Signature'
 				return rv
-			parts.append('User-Signature:' + self.signatures['User'] + '\n')
-		
+		sig_map = {
+			'Custody' : 0,
+			'User' : 1,
+			'Organization' : 2
+		}
 		try:
-			vkey.verify(''.join(parts).encode(), Base85Encoder.decode(self.signatures[sigtype]))
+			data = self.make_bytestring(sig_map[sigtype])
+			vkey.verify(data, Base85Encoder.decode(self.signatures[sigtype]))
 		except nacl.exceptions.BadSignatureError:
 			rv.set_error(InvalidKeycard)
 		
@@ -423,23 +395,39 @@ def load_keycard(path: str):
 	if not os.path.exists(path):
 		return RetVal(ResourceNotFound, "%s doesn't exist" % path)
 	
-	fdata = None
+	lines = list()
+	card = None
+
 	with open(path, 'rb') as f:
 		fsize = os.stat(path).st_size
 		if not fsize:
 			return RetVal(EmptyData)
 		rawdata = f.read(fsize)
-		if rawdata:
-			fdata = rawdata.decode()
+		if not rawdata:
+			return RetVal(BadData)
+
+		fdata = rawdata.decode()
+		if "Type:Organization" in fdata:
+			card = OrgCard()
+		elif "Type:User" in fdata:
+			card = UserCard()
+		else:
+			return RetVal(BadData, 'Bad keycard type')
+		lines = fdata.split('\r\n')
 	
-	card = None
-	if "Type:Organization" in fdata:
-		card = OrgCard()
-	elif "Type:User" in fdata:
-		card = UserCard()
-	else:
-		return RetVal(BadData, 'Bad keycard type')
-	card.set_from_string(fdata)
+	for i, line in enumerate(lines, 1):
+		if not line:
+			continue
+
+		parts = line.split(':', maxsplit=1)
+		if len(parts) != 2:
+			return RetVal(BadData, 'Bad line %s in keycard' % i)
+
+		if parts[0] in [ 'Custody-Signature', 'User-Signature', 'Organization-Signature' ]:
+			sigtype = parts[0].split('-')[0]
+			card.signatures[sigtype] = parts[1]
+		else:
+			card.set_field(parts[0], parts[1])
 
 	return RetVal().set_value('card', card)
 
