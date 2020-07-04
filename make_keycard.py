@@ -145,9 +145,7 @@ def generate_org_card(userdata: list, path: str):
 		else:
 			print("Org card not compliant: %s" % status.error())
 	
-	outpath = os.path.join(path, 'org.keycard')
-	with open(outpath, 'w') as f:
-		f.write(str(card) + '\n')
+	card.save(os.path.join(path, 'org.keycard'), True)
 	
 
 def get_user_info():
@@ -196,13 +194,11 @@ def generate_user_card(userdata: list, path: str):
 		"Public-Encryption-Key" : ekey.get_public_key85(),
 	})
 	
-	outpath = os.path.join(path, 'user.keycard')
-	with open(outpath, 'w') as f:
-		f.write(str(card) + '\n')
+	card.save(os.path.join(path, 'user.keycard'), True)
 
 
 debug_app = False
-debug_org = False
+debug_org = True
 
 if __name__ == '__main__':
 	if debug_app:
@@ -215,12 +211,12 @@ if __name__ == '__main__':
 					('Website', 'www.acme.com'), ('Web-Access', 'webmail.acme.com'), 
 					('Anselus-Access', 'anselus.acme.com'), ('Item-Size-Limit', '30'), 
 					('Message-Size-Limit', '30'), ('Time-To-Live', '14'), ('Expires', '730')],
-					'foo')
+					'testcards')
 		else:
 			generate_user_card([('Name', 'Jon Yoder'), ('User-ID', 'jyoder'),
 					('Workspace-ID', 'ab9ec7a7-d3d0-4bba-a203-b421418a78f0'),
 					('Domain', 'example.com')],
-					'foo')
+					'testcards')
 		sys.exit(0)
 	
 	if len(sys.argv) < 3 or sys.argv[1].casefold() not in [ 'org', 'user' ]:
