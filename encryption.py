@@ -98,6 +98,14 @@ class KeyPair (EncryptionKey):
 		self.public64 = base64.b64encode(bytes(self.public)).decode('utf8')
 		self.private64 = base64.b64encode(bytes(self.private)).decode('utf8')
 
+	def __str__(self):
+		return '\n'.join([
+			self.type,
+			self.enc_type,
+			self.public85,
+			self.private85
+		])
+
 	def get_public_key(self) -> bytes:
 		'''Returns the binary data representing the public half of the key'''
 		return self.public
@@ -208,7 +216,6 @@ class SigningPair (EncryptionKey):
 			super().__init__(category, keytype='asymmetric', enctype=encryption)
 			self.public = public
 			self.private = private
-			self.type = encryption
 		else:
 			super().__init__(category, keytype='asymmetric', enctype='ed25519')
 			key = nacl.signing.SigningKey.generate()
@@ -219,6 +226,14 @@ class SigningPair (EncryptionKey):
 		self.private85 = base64.b85encode(bytes(self.private)).decode('utf8')
 		self.public64 = base64.b64encode(bytes(self.public)).decode('utf8')
 		self.private64 = base64.b64encode(bytes(self.private)).decode('utf8')
+
+	def __str__(self):
+		return '\n'.join([
+			self.type,
+			self.enc_type,
+			self.public85,
+			self.private85
+		])
 
 	def get_public_key(self) -> bytes:
 		'''Returns the binary data representing the public half of the key'''
@@ -335,6 +350,13 @@ class SecretKey (EncryptionKey):
 			self.key = nacl.utils.random(nacl.secret.SecretBox.KEY_SIZE)
 		self.key85 = base64.b85encode(bytes(self.key)).decode('utf8')
 		self.key64 = base64.b64encode(bytes(self.key)).decode('utf8')
+
+	def __str__(self):
+		return '\n'.join([
+			self.type,
+			self.enc_type,
+			self.key85
+		])
 
 	def get_key85(self) -> str:
 		'''Returns the key encoded in base85'''
