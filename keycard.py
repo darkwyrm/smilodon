@@ -103,7 +103,7 @@ class OrgCard(__CardBase):
 			'Secondary-Signing-Key',
 			'Secondary-Signing-Algorithm',
 			'Encryption-Key',
-			'Encryption-Key-Algorithm',
+			'Encryption-Algorithm',
 			'Web-Access',
 			'Mail-Access',
 			'Item-Size-Limit',
@@ -118,7 +118,7 @@ class OrgCard(__CardBase):
 			'Contact-Admin',
 			'Primary-Signing-Algorithm',
 			'Primary-Signing-Key',
-			'Encryption-Key-Algorithm',
+			'Encryption-Algorithm',
 			'Encryption-Key',
 			'Time-To-Live',
 			'Expires'
