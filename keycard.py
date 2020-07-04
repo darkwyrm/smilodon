@@ -351,7 +351,7 @@ class UserCard(__CardBase):
 			rv['parameter'] = 'signing_key'
 			return rv 
 		
-		key = nacl.signing.SigningKey(Base85Encoder.decode(signing_key))
+		key = nacl.signing.SigningKey(signing_key)
 		parts = [ super().__str__() ]
 		
 		if sigtype == 'Custody':
@@ -391,7 +391,7 @@ class UserCard(__CardBase):
 			rv['parameter'] = 'verify_key'
 			return rv 
 		
-		vkey = nacl.signing.VerifyKey(Base85Encoder.decode(verify_key))
+		vkey = nacl.signing.VerifyKey(verify_key)
 		parts = [ super().__str__() ]
 		
 		if 'Custody' in self.signatures:

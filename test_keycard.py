@@ -89,22 +89,6 @@ def test_orgcard_set_from_string():
 	''')
 	assert card.verify(card.fields['Primary-Signing-Key']), 'keycard failed to verify'
 
-def test_blake2():
-	'''Tests the blake2() method'''
-	card = keycard.OrgCard()
-	card.set_from_string('''Type:Organization
-	Name:Example, Inc.
-	Contact-Admin:admin/example.com
-	Primary-Signing-Key:fbqsEyXT`Sq?us{OgVygsK|zBP7njBmwT+Q_a*0E
-	Encryption-Key:0IaDFoy}NDe1@fzkg9z!5`@gclY20sRINMJd_{j!
-	Time-To-Live:30
-	Expires:20210507
-	Organization-Signature:ct1+I$3hcAikDsXP*%I)z0_9_VH;47DsPd-gsdzbq~LOqq(*1h#R$vC>jz~>_yOk<y4mG}ur^CVFLQ?p
-	''')
-	assert card.blake2() == "G%DjezjjNb_0}<q`x|bwC^{4n|8tk5ppQeYf<r<pj)I>`u>Zu57U1G44PiX-@|+!OW!" \
-							"vq?`Zv7>>=to3", \
-			'BLAKE2 hash for keycard did not match expected value'
-
 def test_usercard():
 	'''Tests the UserCard constructor'''
 	card = keycard.UserCard()
@@ -139,19 +123,19 @@ def test_usercard_sign_verify():
 		'Contact-Request-Key':crkey.public_key.encode(Base85Encoder).decode(),
 		'Public-Encryption-Key':ekey.public_key.encode(Base85Encoder).decode()
 	})
-	rv = card.sign(skey.encode(Base85Encoder), 'User')
-	assert not rv.error(), 'Unexpected RetVal error'
+	rv = card.sign(skey.encode(), 'User')
+	assert not rv.error(), 'Unexpected RetVal error %s' % rv.error()
 	assert card.signatures['User'], 'keycard failed to user sign'
 
 	org_skey = nacl.signing.SigningKey(b'JCfIfVhvn|k4Q%M2>@)ENbX%fE_+0Ml2%oz<Mss?',Base85Encoder)
-	rv = card.sign(org_skey.encode(Base85Encoder), 'Organization')
+	rv = card.sign(org_skey.encode(), 'Organization')
 	assert not rv.error(), 'Unexpected RetVal error'
 	assert card.signatures['Organization'], 'keycard failed to org sign'
 	
-	rv = card.verify(skey.verify_key.encode(Base85Encoder), 'User')
+	rv = card.verify(skey.verify_key.encode(), 'User')
 	assert not rv.error(), 'keycard failed to user verify'
 	
-	rv = card.verify(org_skey.verify_key.encode(Base85Encoder), 'Organization')
+	rv = card.verify(org_skey.verify_key.encode(), 'Organization')
 	assert not rv.error(), 'keycard failed to org verify'
 	print(card)
 
@@ -172,9 +156,9 @@ def test_usercard_set_from_string():
 	'Organization-Signature:G(8a}*krMSR($!Uq?=5Sk)J~w2uGGAOD~~<hvsAK7TvS>%>gP{answ=TXB;pakRinUvy1)>B7^4A2tyO\n')
 	skey = nacl.signing.SigningKey(b'{Ue^0)?k`s(>pNG&Wg9f5b;VHN1^PC*c4-($G#>}',Base85Encoder)
 	org_skey = nacl.signing.SigningKey(b'JCfIfVhvn|k4Q%M2>@)ENbX%fE_+0Ml2%oz<Mss?',Base85Encoder)
-	rv = card.verify(skey.verify_key.encode(Base85Encoder), 'User')
+	rv = card.verify(skey.verify_key.encode(), 'User')
 	assert rv.error(), "User verify failed in set_from_string"
-	rv = card.verify(org_skey.verify_key.encode(Base85Encoder), 'Organization')
+	rv = card.verify(org_skey.verify_key.encode(), 'Organization')
 	assert rv.error(), "Organization verify failed in set_from_string"
 
 
