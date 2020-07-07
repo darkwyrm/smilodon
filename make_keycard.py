@@ -207,7 +207,7 @@ def generate_user_card(userdata: list, path: str):
 	card.save(os.path.join(path, 'user.keycard'), True)
 
 
-debug_app = True
+debug_app = False
 debug_org = False
 
 if __name__ == '__main__':
@@ -223,7 +223,7 @@ if __name__ == '__main__':
 					('Message-Size-Limit', '30'), ('Time-To-Live', '14'), ('Expires', '730')],
 					'testcards')
 		else:
-			generate_user_card([('Name', 'Jon Yoder'), ('User-ID', 'jyoder'),
+			generate_user_card([('Name', 'Corbin Smith'), ('User-ID', 'csmith'),
 					('Workspace-ID', 'ab9ec7a7-d3d0-4bba-a203-b421418a78f0'),
 					('Domain', 'example.com')],
 					'testcards')
