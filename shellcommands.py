@@ -320,7 +320,11 @@ class CommandRegister(BaseCommand):
 		
 		if status['code'] == 201:
 			# 201 - Registered
+
 			# TODO: finish handling registration
+			# 1) Set friendly name for account, if applicable - SETADDR
+			# 2) Upload keycard and receive signed keycard - SIGNCARD
+			# 3) Save signed keycard to database
 			pass
 		elif status['code'] in returncodes.keys():
 			return returncodes[status['code']]
