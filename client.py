@@ -145,13 +145,13 @@ class AnselusClient:
 		# 201 - Registered
 		# 300 - Internal server error
 		# 408 - Resource exists
-		if regdata['code'] in [304, 406, 300, 408]:
+		if regdata['status'] in [304, 406, 300, 408]:
 			return regdata
 		
 		# Just a basic sanity check
 		if 'wid' not in regdata:
 			return RetVal(InternalError, 'BUG: bad data from serverconn.register()') \
-					.set_value('code', 300)
+					.set_value('status', 300)
 
 		w = Workspace(self.fs.pman.get_active_profile().db, self.fs.pman.get_active_profile().path)
 		status = w.generate(self.fs.pman.get_active_profile(), server, regdata['wid'], pw)

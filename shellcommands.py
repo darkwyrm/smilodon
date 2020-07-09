@@ -318,7 +318,7 @@ class CommandRegister(BaseCommand):
 			408:"This workspace already exists on the server. Registration is not needed."
 		}
 		
-		if status['code'] == 201:
+		if status['status'] == 201:
 			# 201 - Registered
 
 			# TODO: finish handling registration
@@ -326,8 +326,8 @@ class CommandRegister(BaseCommand):
 			# 2) Upload keycard and receive signed keycard - SIGNCARD
 			# 3) Save signed keycard to database
 			pass
-		elif status['code'] in returncodes.keys():
-			return returncodes[status['code']]
+		elif status['status'] in returncodes.keys():
+			return returncodes[status['status']]
 		
 		return ''
 

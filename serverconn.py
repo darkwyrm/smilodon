@@ -131,7 +131,7 @@ def connect(host, port=2001):
 def device(sock, devid, session_str):
 	'''Completes the login process by submitting device ID and its session string.'''
 	if not utils.validate_uuid(devid):
-		return RetVal(AnsBadRequest, 'Invalid device ID').set_value('code', 400)
+		return RetVal(AnsBadRequest, 'Invalid device ID').set_value('status', 400)
 
 	response = write_text(sock, 'DEVICE %s %s\r\n' % (devid, session_str))
 	if response.error():
@@ -158,7 +158,7 @@ def exists(sock, path):
 		return status
 	
 	status = read_response(sock)
-	if status['code'] == 200:
+	if status['status'] == 200:
 		return status.set_value('exists', True)
 	
 	return status.set_value('exists', False)
@@ -172,7 +172,7 @@ def login(sock, wid):
 	if not utils.validate_uuid(wid):
 		return {
 			'error' : 'BAD REQUEST',
-			'code' : 400
+			'status' : 400
 		}
 
 	response = write_text(sock, 'LOGIN %s\r\n' % wid)
@@ -188,7 +188,7 @@ def login(sock, wid):
 def password(sock, wid, pword):
 	'''Continues the login process by hashing a password and sending it to the server.'''
 	if not password or not utils.validate_uuid(wid):
-		return RetVal(AnsBadRequest).set_value('code', 400)
+		return RetVal(AnsBadRequest).set_value('status', 400)
 	
 	# The server will salt the hash we submit, but we'll salt anyway with the WID for extra safety.
 	pwhash = nacl.pwhash.argon2id.kdf(nacl.secret.SecretBox.KEY_SIZE,
@@ -234,17 +234,17 @@ def register(sock, pwhash, keytype, devkey):
 		if response.error():
 			return response
 		
-		if response['code'] in [ 304, 406 ]:	# Registration closed, Payment required
+		if response['status'] in [ 304, 406 ]:	# Registration closed, Payment required
 			break
 		
-		if response['code'] in [ 101, 201]:		# Pending, Success
+		if response['status'] in [ 101, 201]:		# Pending, Success
 			tokens = response['response'].split()
 			if len(tokens) != 2 or not utils.validate_uuid(tokens[0]):
-				return { 'code' : 300, 'error' : 'INTERNAL SERVER ERROR' }
+				return { 'status' : 300, 'error' : 'INTERNAL SERVER ERROR' }
 			response.set_values({ 'wid':wid, 'devid':tokens[0], 'session':tokens[1] })
 			break
 		
-		if response['code'] == 408:	# WID exists
+		if response['status'] == 408:	# WID exists
 			tries = tries + 1
 		else:
 			# Something we didn't expect
