@@ -29,10 +29,6 @@ def setup_test(name):
 def test_keypair_base():
 	'''Tests base initialization of the KeyPair class'''
 	kp = encryption.KeyPair()
-	assert base64.b64decode(kp.public64.encode()) == kp.public, \
-			"public64 does not match public key"
-	assert base64.b64decode(kp.private64.encode()) == kp.private, \
-			"private64 does not match private key"
 	assert base64.b85decode(kp.public85.encode()) == kp.public, \
 			"public85 does not match public key"
 	assert base64.b85decode(kp.private85.encode()) == kp.private, \
@@ -59,7 +55,6 @@ def test_keypair_save():
 
 	assert filedata['type'] == 'encryptionpair', "Saved data does not match input data"
 	assert filedata['encryption'] == 'curve25519', "Saved data does not match input data"
-	assert filedata['encoding'] == 'base85', "Saved data does not match input data"
 	assert filedata['publickey'] == public85, "Saved data does not match input data"
 	assert filedata['privatekey'] == private85, "Saved data does not match input data"
 
@@ -92,10 +87,6 @@ def test_keypair_load():
 def test_signpair_base():
 	'''Tests base initialization of the SigningPair class'''
 	sp = encryption.SigningPair()
-	assert base64.b64decode(sp.public64.encode()) == sp.public, \
-			"public64 does not match public key"
-	assert base64.b64decode(sp.private64.encode()) == sp.private, \
-			"private64 does not match private key"
 	assert base64.b85decode(sp.public85.encode()) == sp.public, \
 			"public85 does not match public key"
 	assert base64.b85decode(sp.private85.encode()) == sp.private, \
@@ -122,7 +113,6 @@ def test_signpair_save():
 
 	assert filedata['type'] == 'signingpair', "Saved data does not match input data"
 	assert filedata['encryption'] == 'ed25519', "Saved data does not match input data"
-	assert filedata['encoding'] == 'base85', "Saved data does not match input data"
 	assert filedata['publickey'] == public85, "Saved data does not match input data"
 	assert filedata['privatekey'] == private85, "Saved data does not match input data"
 
@@ -155,7 +145,6 @@ def test_signpair_load():
 def test_secretkey_base():
 	'''Tests base initialization of the SecretKey class'''
 	sk = encryption.SecretKey()
-	assert base64.b64decode(sk.key64.encode()) == sk.key, "key64 does not match key"
 	assert base64.b85decode(sk.key85.encode()) == sk.key, "key85 does not match key"
 
 
@@ -177,7 +166,6 @@ def test_secretkey_save():
 
 	assert filedata['type'] == 'secretkey', "Saved data does not match input data"
 	assert filedata['encryption'] == 'salsa20', "Saved data does not match input data"
-	assert filedata['encoding'] == 'base85', "Saved data does not match input data"
 	assert filedata['key'] == key85, "Saved data does not match input data"
 
 

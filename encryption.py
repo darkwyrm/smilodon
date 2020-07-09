@@ -22,7 +22,6 @@ __encryption_pair_schema = {
 	'type' : 'object',
 	'properties' : {
 		'type' : {	'type' : 'string', 'pattern' : 'encryptionpair' },
-		'encoding' : { 'type' : 'string', 'pattern' : 'base64|base85'},
 		'encryption' : { 'type' : 'string', 'pattern' : 'curve25519' },
 		'publickey' : { 'type' : 'string' },
 		'privatekey' : { 'type' : 'string' },
@@ -33,7 +32,6 @@ __signing_pair_schema = {
 	'type' : 'object',
 	'properties' : {
 		'type' : {	'type' : 'string', 'pattern' : 'signingpair' },
-		'encoding' : { 'type' : 'string', 'pattern' : 'base64|base85'},
 		'encryption' : { 'type' : 'string', 'pattern' : 'ed25519' },
 		'publickey' : { 'type' : 'string' },
 		'privatekey' : { 'type' : 'string' },
@@ -44,7 +42,6 @@ __secret_key_schema = {
 	'type' : 'object',
 	'properties' : {
 		'type' : {	'type' : 'string', 'pattern' : 'secretkey' },
-		'encoding' : { 'type' : 'string', 'pattern' : 'base64|base85'},
 		'encryption' : { 'type' : 'string', 'pattern' : 'salsa20' },
 		'key' : { 'type' : 'string' }
 	}
@@ -95,8 +92,6 @@ class KeyPair (EncryptionKey):
 		
 		self.public85 = base64.b85encode(bytes(self.public)).decode('utf8')
 		self.private85 = base64.b85encode(bytes(self.private)).decode('utf8')
-		self.public64 = base64.b64encode(bytes(self.public)).decode('utf8')
-		self.private64 = base64.b64encode(bytes(self.private)).decode('utf8')
 
 	def __str__(self):
 		return '\n'.join([
@@ -114,10 +109,6 @@ class KeyPair (EncryptionKey):
 		'''Returns the public key encoded in base85'''
 		return self.public85
 	
-	def get_public_key64(self) -> str:
-		'''Returns the public key encoded in base64'''
-		return self.public64
-	
 	def get_private_key(self) -> bytes:
 		'''Returns the binary data representing the private half of the key'''
 		return self.private
@@ -126,33 +117,20 @@ class KeyPair (EncryptionKey):
 		'''Returns the private key encoded in base85'''
 		return self.private85
 
-	def get_private_key64(self) -> str:
-		'''Returns the private key encoded in base64'''
-		return self.private64
-
-	def save(self, path: str, encoding='base85'):
+	def save(self, path: str):
 		'''Saves the keypair to a file'''
 		if not path:
 			return RetVal(BadParameterValue, 'path may not be empty')
-		
-		if encoding not in [ 'base64', 'base85' ]:
-			return RetVal(BadParameterValue, "encoding must be 'base64' or 'base85'")
 		
 		if os.path.exists(path):
 			return RetVal(ResourceExists, '%s exists' % path)
 
 		outdata = {
 			'type' : 'encryptionpair',
-			'encryption' : self.enc_type,
-			'encoding' : encoding
+			'encryption' : self.enc_type
 		}
-
-		if encoding == 'base85':
-			outdata['publickey'] = self.get_public_key85()
-			outdata['privatekey'] = self.get_private_key85()
-		else:
-			outdata['publickey'] = self.get_public_key64()
-			outdata['privatekey'] = self.get_private_key64()
+		outdata['publickey'] = self.get_public_key85()
+		outdata['privatekey'] = self.get_private_key85()
 			
 		try:
 			fhandle = open(path, 'w')
@@ -193,18 +171,11 @@ def load_encryptionpair(path: str) -> RetVal:
 
 	public_key = None
 	private_key = None
-	if indata['encoding'] == 'base85':
-		try:
-			public_key = base64.b85decode(indata['publickey'].encode())
-			private_key = base64.b85decode(indata['privatekey'].encode())
-		except Exception as e:
-			return RetVal(BadData, 'Failure to base85 decode key data')
-	else:
-		try:
-			public_key = base64.b64decode(indata['publickey'].encode())
-			private_key = base64.b64decode(indata['privatekey'].encode())
-		except Exception as e:
-			return RetVal(BadData, 'Failure to base64 decode key data')
+	try:
+		public_key = base64.b85decode(indata['publickey'].encode())
+		private_key = base64.b85decode(indata['privatekey'].encode())
+	except Exception as e:
+		return RetVal(BadData, 'Failure to base85 decode key data')
 	
 	return RetVal().set_value('keypair', KeyPair('', public_key, private_key, indata['encryption']))
 
@@ -224,8 +195,6 @@ class SigningPair (EncryptionKey):
 		
 		self.public85 = base64.b85encode(bytes(self.public)).decode('utf8')
 		self.private85 = base64.b85encode(bytes(self.private)).decode('utf8')
-		self.public64 = base64.b64encode(bytes(self.public)).decode('utf8')
-		self.private64 = base64.b64encode(bytes(self.private)).decode('utf8')
 
 	def __str__(self):
 		return '\n'.join([
@@ -243,10 +212,6 @@ class SigningPair (EncryptionKey):
 		'''Returns the public key encoded in base85'''
 		return self.public85
 	
-	def get_public_key64(self) -> str:
-		'''Returns the public key encoded in base64'''
-		return self.public64
-	
 	def get_private_key(self) -> bytes:
 		'''Returns the binary data representing the private half of the key'''
 		return self.private
@@ -255,33 +220,21 @@ class SigningPair (EncryptionKey):
 		'''Returns the private key encoded in base85'''
 		return self.private85
 
-	def get_private_key64(self) -> str:
-		'''Returns the private key encoded in base64'''
-		return self.private64
-
 	def save(self, path: str, encoding='base85'):
 		'''Saves the key to a file'''
 		if not path:
 			return RetVal(BadParameterValue, 'path may not be empty')
-		
-		if encoding not in [ 'base64', 'base85' ]:
-			return RetVal(BadParameterValue, "encoding must be 'base64' or 'base85'")
 		
 		if os.path.exists(path):
 			return RetVal(ResourceExists, '%s exists' % path)
 
 		outdata = {
 			'type' : 'signingpair',
-			'encryption' : self.enc_type,
-			'encoding' : encoding
+			'encryption' : self.enc_type
 		}
 
-		if encoding == 'base85':
-			outdata['publickey'] = self.get_public_key85()
-			outdata['privatekey'] = self.get_private_key85()
-		else:
-			outdata['publickey'] = self.get_public_key64()
-			outdata['privatekey'] = self.get_private_key64()
+		outdata['publickey'] = self.get_public_key85()
+		outdata['privatekey'] = self.get_private_key85()
 			
 		try:
 			fhandle = open(path, 'w')
@@ -322,18 +275,11 @@ def load_signingpair(path: str) -> RetVal:
 
 	public_key = None
 	private_key = None
-	if indata['encoding'] == 'base85':
-		try:
-			public_key = base64.b85decode(indata['publickey'].encode())
-			private_key = base64.b85decode(indata['privatekey'].encode())
-		except Exception as e:
-			return RetVal(BadData, 'Failure to base85 decode key data')
-	else:
-		try:
-			public_key = base64.b64decode(indata['publickey'].encode())
-			private_key = base64.b64decode(indata['privatekey'].encode())
-		except Exception as e:
-			return RetVal(BadData, 'Failure to base64 decode key data')
+	try:
+		public_key = base64.b85decode(indata['publickey'].encode())
+		private_key = base64.b85decode(indata['privatekey'].encode())
+	except Exception as e:
+		return RetVal(BadData, 'Failure to base85 decode key data')
 	
 	return RetVal().set_value('keypair', SigningPair('', public_key, private_key, indata['encryption']))
 
@@ -349,7 +295,6 @@ class SecretKey (EncryptionKey):
 			super().__init__(category, keytype='symmetric', enctype='salsa20')
 			self.key = nacl.utils.random(nacl.secret.SecretBox.KEY_SIZE)
 		self.key85 = base64.b85encode(bytes(self.key)).decode('utf8')
-		self.key64 = base64.b64encode(bytes(self.key)).decode('utf8')
 
 	def __str__(self):
 		return '\n'.join([
@@ -362,31 +307,20 @@ class SecretKey (EncryptionKey):
 		'''Returns the key encoded in base85'''
 		return self.key85
 	
-	def get_key64(self) -> str:
-		'''Returns the key encoded in base64'''
-		return self.key64
-	
 	def save(self, path: str, encoding='base85') -> RetVal:
 		'''Saves the key to a file'''
 		if not path:
 			return RetVal(BadParameterValue, 'path may not be empty')
-		
-		if encoding not in [ 'base64', 'base85' ]:
-			return RetVal(BadParameterValue, "encoding must be 'base64' or 'base85'")
 		
 		if os.path.exists(path):
 			return RetVal(ResourceExists, '%s exists' % path)
 
 		outdata = {
 			'type' : 'secretkey',
-			'encryption' : self.enc_type,
-			'encoding' : encoding
+			'encryption' : self.enc_type
 		}
 
-		if encoding == 'base85':
-			outdata['key'] = self.get_key85()
-		else:
-			outdata['key'] = self.get_key64()
+		outdata['key'] = self.get_key85()
 			
 		try:
 			fhandle = open(path, 'w')
@@ -426,16 +360,10 @@ def load_secretkey(path: str) -> RetVal:
 		return RetVal(InternalError, "BUG: invalid SecretKey schema")
 
 	key = None
-	if indata['encoding'] == 'base85':
-		try:
-			key = base64.b85decode(indata['key'].encode())
-		except Exception as e:
-			return RetVal(BadData, 'Failure to base85 decode key data')
-	else:
-		try:
-			key = base64.b64decode(indata['key'].encode())
-		except Exception as e:
-			return RetVal(BadData, 'Failure to base64 decode key data')
+	try:
+		key = base64.b85decode(indata['key'].encode())
+	except Exception as e:
+		return RetVal(BadData, 'Failure to base85 decode key data')
 	
 	return RetVal().set_value('key', SecretKey('', key, indata['encryption']))
 
