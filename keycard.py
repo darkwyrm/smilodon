@@ -97,7 +97,6 @@ class OrgCard(__CardBase):
 			'Contact-Support',
 			'Language',
 			'Website',
-			'Encoding',
 			'Primary-Signing-Key',
 			'Primary-Signing-Algorithm',
 			'Secondary-Signing-Key',
@@ -124,7 +123,6 @@ class OrgCard(__CardBase):
 			'Expires'
 		]
 		self.fields['Time-To-Live'] = '30'
-		self.fields['Encoding'] = 'base85'
 		self.set_expiration()
 
 	def is_compliant(self):
@@ -231,7 +229,6 @@ class UserCard(__CardBase):
 		self.required_fields = [
 			'Workspace-ID',
 			'Domain',
-			'Encoding',
 			'Contact-Request-Signing-Algorithm',
 			'Contact-Request-Signing-Key',
 			'Contact-Request-Encryption-Algorithm',
@@ -242,7 +239,6 @@ class UserCard(__CardBase):
 			'Expires'
 		]
 		self.fields['Time-To-Live'] = '7'
-		self.fields['Encoding'] = 'base85'
 		self.set_expiration()
 
 	def is_compliant(self):
