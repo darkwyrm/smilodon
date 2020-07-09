@@ -43,7 +43,7 @@ def test_orgcard():
 	})
 	rv = card.is_compliant()
 	assert rv.error(), "OrgCard() should not comply and did"
-	assert rv['field'] == 'Organization-Signature', "Signature complied and shouldn't"
+	assert rv.info() != 'Missing field Organization-Signature', "Signature complied and shouldn't"
 
 
 def test_set_fields():
@@ -72,7 +72,7 @@ def test_set_fields():
 	})
 	rv = card.is_compliant()
 	assert rv.error(), "Setfield() should not comply and did"
-	assert rv['field'] == 'Organization-Signature', "Signature complied and shouldn't"
+	assert rv.info() != 'Missing field Organization-Signature', "Signature complied and shouldn't"
 
 
 def test_set_expiration():
@@ -181,7 +181,7 @@ def test_usercard():
 	card.signatures['Organization'] = 'TestBadOrgSig'
 
 	rv = card.is_compliant()
-	assert not rv.error(), "UserCard() compliance failed: %s" % rv['field']
+	assert not rv.error(), "UserCard() compliance failed: %s" % rv.info()
 
 
 def test_usercard_bytestring():
