@@ -22,11 +22,7 @@ CONN_TIMEOUT = 900.0
 # Size (in bytes) of the read buffer size for recv()
 READ_BUFFER_SIZE = 8192
 
-# Write Text
-#	Requires: 	valid socket
-#				string
-#	Returns: [dict] "error" : string
-def write_text(sock, text):
+def write_text(sock, text: str) -> RetVal:
 	'''Sends a string over a socket'''
 
 	if not sock:
@@ -41,10 +37,7 @@ def write_text(sock, text):
 	return RetVal()
 
 
-# Read Text
-#	Requires: valid socket
-#	Returns: [dict] "error" : string, "string" : string
-def read_text(sock):
+def read_text(sock) -> RetVal:
 	'''Reads a string from the supplied socket'''
 
 	if not sock:
@@ -64,10 +57,7 @@ def read_text(sock):
 	return RetVal().set_value('string', out_string)
 
 
-# Read Response
-#	Requires: valid socket
-#	Returns: [dict] "error" : string, "code" : int
-def read_response(sock):
+def read_response(sock) -> RetVal:
 	'''Reads a server response and returns a separated code and string'''
 	
 	response = read_text(sock)
