@@ -133,7 +133,8 @@ class AnselusClient:
 		if conndata.error():
 			return conndata
 		
-		regdata = serverconn.register(conndata['socket'], pw.hashstring, devkey.type, devkey.public85)
+		regdata = serverconn.register(conndata['socket'], pw.hashstring, devkey.enc_type,
+				devkey.public85)
 		if regdata.error():
 			return regdata
 		serverconn.disconnect(conndata['socket'])
