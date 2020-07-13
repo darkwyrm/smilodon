@@ -291,7 +291,7 @@ class CommandRegister(BaseCommand):
 			print(self.helpInfo)
 			return ''
 		
-		print("Please enter a passphrase. Please use at least 10 characters with a combination" \
+		print("Please enter a passphrase. Please use at least 10 characters with a combination " \
 			"of uppercase and lowercase letters and preferably a number and/or symbol. You can "
 			"even use non-English letters, such as ß, ñ, Ω, and Ç!")
 		
@@ -318,6 +318,9 @@ class CommandRegister(BaseCommand):
 			408:"This workspace already exists on the server. Registration is not needed."
 		}
 		
+		if status.error():
+			return '%s: %s' % (status.error(), status.info())
+
 		if status['status'] == 201:
 			# 201 - Registered
 
