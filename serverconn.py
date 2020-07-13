@@ -229,9 +229,9 @@ def register(sock, pwhash, keytype, devkey):
 		
 		if response['status'] in [ 101, 201]:		# Pending, Success
 			tokens = response['response'].split()
-			if len(tokens) != 2 or not utils.validate_uuid(tokens[0]):
+			if len(tokens) != 3 or not utils.validate_uuid(tokens[2]):
 				return { 'status' : 300, 'error' : 'INTERNAL SERVER ERROR' }
-			response.set_values({ 'wid':wid, 'devid':tokens[0], 'session':tokens[1] })
+			response.set_value('devid', tokens[2])
 			break
 		
 		if response['status'] == 408:	# WID exists
