@@ -319,7 +319,7 @@ class CommandRegister(BaseCommand):
 		}
 		
 		if status.error():
-			return '%s: %s' % (status.error(), status.info())
+			return 'Registration error %s: %s' % (status.error(), status.info())
 
 		if status['status'] == 201:
 			# 201 - Registered
@@ -332,7 +332,7 @@ class CommandRegister(BaseCommand):
 		elif status['status'] in returncodes.keys():
 			return returncodes[status['status']]
 		
-		return ''
+		return 'Registration success'
 
 
 class CommandSetInfo(BaseCommand):
