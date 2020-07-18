@@ -37,15 +37,15 @@ def set_credentials(db, wid: str, domain: str, pw: encryption.Password) -> RetVa
 	db.commit()
 	return RetVal()
 
-def add_device_session(db, address: str, devid: str, keytype: str, public_key: str, 
+def add_device_session(db, address: str, devid: str, enctype: str, public_key: str, 
 		private_key: str, devname='') -> RetVal:
 	'''Adds a device to a workspace'''
 
-	if not address or not devid or not keytype or not public_key or not private_key:
+	if not address or not devid or not enctype or not public_key or not private_key:
 		return RetVal(BadParameterValue, "Empty parameter")
 	
-	if keytype != 'curve25519':
-		return RetVal(BadParameterValue, "keytype must be 'curve25519'")
+	if enctype != 'curve25519':
+		return RetVal(BadParameterValue, "enctype must be 'curve25519'")
 
 	# Normally we don't validate the input, relying on the caller to ensure valid data because
 	# in most cases, bad data just corrupts the database integrity, not crash the program.
@@ -70,14 +70,14 @@ def add_device_session(db, address: str, devid: str, keytype: str, public_key: s
 	cursor = db.cursor()
 	if devname:
 		cursor.execute('''INSERT INTO sessions(
-				address, devid, keytype, public_key, private_key, devname) 
+				address, devid, enctype, public_key, private_key, devname) 
 				VALUES(?,?,?,?,?,?)''',
-				(address, devid, keytype, public_key, private_key, devname))
+				(address, devid, enctype, public_key, private_key, devname))
 	else:
 		cursor.execute('''INSERT INTO sessions(
-				address, devid, keytype, public_key, private_key) 
+				address, devid, enctype, public_key, private_key) 
 				VALUES(?,?,?,?,?)''',
-				(address, devid, keytype, public_key, private_key))
+				(address, devid, enctype, public_key, private_key))
 	db.commit()
 	return RetVal()
 
