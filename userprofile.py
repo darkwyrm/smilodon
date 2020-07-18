@@ -96,8 +96,8 @@ class Profile:
 			except Exception as e:
 				print('Unable to delete old database %s: %s' % (dbpath, e))
 		
-		db = sqlite3.connect(dbpath)
-		cursor = db.cursor()
+		self.db = sqlite3.connect(dbpath)
+		cursor = self.db.cursor()
 
 		sqlcmds = [ '''
 			CREATE TABLE workspaces (
@@ -179,10 +179,10 @@ class Profile:
 		]
 
 		for sqlcmd in sqlcmds:
-			cursor = db.cursor()
+			cursor = self.db.cursor()
 			cursor.execute(sqlcmd)
-		db.commit()
-		return db
+		self.db.commit()
+		return self.db
 
 
 class ProfileManager:
