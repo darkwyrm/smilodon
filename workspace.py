@@ -2,24 +2,26 @@
 
 import pathlib
 
+import sqlite3
+
 import auth
 import encryption
 from retval import RetVal, ResourceExists, ResourceNotFound, ExceptionThrown, BadParameterValue
 
 class Workspace:
 	'''Workspace provides high-level operations for managing workspace data.'''
-	def __init__(self, db, path):
+	def __init__(self, db: sqlite3.Connection, path: str):
 		self.db = db
 		p = pathlib.Path(path)
 		self.path = p.absolute()
-		self.name = ''
+		self.uid = ''
 		self.wid = ''
 		self.domain = ''
 
-	def generate(self, name, server, wid, pw):
+	def generate(self, userid: str, server: str, wid: str, pw: encryption.Password) -> RetVal:
 		'''Creates all the data needed for an individual workspace account'''
 		
-		self.name = name
+		self.uid = userid
 		self.wid = wid
 		self.domain = server
 
@@ -39,9 +41,9 @@ class Workspace:
 		}
 		
 		# Add encryption keys
-		for key in keys.items():
+		for key in keys.values():
 			out = auth.add_key(self.db, key, address)
-			if out['error']:
+			if out.error():
 				status = self.remove_workspace_entry(wid, server)
 				if status.error():
 					return status
@@ -54,7 +56,7 @@ class Workspace:
 			'contacts',
 			'events',
 			'tasks',
-			'notes'
+			'notes',
 			'files',
 			'files attachments'
 		]
@@ -62,7 +64,7 @@ class Workspace:
 		for folder in folderlist:
 			foldermap.MakeID()
 			foldermap.Set(address, keys['folder'].get_id(), folder, 'root')
-			self.db.add_folder(foldermap)
+			self.add_folder(foldermap)
 
 		# Create the folders themselves
 		try:
@@ -74,10 +76,10 @@ class Workspace:
 		self.path.joinpath('files').mkdir(exist_ok=True)
 		self.path.joinpath('files','attachments').mkdir(exist_ok=True)
 
-		self.set_userid(name)
+		self.set_userid(userid)
 		return RetVal()
 
-	def add_to_db(self, pw):
+	def add_to_db(self, pw: encryption.Password) -> RetVal:
 		'''Adds a workspace to the storage database'''
 
 		cursor = self.db.cursor()
@@ -91,7 +93,7 @@ class Workspace:
 		self.db.commit()
 		return RetVal()
 
-	def remove_from_db(self):
+	def remove_from_db(self) -> RetVal:
 		'''
 		Removes ALL DATA associated with a workspace. Don't call this unless you mean to erase
 		all evidence that a particular workspace ever existed.
@@ -112,7 +114,7 @@ class Workspace:
 		self.db.commit()
 		return RetVal()
 	
-	def remove_workspace_entry(self, wid, domain):
+	def remove_workspace_entry(self, wid: str, domain: str) -> RetVal:
 		'''
 		Removes a workspace from the storage database.
 		NOTE: this only removes the workspace entry itself. It does not remove keys, sessions,
@@ -128,7 +130,7 @@ class Workspace:
 		self.db.commit()
 		return RetVal()
 		
-	def add_folder(self, folder):
+	def add_folder(self, folder: encryption.FolderMapping) -> RetVal:
 		'''
 		Adds a mapping of a folder ID to a specific path in the workspace.
 		Parameters:
@@ -146,7 +148,7 @@ class Workspace:
 		self.db.commit()
 		return RetVal()
 
-	def remove_folder(self, fid):
+	def remove_folder(self, fid: encryption.FolderMapping) -> RetVal:
 		'''Deletes a folder mapping.
 		Parameters:
 		fid : uuid
@@ -164,7 +166,7 @@ class Workspace:
 		self.db.commit()
 		return RetVal()
 	
-	def get_folder(self, fid):
+	def get_folder(self, fid: encryption.FolderMapping) -> RetVal:
 		'''Gets the specified folder.
 		Parameters:
 		fid : uuid
@@ -187,10 +189,10 @@ class Workspace:
 		
 		return RetVal().set_value('folder', folder)
 
-	def set_userid(self, name):
+	def set_userid(self, userid: str) -> RetVal:
 		'''set_userid() sets the human-friendly name for the workspace'''
 		
-		if ' ' or '"' in name:
+		if ' ' or '"' in userid:
 			return RetVal(BadParameterValue, '" and space not permitted')
 		
 		cursor = self.db.cursor()
@@ -199,12 +201,12 @@ class Workspace:
 		SET userid=?
 		WHERE wid=? and domain=?
 		'''
-		cursor.execute(sqlcmd, (name, self.wid, self.domain))
+		cursor.execute(sqlcmd, (userid, self.wid, self.domain))
 		self.db.commit()
-		self.name = name
+		self.uid = userid
 
 		return RetVal()
 
-	def get_userid(self):
+	def get_userid(self) -> RetVal:
 		'''get_userid() gets the human-friendly name for the workspace'''
-		return RetVal().set_value('name', self.name)
+		return RetVal().set_value('userid', self.uid)
