@@ -365,3 +365,17 @@ class CommandShell(BaseCommand):
 		except Exception as e:
 			print("Error running command: %s" % e)
 		return ''
+
+class CommandSetUserID(BaseCommand):
+	'''Sets the workspace's user ID'''
+	def __init__(self, raw_input=None, ptoken_list=None):
+		BaseCommand.__init__(self,raw_input,ptoken_list)
+		self.name = 'setuserid'
+		self.helpInfo = helptext.setuserid_cmd
+		self.description = 'Set user id for workspace'
+
+	def execute(self, pshell_state):
+		# TODO: Implement
+		return ''
+
+

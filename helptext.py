@@ -50,7 +50,29 @@ bash.
 Aliases: ` , sh'''
 
 setinfo_cmd = '''Usage: setinfo <infotype> <value>
-Sets contact information for the profile. Available information which can be set is listed below:
+Sets contact information for the profile. Available information which can be 
+set is listed below:
+'''
 
-userid - the "friendly name" for the workspace, i.e. the non-numeric part of a person's Anselus address which is what is usually shared with other people.
+setuserid_cmd = '''Usage: setuserid <userid>
+Sets the user ID for the profile. This is the part before the slash in your 
+Anselus address.
+
+The user ID must be all one word -- no spaces -- but you may use any 
+combination of letters, numbers, or symbols excluding the forward slash (/).
+You may also use non-English characters. It can be up to 128 characters,
+although user IDs of that length are not recommended.
+
+Capitalization does not matter. If the user ID on your server is already
+taken, you will need to choose another.
+
+Once changed you will need to update your keycard.
+
+Examples:
+
+KingArthur
+Аделина
+Aslan_the_Lion
+大和
+karlweiß-52
 '''
