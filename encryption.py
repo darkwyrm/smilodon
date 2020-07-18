@@ -15,8 +15,6 @@ import nacl.utils
 from retval import RetVal, BadData, BadParameterValue, ExceptionThrown, InternalError, \
 		ResourceExists, ResourceNotFound
 
-# TODO: Add support for more than just ed25519/curve25519/salsa20
-
 # JSON schemas used to validate keyfile data
 __encryption_pair_schema = {
 	'type' : 'object',
@@ -220,7 +218,7 @@ class SigningPair (EncryptionKey):
 		'''Returns the private key encoded in base85'''
 		return self.private85
 
-	def save(self, path: str, encoding='base85'):
+	def save(self, path: str):
 		'''Saves the key to a file'''
 		if not path:
 			return RetVal(BadParameterValue, 'path may not be empty')
@@ -307,7 +305,7 @@ class SecretKey (EncryptionKey):
 		'''Returns the key encoded in base85'''
 		return self.key85
 	
-	def save(self, path: str, encoding='base85') -> RetVal:
+	def save(self, path: str) -> RetVal:
 		'''Saves the key to a file'''
 		if not path:
 			return RetVal(BadParameterValue, 'path may not be empty')
