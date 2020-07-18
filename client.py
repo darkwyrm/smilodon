@@ -161,6 +161,9 @@ class AnselusClient:
 		
 		address = '/'.join([regdata['wid'], serverstring])
 		status = auth.add_device_session(self.fs.pman.get_active_profile().db, address, 
-				regdata['devid'], devkey.type, devkey.public85, devkey.private85,
-				socket.gethostbyname())
-		return status
+				regdata['devid'], devkey.enc_type, devkey.public85, devkey.private85,
+				socket.gethostname())
+		if status.error():
+			return status
+
+		return regdata
