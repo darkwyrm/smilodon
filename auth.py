@@ -1,12 +1,13 @@
 '''This module encapsulates authentication, credentials, and session management'''
 
 import base64
+import sqlite3
 
 import encryption
 from retval import RetVal, ResourceNotFound, ResourceExists, BadParameterValue
 import utils
 
-def get_credentials(db, wid, domain):
+def get_credentials(db: sqlite3.Connection, wid: str, domain: str) -> RetVal:
 	'''Returns the stored login credentials for the requested wid'''
 	cursor = db.cursor()
 	cursor.execute('''SELECT password,pwhashtype FROM workspaces WHERE wid=? AND domain=?''',
@@ -21,7 +22,7 @@ def get_credentials(db, wid, domain):
 	return status
 
 
-def set_credentials(db, wid, domain, pw):
+def set_credentials(db, wid: str, domain: str, pw: encryption.Password) -> RetVal:
 	'''Sets the password and hash type for the specified workspace. A boolean success 
 	value is returned.'''
 	cursor = db.cursor()
@@ -37,7 +38,7 @@ def set_credentials(db, wid, domain, pw):
 	return RetVal()
 
 def add_device_session(db, address: str, devid: str, keytype: str, public_key: str, 
-		private_key: str, devname=''):
+		private_key: str, devname='') -> RetVal:
 	'''Adds a device to a workspace'''
 
 	if not address or not devid or not keytype or not public_key or not private_key:
@@ -81,7 +82,7 @@ def add_device_session(db, address: str, devid: str, keytype: str, public_key: s
 	return RetVal()
 
 
-def remove_device_session(db, devid):
+def remove_device_session(db, devid: str) -> RetVal:
 	'''
 	Removes an authorized device from the workspace. Returns a boolean success code.
 	'''
@@ -96,7 +97,7 @@ def remove_device_session(db, devid):
 	return RetVal()
 
 
-def get_session_public_key(db, address):
+def get_session_public_key(db: sqlite3.Connection, address: str) -> RetVal:
 	'''Returns the public key for the device for a session'''
 	cursor = db.cursor()
 	cursor.execute("SELECT public_key FROM sessions WHERE address=?", (address,))
@@ -106,7 +107,7 @@ def get_session_public_key(db, address):
 	return RetVal().set_value('key', results[0])
 
 
-def get_session_private_key(db, address):
+def get_session_private_key(db: sqlite3.Connection, address: str) -> RetVal:
 	'''Returns the private key for the device for a session'''
 	cursor = db.cursor()
 	cursor.execute("SELECT private_key FROM sessions WHERE address=?", (address,))
@@ -116,7 +117,7 @@ def get_session_private_key(db, address):
 	return RetVal().set_value('key', results[0])
 
 
-def add_key(db, key, address):
+def add_key(db: sqlite3.Connection, key: encryption.EncryptionKey, address: str) -> RetVal:
 	'''Adds an encryption key to a workspace.
 	Parameters:
 	key: EncryptionKey from encryption module
@@ -148,7 +149,7 @@ def add_key(db, key, address):
 	return RetVal(BadParameterValue, "Key must be 'asymmetric' or 'symmetric'")
 
 
-def remove_key(db, keyid):
+def remove_key(db: sqlite3.Connection, keyid: str) -> RetVal:
 	'''Deletes an encryption key from a workspace.
 	Parameters:
 	keyid : uuid
@@ -167,7 +168,7 @@ def remove_key(db, keyid):
 	return RetVal()
 
 
-def get_key(db, keyid):
+def get_key(db: sqlite3.Connection, keyid: str) -> RetVal:
 	'''Gets the specified key.
 	Parameters:
 	keyid : uuid
