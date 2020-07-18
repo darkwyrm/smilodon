@@ -119,7 +119,7 @@ class Profile:
 				"address" TEXT NOT NULL,
 				"devid" TEXT NOT NULL,
 				"devname" TEXT,
-				"keytype" TEXT NOT NULL,
+				"enctype" TEXT NOT NULL,
 				"public_key" TEXT NOT NULL,
 				"private_key" TEXT NOT NULL
 			);''', '''
