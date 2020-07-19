@@ -17,6 +17,7 @@ class Workspace:
 		self.uid = ''
 		self.wid = ''
 		self.domain = ''
+		self.type = 'single'
 
 	def generate(self, userid: str, server: str, wid: str, pw: encryption.Password) -> RetVal:
 		'''Creates all the data needed for an individual workspace account'''
@@ -89,7 +90,7 @@ class Workspace:
 			return RetVal(ResourceExists, self.wid)
 		
 		cursor.execute('''INSERT INTO workspaces(wid,domain,password,pwhashtype,type)
-			VALUES(?,?,?,?,?)''', (self.wid, self.domain, pw.hashstring, pw.hashtype, "single"))
+			VALUES(?,?,?,?,?)''', (self.wid, self.domain, pw.hashstring, pw.hashtype, self.type))
 		self.db.commit()
 		return RetVal()
 
