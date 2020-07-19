@@ -105,7 +105,7 @@ def test_pman_create():
 	assert status.error(), "create_profile: failed to handle existing profile"
 
 	status = pman.create_profile('secondary')
-	assert 'id' in status and status['id'], "Failed to get id of new profile"
+	assert 'profile' in status and status['profile'], "Failed to get new profile"
 
 def test_pman_delete():
 	'''Tests ProfileManager's delete() method'''
