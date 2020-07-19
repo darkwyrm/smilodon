@@ -59,9 +59,9 @@ Sets the user ID for the profile. This is the part before the slash in your
 Anselus address.
 
 The user ID must be all one word -- no spaces -- but you may use any 
-combination of letters, numbers, or symbols excluding the forward slash (/).
-You may also use non-English characters. It can be up to 128 characters,
-although user IDs of that length are not recommended.
+combination of letters, numbers, or symbols excluding the forward slash (/)
+and double quote ("). You may also use non-English characters. It can be up to
+128 characters, although user IDs of that length are not recommended.
 
 Capitalization does not matter. If the user ID on your server is already
 taken, you will need to choose another.
