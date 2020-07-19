@@ -153,7 +153,6 @@ def generate_org_card(userdata: list, path: str):
 def get_user_info():
 	'''Gets all user input for a user and returns a list of tuples containing it all'''
 	out = list()
-	out.append(('Name', get_input("Name (optional, but recommended): ")))
 	out.append(('User-ID', get_input(
 			"User ID (optional, but recommended): ")))
 	
