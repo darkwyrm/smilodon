@@ -12,7 +12,7 @@ from prompt_toolkit import print_formatted_text, HTML
 
 from encryption import check_password_complexity
 import helptext
-from shellbase import BaseCommand, gShellCommands
+from shellbase import BaseCommand, gShellCommands, ShellState
 
 class CommandEmpty(BaseCommand):
 	'''Special command just to handle blanks'''
@@ -46,7 +46,7 @@ class CommandChDir(BaseCommand):
 	def get_aliases(self):
 		return { "cd":"chdir" }
 
-	def execute(self, pshell_state):
+	def execute(self, pshell_state: ShellState):
 		if self.tokenList:
 			newDir = ''
 			if '~' in self.tokenList[0]:
@@ -102,7 +102,7 @@ class CommandExit(BaseCommand):
 	def get_aliases(self):
 		return { "x":"exit", "q":"exit" }
 
-	def execute(self, pshell_state):
+	def execute(self, pshell_state: ShellState):
 		sys.exit(0)
 
 
@@ -118,7 +118,7 @@ class CommandHelp(BaseCommand):
 	def get_aliases(self):
 		return { "?":"help" }
 
-	def execute(self, pshell_state):
+	def execute(self, pshell_state: ShellState):
 		if self.tokenList:
 			# help <keyword>
 			for cmdName in self.tokenList:
@@ -162,7 +162,7 @@ class CommandListDir(BaseCommand):
 			subprocess.call(tokens)
 		return ''
 
-	def autocomplete(self, ptokens, pshell_state):
+	def autocomplete(self, ptokens, pshell_state: ShellState):
 		if len(ptokens) == 1:
 			outData = list()
 			
@@ -191,19 +191,6 @@ class CommandListDir(BaseCommand):
 		return list()
 
 
-class CommandLogin(BaseCommand):
-	'''Initiates a login.'''
-	def __init__(self, raw_input=None, ptoken_list=None):
-		BaseCommand.__init__(self, raw_input, ptoken_list)
-		self.name = 'login'
-		self.helpInfo = helptext.login_cmd
-		self.description = 'Log into the connected server.'
-
-	def execute(self, pshell_state):
-		# TODO: Implement LOGIN
-		return 'Unimplemented'
-
-
 class CommandProfile(BaseCommand):
 	'''User profile management command'''
 	def __init__(self, raw_input=None, ptoken_list=None):
@@ -212,9 +199,9 @@ class CommandProfile(BaseCommand):
 		self.helpInfo = helptext.profile_cmd
 		self.description = 'Manage profiles.'
 	
-	def execute(self, pshell_state):
+	def execute(self, pshell_state: ShellState):
 		if not self.tokenList:
-			print('Active profile: %s' % pshell_state.client.get_active_profile())
+			print('Active profile: %s' % pshell_state.client.get_active_profile_name())
 			return ''
 
 		verb = self.tokenList[0].casefold()
@@ -260,7 +247,7 @@ class CommandProfile(BaseCommand):
 			print(self.get_help())
 		return ''
 	
-	def autocomplete(self, ptokens, pshell_state):
+	def autocomplete(self, ptokens, pshell_state: ShellState):
 		if len(ptokens) < 1:
 			return list()
 
@@ -286,7 +273,7 @@ class CommandRegister(BaseCommand):
 		self.description = 'Register a new account on the connected server.'
 		
 
-	def execute(self, pshell_state):
+	def execute(self, pshell_state: ShellState):
 		if len(self.tokenList) != 1:
 			print(self.helpInfo)
 			return ''
@@ -343,7 +330,7 @@ class CommandSetInfo(BaseCommand):
 		self.helpInfo = helptext.setinfo_cmd
 		self.description = 'Set workspace information'
 
-	def execute(self, pshell_state):
+	def execute(self, pshell_state: ShellState):
 		# TODO: Implement SETINFO
 		return ''
 
@@ -359,7 +346,7 @@ class CommandShell(BaseCommand):
 	def get_aliases(self):
 		return { "sh":"shell", "`":"shell" }
 
-	def execute(self, pshell_state):
+	def execute(self, pshell_state: ShellState):
 		try:
 			os.system(' '.join(self.tokenList))
 		except Exception as e:
@@ -374,8 +361,28 @@ class CommandSetUserID(BaseCommand):
 		self.helpInfo = helptext.setuserid_cmd
 		self.description = 'Set user id for workspace'
 
-	def execute(self, pshell_state):
-		# TODO: Implement
-		return ''
-
+	def execute(self, pshell_state: ShellState):
+		if len(self.tokenList) != 1:
+			print(self.helpInfo)
+			return ''
+		
+		if '"' in self.tokenList[0] or "/" in self.tokenList[0]:
+			return 'A user id may not contain " or /.'
+		
+		p = pshell_state.client.get_active_profile()
+		worklist = p.get_workspaces()
+		user_wksp = None
+		for w in worklist:
+			if w.type == 'single':
+				user_wksp = w
+				break
+		
+		if not user_wksp:
+			return "Couldn't find the identity workspace for the profile."
+		
+		status = user_wksp.set_userid(self.tokenList[0])
+		if status.error():
+			return "Error setting user ID %s : %s" % (status.error(), status.info())
+		
+		return 'Anselus address is now %s/%s' % (user_wksp.uid, user_wksp.domain)
 
