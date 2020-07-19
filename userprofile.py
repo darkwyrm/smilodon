@@ -329,7 +329,7 @@ class ProfileManager:
 		status.set_value("profile", profile)
 		return status
 
-	def delete_profile(self, name):
+	def delete_profile(self, name) -> RetVal:
 		'''
 		Deletes the named profile and all files on disk contained in it.
 		'''
@@ -357,7 +357,7 @@ class ProfileManager:
 		
 		return self.save_profiles()
 
-	def rename_profile(self, oldname, newname):
+	def rename_profile(self, oldname, newname) -> RetVal:
 		'''
 		Renames a profile, leaving the profile ID unchanged.
 		'''
@@ -398,11 +398,11 @@ class ProfileManager:
 		
 		return self.save_profiles()
 	
-	def get_profiles(self):
+	def get_profiles(self) -> dict:
 		'''Returns a list of loaded profiles'''
 		return self.profiles
 	
-	def get_default_profile(self):
+	def get_default_profile(self) -> str:
 		'''
 		Returns the name of the default profile. If one has not been set, it returns an empty string.
 		'''
@@ -411,7 +411,7 @@ class ProfileManager:
 				return item.name
 		return ''
 
-	def set_default_profile(self, name):
+	def set_default_profile(self, name: str) -> RetVal:
 		'''
 		Sets the default profile. If there is only one profile -- or none at all -- this call has 
 		no effect.
@@ -444,7 +444,7 @@ class ProfileManager:
 		self.profiles[newindex].isdefault = True		
 		return self.save_profiles()
 
-	def activate_profile(self, name):
+	def activate_profile(self, name: str) -> RetVal:
 		'''
 		Activates the specified profile.
 
@@ -479,8 +479,8 @@ class ProfileManager:
 		})
 		return out
 
-	def get_active_profile(self):
+	def get_active_profile(self) -> RetVal:
 		'''Returns the active profile'''
 		if self.active_index >= 0:
-			return self.profiles[self.active_index]
-		return ''
+			return RetVal().set_value("profile", self.profiles[self.active_index])
+		return RetVal(InvalidProfile,'No active profile')
