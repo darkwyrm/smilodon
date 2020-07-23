@@ -14,6 +14,12 @@ login CatLover/example.com
 login
 '''
 
+preregister_cmd='''Usage: preregister
+Preprovisions a workspace for a user. This command only works when logged in 
+to a server locally. A workspace ID and a preregistration code is created 
+that the user will perform the initial login with.
+'''
+
 profile_cmd = '''Usage: profile <action> <profilename>
 Manage profiles. Actions are detailed below.
 

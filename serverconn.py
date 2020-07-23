@@ -192,6 +192,12 @@ def password(sock, wid, pword):
 	return read_response(sock)
 
 
+def preregister(sock) -> RetVal:
+	'''Provisions a preregistered account on the server.'''
+	# TODO: Implement preregistration
+	return RetVal('Unimplemented')
+
+
 # Register
 #	Requires: valid socket, password hash
 #	Returns: [dict] "wid": string, "devid" : string, "session" : string, "code" : int,

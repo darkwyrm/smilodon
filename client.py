@@ -69,6 +69,31 @@ class AnselusClient:
 		'''Sets the profile loaded on startup'''
 		return self.fs.pman.set_default_profile(name)
 
+	def preregister_account(self, port: str) -> RetVal:
+		'''Create a new account on the local server. This is a simple command because it is not 
+		meant to create a local profile.'''
+		
+		if not port:
+			port = 2001
+		
+		conndata = serverconn.connect('127.0.0.1', port)
+		if conndata.error():
+			return conndata
+		
+		regdata = serverconn.preregister(conndata['socket'])
+		if regdata.error():
+			return regdata
+		serverconn.disconnect(conndata['socket'])
+
+		if regdata['status'] != 200:
+			return regdata
+		
+		if 'wid' not in regdata or 'regcode' not in regdata:
+			return RetVal(InternalError, 'BUG: bad data from serverconn.preregister()') \
+					.set_value('status', 300)
+
+		return regdata
+
 	def register_account(self, server: str, userpass: str) -> RetVal:
 		'''Create a new account on the specified server.'''
 		

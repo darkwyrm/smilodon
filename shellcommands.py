@@ -191,6 +191,28 @@ class CommandListDir(BaseCommand):
 		return list()
 
 
+class CommandPreregister(BaseCommand):
+	'''Preregister an account for someone'''
+	def __init__(self, raw_input=None, ptoken_list=None):
+		BaseCommand.__init__(self, raw_input, ptoken_list)
+		self.name = 'preregister'
+		self.helpInfo = helptext.preregister_cmd
+		self.description = 'Preregister a new account for someone.'
+		
+	def execute(self, pshell_state: ShellState):
+		if len(self.tokenList) != 1:
+			print(self.helpInfo)
+			return ''
+		
+		status = pshell_state.client.preregister_account()
+		
+		if status['status'] != 200:
+			return 'Preregistration error %s: %s' % (status['status'], status.info())
+		
+		return 'Preegistration success:\nWorkspace ID: %s\nRegCode: %s' % (status['wid'],
+				status['regcode'])
+
+
 class CommandProfile(BaseCommand):
 	'''User profile management command'''
 	def __init__(self, raw_input=None, ptoken_list=None):
