@@ -22,7 +22,7 @@ CONN_TIMEOUT = 900.0
 # Size (in bytes) of the read buffer size for recv()
 READ_BUFFER_SIZE = 8192
 
-def write_text(sock, text: str) -> RetVal:
+def write_text(sock: socket.socket, text: str) -> RetVal:
 	'''Sends a string over a socket'''
 
 	if not sock:
@@ -37,7 +37,7 @@ def write_text(sock, text: str) -> RetVal:
 	return RetVal()
 
 
-def read_text(sock) -> RetVal:
+def read_text(sock: socket.socket) -> RetVal:
 	'''Reads a string from the supplied socket'''
 
 	if not sock:
@@ -57,7 +57,7 @@ def read_text(sock) -> RetVal:
 	return RetVal().set_value('string', out_string)
 
 
-def read_response(sock) -> RetVal:
+def read_response(sock: socket.socket) -> RetVal:
 	'''Reads a server response and returns a separated code and string'''
 	
 	response = read_text(sock)
@@ -74,9 +74,9 @@ def read_response(sock) -> RetVal:
 # Connect
 #	Requires: host (hostname or IP)
 #	Optional: port number
-#	Returns: [dict] socket, IP address, server version (if given), error string
+#	Returns: RetVal / socket, IP address, server version (if given), error string
 #					
-def connect(host, port=2001):
+def connect(host: str, port=2001) -> dict:
 	'''Creates a connection to the server.'''
 	try:
 		sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -117,8 +117,9 @@ def connect(host, port=2001):
 	
 # Device
 #	Requires: device ID, session string
-#	Returns: [dict] "code" : int, "error" : string
-def device(sock, devid, session_str):
+#	Returns: RetVal / "code" : int, "error" : string
+def device(sock: socket.socket, devid: str, session_str: str) -> RetVal:
+	# TODO: refactor to match current spec
 	'''Completes the login process by submitting device ID and its session string.'''
 	if not utils.validate_uuid(devid):
 		return RetVal(AnsBadRequest, 'Invalid device ID').set_value('status', 400)
@@ -132,16 +133,15 @@ def device(sock, devid, session_str):
 
 # Disconnect
 #	Requires: socket
-#	Returns: error string
-def disconnect(sock):
+def disconnect(sock: socket.socket) -> RetVal:
 	'''Disconnects by sending a QUIT command to the server'''
 	return write_text(sock, 'QUIT\r\n'.encode())
 
 
 # Exists
 #	Requires: one or more names to describe the path desired
-#	Returns: [dict] "exists" : bool, "code" : int, "error" : string
-def exists(sock, path):
+#	Returns: RetVal / "exists" : bool, "code" : int, "error" : string
+def exists(sock: socket.socket, path: str) -> RetVal:
 	'''Checks to see if a path exists on the server side.'''
 	status = write_text(sock, "EXISTS %s\r\n" % path)
 	if status.error():
@@ -156,8 +156,8 @@ def exists(sock, path):
 
 # Login
 #	Requires: numeric workspace ID
-#	Returns: [dict] "code" : int, "error" : string
-def login(sock, wid):
+#	Returns: RetVal / "code" : int, "error" : string
+def login(sock: socket.socket, wid: str) -> RetVal:
 	'''Starts the login process by sending the requested workspace ID.'''
 	if not utils.validate_uuid(wid):
 		return {
@@ -174,8 +174,8 @@ def login(sock, wid):
 
 # Password
 #	Requires: workspace ID, password string
-#	Returns: [dict] "code" : int, "error" : string
-def password(sock, wid, pword):
+#	Returns: RetVal / "code" : int, "error" : string
+def password(sock: socket.socket, wid: str, pword: str) -> RetVal:
 	'''Continues the login process by hashing a password and sending it to the server.'''
 	if not password or not utils.validate_uuid(wid):
 		return RetVal(AnsBadRequest).set_value('status', 400)
@@ -192,7 +192,7 @@ def password(sock, wid, pword):
 	return read_response(sock)
 
 
-def preregister(sock) -> RetVal:
+def preregister(sock: socket.socket, uid: str) -> RetVal:
 	'''Provisions a preregistered account on the server.'''
 	# TODO: Implement preregistration
 	return RetVal('Unimplemented')
@@ -200,9 +200,9 @@ def preregister(sock) -> RetVal:
 
 # Register
 #	Requires: valid socket, password hash
-#	Returns: [dict] "wid": string, "devid" : string, "session" : string, "code" : int,
+#	Returns: RetVal / "wid": string, "devid" : string, "session" : string, "code" : int,
 # 			"error" : string
-def register(sock, pwhash, keytype, devkey):
+def register(sock: socket.socket, pwhash: str, keytype: str, devkey: str) -> RetVal:
 	'''Creates an account on the server.'''
 	
 	# This construct is a little strange, but it is to work around the minute possibility that
@@ -249,7 +249,7 @@ def register(sock, pwhash, keytype, devkey):
 	return response.set_value('wid', wid)
 
 
-def unregister(sock, pwhash):
+def unregister(sock: socket.socket, pwhash: str) -> RetVal:
 	'''
 	Deletes the online account at the specified server.
 	Returns:
@@ -268,7 +268,7 @@ def unregister(sock, pwhash):
 	return response
 
 
-def progress_stdout(value):
+def progress_stdout(value: float):
 	'''callback for upload() which just prints what it's given'''
 	sys.stdout.write("Progress: %s\r" % value)
 
@@ -287,7 +287,7 @@ def progress_stdout(value):
 #	Returns: [dict] error code
 #				error string
 
-# def upload(sock, path, serverpath, progress):
+# def upload(sock: socket.socket, path, serverpath, progress):
 # 	'''Upload a local file to the server.'''
 # 	chunk_size = 128
 
