@@ -44,20 +44,27 @@ class RetVal:
 		self._fields['_info'] = info
 		return self
 
-	def error(self):
+	def error(self) -> str:
 		'''Gets the error value of the object'''
 		return self._fields['_error']
+
+	def fields(self) -> list:
+		'''Returns a list of the attached data fields in the object'''
+		out = self._fields.keys()
+		del out['_error']
+		del out['_info']
+		return out
 
 	def set_info(self, value):
 		'''Sets the extra error information of the object.'''
 		self._fields['_info'] = value
 		return self
 
-	def info(self):
+	def info(self) -> str:
 		'''Gets the error value of the object'''
 		return self._fields['_info']
 
-	def set_value(self, name, value):
+	def set_value(self, name: str, value):
 		'''Adds a field to the object'''
 		if name == '_error':
 			return False
@@ -65,7 +72,7 @@ class RetVal:
 		self._fields[name] = value
 		return self
 
-	def set_values(self, values):
+	def set_values(self, values: dict):
 		'''Adds multiple dictionary fields to the object.'''
 		for k,v in values.items():
 			if k in [ '_error', '_info' ]:
@@ -73,7 +80,7 @@ class RetVal:
 			self._fields[k] = v
 		return self
 	
-	def has_value(self, s):
+	def has_value(self, s: str) -> bool:
 		'''Tests if a specific value field has been returned'''
 		return s in self._fields
 	
@@ -82,7 +89,7 @@ class RetVal:
 		self._fields = { '_error':OK, '_info':'' }
 		return self
 
-	def count(self):
+	def count(self) -> int:
 		'''Returns the number of values contained by the return value'''
 		return len(self._fields) - 2
 	
