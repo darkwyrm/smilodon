@@ -191,19 +191,6 @@ class CommandListDir(BaseCommand):
 		return list()
 
 
-class CommandLogin(BaseCommand):
-	'''Initiates a login.'''
-	def __init__(self, raw_input=None, ptoken_list=None):
-		BaseCommand.__init__(self, raw_input, ptoken_list)
-		self.name = 'login'
-		self.helpInfo = helptext.login_cmd
-		self.description = 'Log into the connected server.'
-
-	def execute(self, pshell_state):
-		# TODO: Implement LOGIN
-		return 'Unimplemented'
-
-
 class CommandProfile(BaseCommand):
 	'''User profile management command'''
 	def __init__(self, raw_input=None, ptoken_list=None):
