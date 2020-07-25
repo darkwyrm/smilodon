@@ -15,6 +15,7 @@ class CommandAccess:
 
 		self.add_command(shellcommands.CommandProfile())
 		self.add_command(shellcommands.CommandRegister())
+		self.add_command(shellcommands.CommandSetUserID())
 
 		self.all_names.sort()
 

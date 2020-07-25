@@ -209,7 +209,6 @@ class UserCard(__CardBase):
 		super().__init__()
 		self.type = 'User'
 		self.field_names = [
-			'Name',
 			'Workspace-ID',
 			'User-ID',
 			'Domain',

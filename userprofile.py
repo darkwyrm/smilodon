@@ -35,11 +35,11 @@ class Profile:
 		'''Generates a new profile ID for the object'''
 		self.id = str(uuid.uuid4())
 
-	def address(self):
+	def address(self) -> str:
 		'''Returns the identity workspace address for the profile'''
 		return '/'.join([self.wid, self.domain])
 	
-	def serverstring(self):
+	def serverstring(self) -> str:
 		'''Returns the identity workspace address for the profile including port'''
 		return ':'.join([self.address(),self.port])
 	
@@ -57,7 +57,7 @@ class Profile:
 			self.db.close()
 			self.db = None
 	
-	def as_dict(self):
+	def as_dict(self) -> dict:
 		'''Returns the state of the profile as a dictionary'''
 		return {
 			'name' : self.name,
@@ -75,14 +75,14 @@ class Profile:
 			if k in [ 'name', 'isdefault', 'id', 'wid', 'domain', 'port' ]:
 				setattr(self, k, v)
 	
-	def is_valid(self):
+	def is_valid(self) -> bool:
 		'''Returns true if data stored in the profile object is valid'''
 		if self.name and utils.validate_uuid(self.id):
 			return True
 		
 		return False
 
-	def reset_db(self):
+	def reset_db(self) -> sqlite3.Connection:
 		'''This function reinitializes the database to empty, taking a path to the file used by the 
 		SQLite database. Returns a handle to an open SQLite3 connection.
 		'''
@@ -184,6 +184,11 @@ class Profile:
 		self.db.commit()
 		return self.db
 
+	def get_workspaces(self) -> list:
+		'''Returns a list containing all subscribed workspaces in the profile'''
+		# TODO: Implement
+		return list()
+
 
 class ProfileManager:
 	'''Handles user profile management'''
@@ -217,7 +222,7 @@ class ProfileManager:
 		if not self.error_state.error():
 			self.error_state = self.activate_profile(self.get_default_profile())
 
-	def save_profiles(self):
+	def save_profiles(self) -> RetVal:
 		'''
 		Saves the current list of profiles to the profile list file.
 
@@ -253,7 +258,7 @@ class ProfileManager:
 
 		return RetVal()
 
-	def load_profiles(self):
+	def load_profiles(self) -> RetVal:
 		'''
 		Loads profile information from the specified JSON file stored in the top level of the 
 		profile folder.
@@ -284,7 +289,7 @@ class ProfileManager:
 			self.profiles = profiles
 		return RetVal()
 	
-	def __index_for_profile(self, name):
+	def __index_for_profile(self, name: str) -> int:
 		'''Returns the numeric index of the named profile. Returns -1 on error'''
 		if not name:
 			return -1
@@ -295,12 +300,12 @@ class ProfileManager:
 				return i
 		return -1
 
-	def create_profile(self, name):
+	def create_profile(self, name) -> RetVal:
 		'''
 		Creates a profile with the specified name. Profile names are not case-sensitive.
 
 		Returns: 
-		RetVal error state also containing "id", the uuid of folder for new profile
+		RetVal error state also contains a copy of the created profile as "profile"
 		'''
 		if not name:
 			return RetVal(BadParameterValue, "BUG: name may not be empty")
@@ -321,10 +326,10 @@ class ProfileManager:
 		if status.error():
 			return status
 		
-		status.set_value("id", profile.id)
+		status.set_value("profile", profile)
 		return status
 
-	def delete_profile(self, name):
+	def delete_profile(self, name) -> RetVal:
 		'''
 		Deletes the named profile and all files on disk contained in it.
 		'''
@@ -352,7 +357,7 @@ class ProfileManager:
 		
 		return self.save_profiles()
 
-	def rename_profile(self, oldname, newname):
+	def rename_profile(self, oldname, newname) -> RetVal:
 		'''
 		Renames a profile, leaving the profile ID unchanged.
 		'''
@@ -393,11 +398,11 @@ class ProfileManager:
 		
 		return self.save_profiles()
 	
-	def get_profiles(self):
+	def get_profiles(self) -> dict:
 		'''Returns a list of loaded profiles'''
 		return self.profiles
 	
-	def get_default_profile(self):
+	def get_default_profile(self) -> str:
 		'''
 		Returns the name of the default profile. If one has not been set, it returns an empty string.
 		'''
@@ -406,7 +411,7 @@ class ProfileManager:
 				return item.name
 		return ''
 
-	def set_default_profile(self, name):
+	def set_default_profile(self, name: str) -> RetVal:
 		'''
 		Sets the default profile. If there is only one profile -- or none at all -- this call has 
 		no effect.
@@ -439,7 +444,7 @@ class ProfileManager:
 		self.profiles[newindex].isdefault = True		
 		return self.save_profiles()
 
-	def activate_profile(self, name):
+	def activate_profile(self, name: str) -> RetVal:
 		'''
 		Activates the specified profile.
 
@@ -474,8 +479,8 @@ class ProfileManager:
 		})
 		return out
 
-	def get_active_profile(self):
-		'''Returns the active profile name'''
+	def get_active_profile(self) -> RetVal:
+		'''Returns the active profile'''
 		if self.active_index >= 0:
-			return self.profiles[self.active_index]
-		return ''
+			return RetVal().set_value("profile", self.profiles[self.active_index])
+		return RetVal(InvalidProfile,'No active profile')

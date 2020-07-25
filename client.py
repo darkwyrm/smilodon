@@ -7,6 +7,7 @@ import serverconn
 from encryption import Password, KeyPair
 from retval import RetVal, InternalError, BadParameterValue, ResourceExists
 from storage import ClientStorage
+from userprofile import Profile
 from workspace import Workspace
 
 class AnselusClient:
@@ -20,7 +21,7 @@ class AnselusClient:
 		self.active_profile = ''
 		self.socket = None
 
-	def activate_profile(self, name):
+	def activate_profile(self, name) -> RetVal:
 		'''Activates the specified profile'''
 
 		status = self.fs.pman.activate_profile(name)
@@ -34,24 +35,23 @@ class AnselusClient:
 		status = serverconn.connect(status['host'],status['port'])
 		return status
 	
-	def get_active_profile(self):
-		'''Returns the name of the active profile'''
+	def get_active_profile(self) -> Profile:
+		'''Returns a copy of the active profile'''
 		return self.fs.pman.get_active_profile()
 
-	def get_profiles(self):
+	def get_profiles(self) -> list:
 		'''Gets the list of available profiles'''
 		return self.fs.pman.get_profiles()
 
-	def create_profile(self, name):
+	def create_profile(self, name: str) -> Profile:
 		'''Creates a new profile'''
-		pman = self.fs.get_profile_manager()
-		return pman.create_profile(name)
+		return self.fs.pman.create_profile(name)
 
-	def delete_profile(self, name):
+	def delete_profile(self, name: str) -> RetVal:
 		'''Deletes the specified profile'''
 		return self.fs.pman.delete_profile(name)
 	
-	def rename_profile(self, oldname, newname):
+	def rename_profile(self, oldname: str, newname: str) -> RetVal:
 		'''Renames the specified profile'''
 		status = self.fs.pman.rename_profile(oldname, newname)
 		if status.error() != '':
@@ -59,17 +59,42 @@ class AnselusClient:
 		
 		if self.active_profile == oldname:
 			self.active_profile = newname
-		return { 'error' : '' }
+		return RetVal()
 	
-	def get_default_profile(self):
+	def get_default_profile(self) -> str:
 		'''Gets the default profile'''
 		return self.fs.pman.get_default_profile()
 		
-	def set_default_profile(self, name):
+	def set_default_profile(self, name: str) -> RetVal:
 		'''Sets the profile loaded on startup'''
 		return self.fs.pman.set_default_profile(name)
 
-	def register_account(self, server: str, userpass: str):
+	def preregister_account(self, port: str) -> RetVal:
+		'''Create a new account on the local server. This is a simple command because it is not 
+		meant to create a local profile.'''
+		
+		if not port:
+			port = 2001
+		
+		conndata = serverconn.connect('127.0.0.1', port)
+		if conndata.error():
+			return conndata
+		
+		regdata = serverconn.preregister(conndata['socket'])
+		if regdata.error():
+			return regdata
+		serverconn.disconnect(conndata['socket'])
+
+		if regdata['status'] != 200:
+			return regdata
+		
+		if 'wid' not in regdata or 'regcode' not in regdata:
+			return RetVal(InternalError, 'BUG: bad data from serverconn.preregister()') \
+					.set_value('status', 300)
+
+		return regdata
+
+	def register_account(self, server: str, userpass: str) -> RetVal:
 		'''Create a new account on the specified server.'''
 		
 		# Process for registration of a new account:
