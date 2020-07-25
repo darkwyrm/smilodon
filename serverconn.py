@@ -69,7 +69,7 @@ def read_response(sock: socket.socket) -> RetVal:
 	except:
 		return RetVal(ServerError).set_value('response', response['string'])
 	
-	return RetVal().set_values({ 'status' : status_code, 'response' : response['string'] })
+	return RetVal().set_value('status', status_code).set_info(response['string'])
 
 # Connect
 #	Requires: host (hostname or IP)
@@ -192,10 +192,38 @@ def password(sock: socket.socket, wid: str, pword: str) -> RetVal:
 	return read_response(sock)
 
 
+# Preregister
+#	Requires: none
+#	Optional: user ID
+#	Returns: RetVal / wid : string, regcode : string, 
 def preregister(sock: socket.socket, uid: str) -> RetVal:
 	'''Provisions a preregistered account on the server.'''
-	# TODO: Implement preregistration
-	return RetVal('Unimplemented')
+	if uid is None:
+		uid = ''
+	
+	response = write_text(sock, 'PREREG %s\r\n' % uid)
+	if response.error():
+		return response
+	
+	response = read_response(sock)
+	if response.error() or response['status'] != 200:
+		return response
+
+	# The response should take the form <code> <wid> <regcode> [<uid>]
+	try:
+		tokens = response.info().strip().split(' ')
+	except:
+		return RetVal(ServerError, 'BUG: bad response %s' % response.info())
+
+	if len(tokens) not in [4, 5]:
+		return RetVal(ServerError, 'BUG: bad response %s' % response.info())
+	
+	out = RetVal()
+	out.set_values({ 'status':response['status'], 'wid':tokens[2], 'regcode':tokens[3], 'uid':'' })
+	if len(tokens) == 5:
+		out.set_value('uid', tokens[4])
+	
+	return out
 
 
 # Register
@@ -234,7 +262,7 @@ def register(sock: socket.socket, pwhash: str, keytype: str, devkey: str) -> Ret
 			break
 		
 		if response['status'] in [ 101, 201]:		# Pending, Success
-			tokens = response['response'].split()
+			tokens = response.info().split()
 			if len(tokens) != 3 or not utils.validate_uuid(tokens[2]):
 				return { 'status' : 300, 'error' : 'INTERNAL SERVER ERROR' }
 			response.set_value('devid', tokens[2])

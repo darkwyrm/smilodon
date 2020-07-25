@@ -27,10 +27,10 @@ class CommandUnrecognized(BaseCommand):
 		BaseCommand.__init__(self,'unrecognized')
 		self.name = 'unrecognized'
 
-	def is_valid(self):
+	def is_valid(self) -> str:
 		return "Unknown command"
 
-	def execute(self, pshell_state):
+	def execute(self, pshell_state: ShellState) -> str:
 		return "Unknown command"
 
 
@@ -43,21 +43,21 @@ class CommandChDir(BaseCommand):
 						'Aliases: cd'
 		self.description = 'change directory/location'
 
-	def get_aliases(self):
+	def get_aliases(self) -> dict:
 		return { "cd":"chdir" }
 
-	def execute(self, pshell_state: ShellState):
+	def execute(self, pshell_state: ShellState) -> str:
 		if self.tokenList:
-			newDir = ''
+			new_dir = ''
 			if '~' in self.tokenList[0]:
 				if platform.system().casefold() == 'windows':
-					newDir = self.tokenList[0].replace('~', os.getenv('USERPROFILE'))
+					new_dir = self.tokenList[0].replace('~', os.getenv('USERPROFILE'))
 				else:
-					newDir = self.tokenList[0].replace('~', os.getenv('HOME'))
+					new_dir = self.tokenList[0].replace('~', os.getenv('HOME'))
 			else:
-				newDir = self.tokenList[0]
+				new_dir = self.tokenList[0]
 			try:
-				os.chdir(newDir)
+				os.chdir(new_dir)
 			except Exception as e:
 				return e.__str__()
 
@@ -66,12 +66,12 @@ class CommandChDir(BaseCommand):
 
 		return ''
 
-	def autocomplete(self, ptokens, pshell_state):
+	def autocomplete(self, ptokens: list, pshell_state: ShellState):
 		if len(ptokens) == 1:
-			outData = list()
+			out_data = list()
 			
-			quoteMode = bool(ptokens[0][0] == '"')
-			if quoteMode:
+			quote_mode = bool(ptokens[0][0] == '"')
+			if quote_mode:
 				items = glob(ptokens[0][1:] + '*')
 			else:
 				items = glob(ptokens[0] + '*')
@@ -81,13 +81,13 @@ class CommandChDir(BaseCommand):
 					continue
 
 				display = item
-				if quoteMode or ' ' in item:
+				if quote_mode or ' ' in item:
 					data = '"' + item + '"'
 				else:
 					data = item
-				outData.append([data,display])
+				out_data.append([data,display])
 					
-			return outData
+			return out_data
 		return list()
 
 
@@ -99,10 +99,10 @@ class CommandExit(BaseCommand):
 		self.helpInfo = 'Usage: exit\nCloses the connection and exits the shell.'
 		self.description = 'Exits the shell'
 
-	def get_aliases(self):
+	def get_aliases(self) -> dict:
 		return { "x":"exit", "q":"exit" }
 
-	def execute(self, pshell_state: ShellState):
+	def execute(self, pshell_state: ShellState) -> str:
 		sys.exit(0)
 
 
@@ -115,10 +115,10 @@ class CommandHelp(BaseCommand):
 						'Aliases: ?'
 		self.description = 'Show help on a command'
 
-	def get_aliases(self):
+	def get_aliases(self) -> dict:
 		return { "?":"help" }
 
-	def execute(self, pshell_state: ShellState):
+	def execute(self, pshell_state: ShellState) -> str:
 		if self.tokenList:
 			# help <keyword>
 			for cmdName in self.tokenList:
@@ -148,10 +148,10 @@ class CommandListDir(BaseCommand):
 		self.helpInfo = 'Usage: as per bash ls command or Windows dir command'
 		self.description = 'list directory contents'
 
-	def get_aliases(self):
+	def get_aliases(self) -> dict:
 		return { "dir":"ls" }
 
-	def execute(self, pshell_state):
+	def execute(self, pshell_state: ShellState) -> str:
 		if sys.platform == 'win32':
 			tokens = ['dir','/w']
 			tokens.extend(self.tokenList)
@@ -162,16 +162,16 @@ class CommandListDir(BaseCommand):
 			subprocess.call(tokens)
 		return ''
 
-	def autocomplete(self, ptokens, pshell_state: ShellState):
+	def autocomplete(self, ptokens: list, pshell_state: ShellState):
 		if len(ptokens) == 1:
-			outData = list()
+			out_data = list()
 			
 			if ptokens[0][0] == '"':
-				quoteMode = True
+				quote_mode = True
 			else:
-				quoteMode = False
+				quote_mode = False
 			
-			if quoteMode:
+			if quote_mode:
 				items = glob(ptokens[0][1:] + '*')
 			else:
 				items = glob(ptokens[0] + '*')
@@ -181,13 +181,13 @@ class CommandListDir(BaseCommand):
 					continue
 
 				display = item
-				if quoteMode or ' ' in item:
+				if quote_mode or ' ' in item:
 					data = '"' + item + '"'
 				else:
 					data = item
-				outData.append([data,display])
+				out_data.append([data,display])
 					
-			return outData
+			return out_data
 		return list()
 
 
@@ -199,18 +199,34 @@ class CommandPreregister(BaseCommand):
 		self.helpInfo = helptext.preregister_cmd
 		self.description = 'Preregister a new account for someone.'
 		
-	def execute(self, pshell_state: ShellState):
-		if len(self.tokenList) != 1:
+	def execute(self, pshell_state: ShellState) -> str:
+		if len(self.tokenList) > 2 or len(self.tokenList) == 0:
 			print(self.helpInfo)
 			return ''
 		
-		status = pshell_state.client.preregister_account()
+		try:
+			port = int(self.tokenList[0])
+		except:
+			return 'Bad port number'
+		
+		user_id = ''
+		if len(self.tokenList) == 2:
+			user_id = self.tokenList[1]
+		
+		if user_id and ('"' in user_id or '/' in user_id):
+			return 'User ID may not contain " or /.'
+		
+		status = pshell_state.client.preregister_account(port, user_id)
 		
 		if status['status'] != 200:
-			return 'Preregistration error %s: %s' % (status['status'], status.info())
+			return 'Preregistration error: %s' % (status.info())
 		
-		return 'Preegistration success:\nWorkspace ID: %s\nRegCode: %s' % (status['wid'],
-				status['regcode'])
+		outparts = [ 'Preregistration success:\n' ]
+		if status['uid']:
+			outparts.extend(['User ID: ', status['uid'], '\n'])
+		outparts.extend(['Workspace ID: ' , status['wid'], '\n',
+						'Registration Code: ', status['regcode']])
+		return ''.join(outparts)
 
 
 class CommandProfile(BaseCommand):
@@ -221,7 +237,7 @@ class CommandProfile(BaseCommand):
 		self.helpInfo = helptext.profile_cmd
 		self.description = 'Manage profiles.'
 	
-	def execute(self, pshell_state: ShellState):
+	def execute(self, pshell_state: ShellState) -> str:
 		if not self.tokenList:
 			print('Active profile: %s' % pshell_state.client.get_active_profile_name())
 			return ''
@@ -269,19 +285,19 @@ class CommandProfile(BaseCommand):
 			print(self.get_help())
 		return ''
 	
-	def autocomplete(self, ptokens, pshell_state: ShellState):
+	def autocomplete(self, ptokens: list, pshell_state: ShellState):
 		if len(ptokens) < 1:
 			return list()
 
 		verbs = [ 'create', 'delete', 'list', 'rename' ]
 		if len(ptokens) == 1 and ptokens[0] not in verbs:
-			outdata = [i for i in verbs if i.startswith(ptokens[0])]
-			return outdata
+			out_data = [i for i in verbs if i.startswith(ptokens[0])]
+			return out_data
 		
 		groups = pshell_state.client.get_profiles()
 		if len(ptokens) == 2 and ptokens[1] not in groups:
-			outdata = [i for i in groups if i.startswith(ptokens[1])]
-			return outdata
+			out_data = [i for i in groups if i.startswith(ptokens[1])]
+			return out_data
 
 		return list()
 
@@ -295,7 +311,7 @@ class CommandRegister(BaseCommand):
 		self.description = 'Register a new account on the connected server.'
 		
 
-	def execute(self, pshell_state: ShellState):
+	def execute(self, pshell_state: ShellState) -> str:
 		if len(self.tokenList) != 1:
 			print(self.helpInfo)
 			return ''
@@ -352,7 +368,7 @@ class CommandSetInfo(BaseCommand):
 		self.helpInfo = helptext.setinfo_cmd
 		self.description = 'Set workspace information'
 
-	def execute(self, pshell_state: ShellState):
+	def execute(self, pshell_state: ShellState) -> str:
 		# TODO: Implement SETINFO
 		return ''
 
@@ -365,11 +381,11 @@ class CommandShell(BaseCommand):
 		self.helpInfo = helptext.shell_cmd
 		self.description = 'Run a shell command'
 
-	def get_aliases(self):
+	def get_aliases(self) -> dict:
 		'''Return aliases for the command'''
 		return { "sh":"shell", "`":"shell" }
 
-	def execute(self, pshell_state: ShellState):
+	def execute(self, pshell_state: ShellState) -> str:
 		try:
 			os.system(' '.join(self.tokenList))
 		except Exception as e:
@@ -380,11 +396,11 @@ class CommandSetUserID(BaseCommand):
 	'''Sets the workspace's user ID'''
 	def __init__(self, raw_input=None, ptoken_list=None):
 		BaseCommand.__init__(self,raw_input,ptoken_list)
-		self.name = 'setuserid'
+		self.name = 'setuser_id'
 		self.helpInfo = helptext.setuserid_cmd
 		self.description = 'Set user id for workspace'
 
-	def execute(self, pshell_state: ShellState):
+	def execute(self, pshell_state: ShellState) -> str:
 		if len(self.tokenList) != 1:
 			print(self.helpInfo)
 			return ''
@@ -403,7 +419,7 @@ class CommandSetUserID(BaseCommand):
 		if not user_wksp:
 			return "Couldn't find the identity workspace for the profile."
 		
-		status = user_wksp.set_userid(self.tokenList[0])
+		status = user_wksp.set_user_id(self.tokenList[0])
 		if status.error():
 			return "Error setting user ID %s : %s" % (status.error(), status.info())
 		

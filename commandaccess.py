@@ -13,6 +13,7 @@ class CommandAccess:
 		self.add_command(shellcommands.CommandHelp())
 		self.add_command(shellcommands.CommandShell())
 
+		self.add_command(shellcommands.CommandPreregister())
 		self.add_command(shellcommands.CommandProfile())
 		self.add_command(shellcommands.CommandRegister())
 		self.add_command(shellcommands.CommandSetUserID())
