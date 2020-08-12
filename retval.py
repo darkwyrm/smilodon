@@ -17,6 +17,7 @@ ExceptionThrown = 'ExceptionThrown'
 InternalError = 'InternalError'
 NetworkError = 'NetworkError'
 ServerError = 'ServerError'
+Unimplemented = 'Unimplemented'
 
 class RetVal:
 	'''The RetVal class enables better error checking and variable return values'''
