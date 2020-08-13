@@ -13,6 +13,7 @@ from retval import RetVal, BadData, BadParameterValue, BadParameterType, EmptyDa
 
 UnsupportedKeycardType = 'UnsupportedKeycardType'
 InvalidKeycard = 'InvalidKeycard'
+InvalidEntry = 'InvalidEntry'
 
 # These three return codes are associated with a second field, 'field', which indicates which
 # signature field is related to the error
@@ -173,7 +174,7 @@ class OrgEntry(__EntryBase):
 		try:
 			vkey.verify(self.make_bytestring(True), Base85Encoder.decode(self.signatures['Organization']))
 		except nacl.exceptions.BadSignatureError:
-			rv.set_error(InvalidKeycard)
+			rv.set_error(InvalidEntry)
 		
 		return rv
 
@@ -207,7 +208,7 @@ class UserEntry(__EntryBase):
 		self.fields['Time-To-Live'] = '7'
 		self.set_expiration()
 
-	def is_compliant(self):
+	def is_compliant(self) -> RetVal:
 		'''Checks the fields to ensure that it meets spec requirements. If a field causes it 
 		to be noncompliant, the noncompliant field is also returned'''
 		rv = super().is_compliant()
@@ -254,7 +255,7 @@ class UserEntry(__EntryBase):
 		lines.append(b'')
 		return b'\r\n'.join(lines)
 
-	def sign(self, signing_key: bytes, sigtype: str):
+	def sign(self, signing_key: bytes, sigtype: str) -> RetVal:
 		'''Adds a signature to the  Note that for any change in the keycard fields, this 
 		call must be made afterward. Note that successive signatures are deleted, such that 
 		updating a User signature will delete the Organization signature which depends on it. The 
@@ -302,7 +303,7 @@ class UserEntry(__EntryBase):
 		self.signatures[sigtype] = 'ED25519' + signed.signature.decode()
 		return RetVal()
 
-	def verify(self, verify_key: bytes, sigtype: str):
+	def verify(self, verify_key: bytes, sigtype: str) -> RetVal:
 		'''Verifies a signature, given a verification key'''
 	
 		rv = RetVal()
@@ -351,7 +352,7 @@ class UserEntry(__EntryBase):
 			data = self.make_bytestring(sig_map[sigtype])
 			vkey.verify(data, Base85Encoder.decode(self.signatures[sigtype]))
 		except nacl.exceptions.BadSignatureError:
-			rv.set_error(InvalidKeycard)
+			rv.set_error(InvalidEntry)
 		
 		return rv
 		
@@ -379,10 +380,32 @@ class Keycard:
 			return RetVal(BadParameterType)
 		
 		if not entry.is_compliant():
-			return RetVal(NotCompliant)		
+			return RetVal(NotCompliant)
+		
+		if len(self.entries) > 0:
+			prevcard = self.entries[-1]
+			preventry = dict()
+			parts = prevcard.fields['Contact-Request-Signing-Key'].splits(':')
 
-		# TODO: Finish implementation
+			if len(parts) != 2:
+				return RetVal(InvalidKeycard, 'bad signing key')
+			preventry['type'] = parts[0]
+			preventry['key'] = base64.b85decode(parts[1])
 
+			status = entry.verification(preventry['key'], preventry['type'])
+			if status.error():
+				return status
+		
+		# If we've gotten this far, it's safe to add the entry to the card because we've verified
+		# that it's compliant within itself and it is signed by the contact request signing key of 
+		# the previous entry.
+		self.entries.append(entry)
+		
+		return RetVal()
+
+	def replace(self) -> RetVal:
+		'''Handles key revocation in an entry chain'''
+		# TODO: Implement
 		return RetVal(Unimplemented)
 
 	def verify(self) -> RetVal:
