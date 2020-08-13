@@ -370,7 +370,13 @@ class Keycard:
 	
 	def save(self, path: str) -> RetVal:
 		'''Saves an entire keycard to disk'''
-		# TODO: Implement
+		
+		out = list()
+		for entry in self.entries:
+			out.append(b'----- BEGIN ENTRY -----\n' + entry.make_bytestring(4) + b'----- END ENTRY -----')
+		
+		# TODO: Finish implementation
+
 		return RetVal(Unimplemented)
 	
 	def append(self, entry: __EntryBase) -> RetVal:
