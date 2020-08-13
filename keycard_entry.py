@@ -8,7 +8,7 @@ import os
 import nacl.public
 import nacl.signing
 
-from retval import RetVal, BadData, BadParameterValue, EmptyData, \
+from retval import RetVal, BadData, BadParameterValue, BadParameterType, EmptyData, \
 		ExceptionThrown, ResourceNotFound, ResourceExists, Unimplemented
 
 UnsupportedKeycardType = 'UnsupportedKeycardType'
@@ -360,14 +360,33 @@ class Keycard:
 	'''This class contains and manages a chain of keycard entries'''
 	def __init__(self):
 		self.entries = list()
-	
-	def verify(self) -> RetVal:
-		'''Verifies the entire chain of entries'''
+		self.type = ''
+
+	def load(self, path: str) -> RetVal:
+		'''Loads an entire keycard from disk'''
 		# TODO: Implement
 		return RetVal(Unimplemented)
-
+	
+	def save(self, path: str) -> RetVal:
+		'''Saves an entire keycard to disk'''
+		# TODO: Implement
+		return RetVal(Unimplemented)
+	
 	def append(self, entry: __EntryBase) -> RetVal:
 		'''Adds a new entry to the chain'''
+		
+		if self.type and self.type != entry.type:
+			return RetVal(BadParameterType)
+		
+		if not entry.is_compliant():
+			return RetVal(NotCompliant)		
+
+		# TODO: Finish implementation
+
+		return RetVal(Unimplemented)
+
+	def verify(self) -> RetVal:
+		'''Verifies the entire chain of entries'''
 		# TODO: Implement
 		return RetVal(Unimplemented)
 
