@@ -365,19 +365,59 @@ class Keycard:
 
 	def load(self, path: str) -> RetVal:
 		'''Loads an entire keycard from disk'''
-		# TODO: Implement
+		try:
+			f = open(path, 'r')
+			lines = f.readlines()
+			f.close()
+		except Exception as e:
+			return RetVal(ExceptionThrown, e)
+		
+		# now that the lines have been loaded, we create entries.
+		entry = None
+		for line in lines():
+			if line == '----- END ENTRY -----' and entry:
+				self.entries.append(entry)
+				continue
+
+			folded_line = line.casefold()
+			if folded_line == 'type:organization':
+				entry = OrgEntry()
+				continue
+			elif folded_line == 'type:user':
+				entry = UserEntry()
+				continue
+			
+			parts = line.split(':', max_split=1)
+			if len(parts) != 2:
+				return RetVal(BadData, 'Bad line in entry')
+
+			if parts[0] in [ 'Custody-Signature', 'User-Signature', 'Organization-Signature',
+					'Entry-Signature' ]:
+				sigtype = parts[0].split('-')[0]
+				entry.signatures[sigtype] = parts[1]
+			else:
+				entry.set_field(parts[0], parts[1])
+
+		# TODO: finish implementing, including hashing and validation
+
 		return RetVal(Unimplemented)
 	
 	def save(self, path: str) -> RetVal:
 		'''Saves an entire keycard to disk'''
 		
-		out = list()
+		out_list = list()
 		for entry in self.entries:
-			out.append(b'----- BEGIN ENTRY -----\n' + entry.make_bytestring(4) + b'----- END ENTRY -----')
+			out_list.append(b'----- BEGIN ENTRY -----\r\n' + entry.make_bytestring(4) + 
+				b'----- END ENTRY -----')
 		
-		# TODO: Finish implementation
+		try:
+			f = open(path, 'wb')
+			f.write(b'\r\n'.join(out_list))
+			f.close()
+		except Exception as e:
+			return RetVal(ExceptionThrown, e)
 
-		return RetVal(Unimplemented)
+		return RetVal()
 	
 	def append(self, entry: __EntryBase) -> RetVal:
 		'''Adds a new entry to the chain'''
