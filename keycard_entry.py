@@ -24,7 +24,7 @@ SignatureMissing = 'SignatureMissing'
 class ComplianceException(Exception):
 	'''Custom exception for spec compliance failures'''
 
-class __EntryBase:
+class EntryBase:
 	'''Base class for all code common to org and user cards'''
 	def __init__(self):
 		self.fields = dict()
@@ -70,7 +70,7 @@ class __EntryBase:
 
 		return RetVal(Unimplemented)
 
-	def make_bytestring(self, include_signatures : bool) -> bytes:
+	def make_bytestring(self, include_signatures : bool) -> bytes:	# pylint: disable=unused-argument,no-self-use
 		'''Method to be implemented by child classes. Returns a bytes object representing the 
 		entry'''
 		return b''
@@ -92,7 +92,7 @@ class __EntryBase:
 		return RetVal()
 
 
-class OrgEntry(__EntryBase):
+class OrgEntry(EntryBase):
 	'''Represents an organizational keycard entry'''
 	def __init__(self):
 		super().__init__()
@@ -179,7 +179,7 @@ class OrgEntry(__EntryBase):
 		return rv
 
 
-class UserEntry(__EntryBase):
+class UserEntry(EntryBase):
 	'''Represents a user keycard entry'''
 	def __init__(self):
 		super().__init__()
@@ -419,7 +419,7 @@ class Keycard:
 
 		return RetVal()
 	
-	def append(self, entry: __EntryBase) -> RetVal:
+	def append(self, entry: EntryBase) -> RetVal:
 		'''Adds a new entry to the chain'''
 		
 		if self.type and self.type != entry.type:
