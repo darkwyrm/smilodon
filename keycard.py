@@ -86,38 +86,21 @@ class OrgCard(__CardBase):
 		self.type = 'Organization'
 		self.field_names = [
 			'Name',
-			'Street-Address',
-			'Extended-Address',
-			'City',
-			'Province',
-			'Postal-Code',
-			'Country',
 			'Contact-Admin',
 			'Contact-Abuse',
 			'Contact-Support',
 			'Language',
-			'Website',
 			'Primary-Signing-Key',
-			'Primary-Signing-Algorithm',
 			'Secondary-Signing-Key',
-			'Secondary-Signing-Algorithm',
 			'Encryption-Key',
-			'Encryption-Algorithm',
-			'Web-Access',
-			'Mail-Access',
-			'Item-Size-Limit',
-			'Message-Size-Limit',
 			'Time-To-Live',
 			'Expires',
-			'Hash-Type',
 			'Hash-ID'
 		]
 		self.required_fields = [
 			'Name',
 			'Contact-Admin',
-			'Primary-Signing-Algorithm',
 			'Primary-Signing-Key',
-			'Encryption-Algorithm',
 			'Encryption-Key',
 			'Time-To-Live',
 			'Expires'
@@ -212,27 +195,19 @@ class UserCard(__CardBase):
 			'Workspace-ID',
 			'User-ID',
 			'Domain',
-			'Contact-Request-Signing-Algorithm',
 			'Contact-Request-Signing-Key',
-			'Contact-Request-Encryption-Algorithm',
 			'Contact-Request-Encryption-Key',
-			'Public-Encryption-Algorithm',
 			'Public-Encryption-Key',
-			'Alternate-Encryption-Algorithm',
 			'Alternate-Encryption-Key',
 			'Time-To-Live',
 			'Expires',
-			'Hash-Type',
 			'Hash-ID'
 		]
 		self.required_fields = [
 			'Workspace-ID',
 			'Domain',
-			'Contact-Request-Signing-Algorithm',
 			'Contact-Request-Signing-Key',
-			'Contact-Request-Encryption-Algorithm',
 			'Contact-Request-Encryption-Key',
-			'Public-Encryption-Algorithm',
 			'Public-Encryption-Key',
 			'Time-To-Live',
 			'Expires'
@@ -252,6 +227,9 @@ class UserCard(__CardBase):
 		
 		if 'Organization' not in self.signatures or not self.signatures['Organization']:
 			return RetVal(SignatureMissing, 'Organization-Signature')
+		
+		if 'Entry' not in self.signatures or not self.signatures['Entry']:
+			return RetVal(SignatureMissing, 'Entry-Signature')
 		
 		return rv
 
@@ -277,6 +255,9 @@ class UserCard(__CardBase):
 		if include_signatures > 2 and 'Organization' in self.signatures:
 			lines.append(b''.join([b'Organization-Signature:',
 							self.signatures['Organization'].encode()]))
+		if include_signatures > 3 and 'Entry' in self.signatures:
+			lines.append(b''.join([b'Entry-Signature:',
+							self.signatures['Entry'].encode()]))
 
 		lines.append(b'')
 		return b'\r\n'.join(lines)
@@ -308,7 +289,7 @@ class UserCard(__CardBase):
 		if not signing_key:
 			return RetVal(BadParameterValue, 'signing key')
 		
-		if sigtype not in ['Custody', 'User', 'Organization']:
+		if sigtype not in ['Custody', 'User', 'Organization', 'Entry']:
 			return RetVal(BadParameterValue, 'sigtype')
 		
 		key = nacl.signing.SigningKey(signing_key)
@@ -316,22 +297,32 @@ class UserCard(__CardBase):
 		if sigtype == 'Custody':
 			if 'User' in self.signatures:
 				del self.signatures['User']
-			
 			if 'Organization' in self.signatures:
 				del self.signatures['Organization']
+			if 'Entry' in self.signatures:
+				del self.signatures['Entry']
 		
 		elif sigtype == 'User':
 			if 'Organization' in self.signatures:
 				del self.signatures['Organization']
+			if 'Entry' in self.signatures:
+				del self.signatures['Entry']
 		
 		elif sigtype == 'Organization':
 			if not self.signatures['User']:
+				raise ComplianceException
+			if 'Entry' in self.signatures:
+				del self.signatures['Entry']
+		
+		elif sigtype == 'Entry':
+			if not self.signatures['User'] or self.signatures['Organization']:
 				raise ComplianceException
 		
 		sig_map = {
 			'Custody' : 0,
 			'User' : 1,
-			'Organization' : 2
+			'Organization' : 2,
+			'Entry' : 3
 		}
 		signed = key.sign(self.make_bytestring(sig_map[sigtype]), Base85Encoder)
 		self.signatures[sigtype] = signed.signature.decode()
@@ -346,7 +337,7 @@ class UserCard(__CardBase):
 			rv['parameter'] = 'verify_key'
 			return rv 
 		
-		if sigtype not in ['Custody', 'User', 'Organization']:
+		if sigtype not in ['Custody', 'User', 'Organization', 'Entry']:
 			rv.set_error(BadParameterValue)
 			rv['parameter'] = 'sigtype'
 			return rv 
@@ -359,15 +350,23 @@ class UserCard(__CardBase):
 			rv['field'] = 'Custody-Signature'
 			return rv
 		
-		if sigtype == 'Organization':
+		if sigtype == 'Organization' or sigtype == 'Entry':
 			if 'User' not in self.signatures or not self.signatures['User']:
 				rv.set_error(NotCompliant)
 				rv['field'] = 'User-Signature'
 				return rv
+
+		if sigtype == 'Entry':
+			if 'Organization' not in self.signatures or not self.signatures['Organization']:
+				rv.set_error(NotCompliant)
+				rv['field'] = 'Organization-Signature'
+				return rv
+		
 		sig_map = {
 			'Custody' : 0,
 			'User' : 1,
-			'Organization' : 2
+			'Organization' : 2,
+			'Entry' : 3
 		}
 		try:
 			data = self.make_bytestring(sig_map[sigtype])
@@ -411,7 +410,8 @@ def load_keycard(path: str):
 		if len(parts) != 2:
 			return RetVal(BadData, 'Bad line %s in keycard' % i)
 
-		if parts[0] in [ 'Custody-Signature', 'User-Signature', 'Organization-Signature' ]:
+		if parts[0] in [ 'Custody-Signature', 'User-Signature', 'Organization-Signature',
+				'Entry-Signature' ]:
 			sigtype = parts[0].split('-')[0]
 			card.signatures[sigtype] = parts[1]
 		else:
