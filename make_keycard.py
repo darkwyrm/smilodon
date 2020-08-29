@@ -73,15 +73,8 @@ def get_org_info():
 	'''Gets all user input for an organization and returns a list of tuples containing it all'''
 	out = list()
 	out.append(('Name', get_input("Organization Name: ", ValueNotEmpty())))
-	out.append(('Street-Address',get_input("Street Address: ", ValueNotEmpty())))
-	out.append(('Extended-Address',get_input("Address Line 2: ")))
-	out.append(('City',get_input("City: ")))
-	out.append(('Province',get_input("Province/State: ")))
-	out.append(('Postal-Code',get_input("Postal Code: ")))
-	out.append(('Country',get_input("Country: ")))
 	
-	domain = get_input("Domain: ",ValueNotEmpty())
-	out.append(('Domain',domain))
+	domain = get_input("Primary Domain: ",ValueNotEmpty())
 	admin_address = '/'.join(['admin', domain])
 	out.append(('Contact-Admin',
 				get_input("Administrator contact [%s]: " % admin_address,ValueNotEmpty(),
@@ -91,17 +84,6 @@ def get_org_info():
 	out.append(('Contact-Support',
 				get_input("Support contact [%s]: " % admin_address,ValueNotEmpty(), admin_address)))
 	out.append(('Language',get_input("Preferred Language [en]: ", ValueNotEmpty(), 'en')))
-	out.append(('Website',get_input("Website URL: ")))
-
-	web_access = 'webmail.' + domain
-	out.append(('Web-Access',get_input("Webmail Access [%s]: " % web_access, Validator(),
-			web_access)))
-	mail_access = 'anselus.' + domain
-	out.append(('Anselus-Access',get_input("Anselus Access [%s]: " % mail_access,
-			Validator(), mail_access)))
-	out.append(('Item-Size-Limit',get_input("Item Size Limit [30MB]: ", ValueIsInteger(), '30')))
-	out.append(('Message-Size-Limit',get_input("Message Size Limit [30MB]: ", ValueIsInteger(), 
-			'30')))
 	out.append(('Time-To-Live',get_input("Cache Update Period (days) [14]: ", ValueIsInteger(), '14')))
 	out.append(('Expires',get_input("Time Valid (days) [730]: ", ValueIsInteger(), '730')))
 	
@@ -128,10 +110,8 @@ def generate_org_card(userdata: list, path: str):
 	card = keycard.OrgCard()
 	for item in userdata:
 		card.set_field(item[0], item[1])
-	card.set_field("Primary-Signing-Algorithm", 'ed25519')
-	card.set_field("Primary-Signing-Key", skey.get_public_key85())
-	card.set_field("Encryption-Algorithm", 'curve25519')
-	card.set_field("Encryption-Key", ekey.get_public_key85())
+	card.set_field("Primary-Signing-Key", 'ED25519:' + skey.get_public_key85())
+	card.set_field("Encryption-Key", 'CURVE25519:' + ekey.get_public_key85())
 	
 	status = card.sign(skey.get_private_key())
 	if status.error():
@@ -195,12 +175,11 @@ def generate_user_card(userdata: list, path: str):
 	for item in userdata:
 		card.set_field(item[0], item[1])
 	card.set_fields({
-		"Contact-Request-Signing-Algorithm" : crskey.enc_type,
-		"Contact-Request-Signing-Key" : crskey.get_public_key85(),
-		"Contact-Request-Encryption-Algorithm" : crekey.enc_type,
-		"Contact-Request-Encryption-Key" : crekey.get_public_key85(),
-		"Public-Encryption-Algorithm" : ekey.enc_type,
-		"Public-Encryption-Key" : ekey.get_public_key85()
+		"Contact-Request-Signing-Key" : crskey.enc_type.upper() + ':' + 
+				crskey.get_public_key85(),
+		"Contact-Request-Encryption-Key" : crekey.enc_type.upper() + ':' + 
+				crekey.get_public_key85(),
+		"Public-Encryption-Key" : ekey.enc_type.upper() + ':' + ekey.get_public_key85()
 	})
 	
 	card.save(os.path.join(path, 'user.keycard'), True)
@@ -212,14 +191,8 @@ debug_org = False
 if __name__ == '__main__':
 	if debug_app:
 		if debug_org:
-			generate_org_card([('Name', 'Acme, Inc.'), ('Street-Address', '1313 Mockingbird Lane'), 
-					('Extended-Address', ''), ('City', 'Schenectady'), ('Province', 'NY'), 
-					('Postal-Code', '12345'), ('Country', 'United States'), ('Domain', 'acme.com'), 
-					('Contact-Admin', 'admin/acme.com'), ('Contact-Abuse', 'admin/acme.com'), 
-					('Contact-Support', 'admin/acme.com'), ('Language', 'en'), 
-					('Website', 'www.acme.com'), ('Web-Access', 'webmail.acme.com'), 
-					('Anselus-Access', 'anselus.acme.com'), ('Item-Size-Limit', '30'), 
-					('Message-Size-Limit', '30'), ('Time-To-Live', '14'), ('Expires', '730')],
+			generate_org_card([('Name', 'Acme, Inc.'), ('Contact-Admin', 'admin/acme.com'), 
+					('Language', 'en'), ('Time-To-Live', '14'), ('Expires', '730')],
 					'testcards')
 		else:
 			generate_user_card([('Name', 'Corbin Smith'), ('User-ID', 'csmith'),
