@@ -42,4 +42,5 @@ if __name__ == '__main__':
 
 		user_card.sign(user_key.private, 'User')
 		user_card.sign(org_key.private, 'Organization')
+		user_card.sign(user_key.private, 'Entry')
 		user_card.save('testcards/user_signed.keycard', True)
