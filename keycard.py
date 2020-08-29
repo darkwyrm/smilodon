@@ -192,6 +192,7 @@ class UserCard(__CardBase):
 		super().__init__()
 		self.type = 'User'
 		self.field_names = [
+			'Name',
 			'Workspace-ID',
 			'User-ID',
 			'Domain',
@@ -325,7 +326,7 @@ class UserCard(__CardBase):
 			'Entry' : 3
 		}
 		signed = key.sign(self.make_bytestring(sig_map[sigtype]), Base85Encoder)
-		self.signatures[sigtype] = signed.signature.decode()
+		self.signatures[sigtype] = 'ED25519:' + signed.signature.decode()
 		return RetVal()
 
 	def verify(self, verify_key: bytes, sigtype: str):
@@ -368,6 +369,8 @@ class UserCard(__CardBase):
 			'Organization' : 2,
 			'Entry' : 3
 		}
+		# TODO: split the algorithm from the signature before attempting to verify
+		
 		try:
 			data = self.make_bytestring(sig_map[sigtype])
 			vkey.verify(data, Base85Encoder.decode(self.signatures[sigtype]))

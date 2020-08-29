@@ -34,6 +34,7 @@ def test_orgcard():
 	assert card.is_compliant().error(), "Initial OrgCard() complies but shouldn't"
 
 	card.set_fields({
+		'Type':'Organization',
 		'Name':'Example, Inc.',
 		'Contact-Admin':'admin/example.com',
 		'Primary-Signing-Key':'ED25519:l<V_`qb)QM=K#F>u-GCs?W1+>^nl1*#!%$NRxP-6',
@@ -48,6 +49,7 @@ def test_set_fields():
 	'''Tests setfields'''
 	card = keycard.OrgCard()
 	card.set_fields({
+		'Type':'Organization',
 		'Name':'Example, Inc.',
 		'Contact-Admin':'admin/example.com',
 		'Language':'en',
@@ -75,6 +77,7 @@ def test_load_keycard():
 	
 	card = keycard.OrgCard()
 	card.set_fields({
+		'Type':'Organization',
 		'Name':'Example, Inc.',
 		'Contact-Admin':'admin/example.com',
 		'Language':'en',
@@ -111,7 +114,7 @@ def test_orgcard_sign_verify():
 	rv = card.sign(skey.encode())
 	assert not rv.error(), 'Unexpected RetVal error'
 	assert card.signatures['Organization'], 'keycard failed to sign'
-	assert card.verify(card.fields['Primary-Signing-Key']), 'keycard failed to verify'
+	assert card.verify(skey.verify_key.encode(Base85Encoder).decode()), 'keycard failed to verify'
 
 	test_card_path = os.path.join(test_folder, 'test_org_card.keycard')
 	rv = card.save(test_card_path)
@@ -120,7 +123,7 @@ def test_orgcard_sign_verify():
 	rv = keycard.load_keycard(test_card_path)
 	assert not rv.error(), "failed to load test keycard"
 	testcard = rv['card']
-	assert testcard.verify(card.fields['Primary-Signing-Key']), 'test card failed to verify'
+	assert testcard.verify(skey.verify_key.encode(Base85Encoder).decode()), 'test card failed to verify'
 
 
 def test_usercard():
@@ -130,6 +133,7 @@ def test_usercard():
 	assert rv.error(), "Initial UserCard() complies but shouldn't"
 
 	card.set_fields({
+		'Type':'User',
 		'Workspace-ID':'00000000-1111-2222-3333-444444444444',
 		'Domain':'example.com',
 		'Contact-Request-Signing-Key':'ED25519:7dfD==!Jmt4cDtQDBxYa7(dV|N$}8mYwe$=RZuW|',
@@ -138,6 +142,7 @@ def test_usercard():
 	})
 	card.signatures['User'] = 'TestBadUserSig'
 	card.signatures['Organization'] = 'TestBadOrgSig'
+	card.signatures['Entry'] = 'TestBadEntrySig'
 
 	rv = card.is_compliant()
 	assert not rv.error(), "UserCard() compliance failed: %s" % rv.info()
@@ -146,13 +151,14 @@ def test_usercard():
 def test_usercard_bytestring():
 	'''Tests the UserCard get_bytestring() method'''
 	card = keycard.UserCard()
-	card.set_fields({
+	card.set_fields({'Type':'User',
 		'Name':'Corbin Simons',
 		'Workspace-ID':'4418bf6c-000b-4bb3-8111-316e72030468',
 		'Domain':'example.com',
 		'Contact-Request-Signing-Key':'ED25519:7dfD==!Jmt4cDtQDBxYa7(dV|N$}8mYwe$=RZuW|',
 		'Contact-Request-Encryption-Key':'CURVE25519:yBZ0{1fE9{2<b~#i^R+JT-yh-y5M(Wyw_)}_SZOn',
 		'Public-Encryption-Key':'CURVE25519:_`UC|vltn_%P5}~vwV^)oY){#uvQSSy(dOD_l(yE',
+		'Time-To-Live':'7',
 		'Expires':'20201002'
 	})
 
@@ -178,6 +184,7 @@ def test_usercard_sign():
 
 	card = keycard.UserCard()
 	card.set_fields({
+		'Type':'User',
 		'Name':'Corbin Simons',
 		'Workspace-ID':'4418bf6c-000b-4bb3-8111-316e72030468',
 		'Domain':'example.com',
@@ -186,7 +193,8 @@ def test_usercard_sign():
 		'Public-Encryption-Key':'CURVE25519:_`UC|vltn_%P5}~vwV^)oY){#uvQSSy(dOD_l(yE',
 		'Expires':'20201002'
 	})
-	expected_sig = '#sl4;saPEf*w~PxituHuiXrgP^tko9uO8kib;Wt$>*r(ECw8K;>Uq7zlAWx9%D9HU)`HV87@6Ht5elCJ'
+	expected_sig = 'ED25519:_)&8B7R4?1V~;>qSa?rB3Tn*X_kcQ9eI_5a#8nj+q|>hb9;{r*W2We9U|Q=' \
+			'TaQAu;wz%^7JKXlpIslIi'
 	
 	rv = card.sign(skey.encode(), 'User')
 	assert not rv.error(), 'Unexpected RetVal error %s' % rv.error()
@@ -205,6 +213,7 @@ def test_usercard_sign_verify():
 
 	card = keycard.UserCard()
 	card.set_fields({
+		'Type':'User',
 		'Name':'Corbin Simons',
 		'Workspace-ID':'4418bf6c-000b-4bb3-8111-316e72030468',
 		'Domain':'example.com',
@@ -214,7 +223,8 @@ def test_usercard_sign_verify():
 		'Expires':'20201002'
 	})
 
-	expected_sig = '#sl4;saPEf*w~PxituHuiXrgP^tko9uO8kib;Wt$>*r(ECw8K;>Uq7zlAWx9%D9HU)`HV87@6Ht5elCJ'
+	expected_sig = 'ED25519:_)&8B7R4?1V~;>qSa?rB3Tn*X_kcQ9eI_5a#8nj+q|>hb9;{r*W2We9U|Q=' \
+			'TaQAu;wz%^7JKXlpIslIi'
 
 	rv = card.sign(skey.encode(), 'User')
 	assert not rv.error(), 'Unexpected RetVal error %s' % rv.error()
@@ -250,3 +260,6 @@ def test_usercard_sign_verify():
 
 	rv = testcard.verify(org_skey.verify_key.encode(), 'Organization')
 	assert not rv.error(), 'test keycard failed to org verify'
+
+if __name__ == '__main__':
+	test_usercard_sign()
