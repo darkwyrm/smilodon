@@ -36,10 +36,8 @@ def test_orgcard():
 	card.set_fields({
 		'Name':'Example, Inc.',
 		'Contact-Admin':'admin/example.com',
-		'Primary-Signing-Algorithm':'ed25519',
-		'Primary-Signing-Key':'l<V_`qb)QM=K#F>u-GCs?W1+>^nl1*#!%$NRxP-6',
-		'Encryption-Key-Algorithm':'curve25519',
-		'Encryption-Key':'9+8r$)N}={KFhGD3H2rv<q8$72b4A$K!DN;bGrvt'
+		'Primary-Signing-Key':'ED25519:l<V_`qb)QM=K#F>u-GCs?W1+>^nl1*#!%$NRxP-6',
+		'Encryption-Key':'CURVE25519:9+8r$)N}={KFhGD3H2rv<q8$72b4A$K!DN;bGrvt'
 	})
 	rv = card.is_compliant()
 	assert rv.error(), "OrgCard() should not comply and did"
@@ -51,23 +49,11 @@ def test_set_fields():
 	card = keycard.OrgCard()
 	card.set_fields({
 		'Name':'Example, Inc.',
-		'Street':'1443 Dogwood Lane',
-		'City':'Nogales',
-		'Province':'AZ',
-		'Postal-Code':'85621',
-		'Country':'United States',
 		'Contact-Admin':'admin/example.com',
-		'Language':'English',
-		'Website':'https://www.example.com',
-		'Primary-Signing-Algorithm':'ed25519',
-		'Primary-Signing-Key':'l<V_`qb)QM=K#F>u-GCs?W1+>^nl1*#!%$NRxP-6',
-		'Secondary-Signing-Algorithm':'ed25519',
-		'Secondary-Signing-Key':'`D7QV39R926R3nf<NjU;pi)80xJxvj#1&iWD0!%6',
-		'Encryption-Key-Algorithm':'curve25519',
-		'Encryption-Key':'9+8r$)N}={KFhGD3H2rv<q8$72b4A$K!DN;bGrvt',
-		'Web-Access':'mail.example.com:2081',
-		'Mail-Access':'mail.example.com:2001',
-		'Message-Size-Limit':'100MB',
+		'Language':'en',
+		'Primary-Signing-Key':'ED25519:l<V_`qb)QM=K#F>u-GCs?W1+>^nl1*#!%$NRxP-6',
+		'Secondary-Signing-Key':'ED25519:`D7QV39R926R3nf<NjU;pi)80xJxvj#1&iWD0!%6',
+		'Encryption-Key':'CURVE25519:9+8r$)N}={KFhGD3H2rv<q8$72b4A$K!DN;bGrvt',
 		'noncompliant-field':'foobar2000'
 	})
 	rv = card.is_compliant()
@@ -89,25 +75,12 @@ def test_load_keycard():
 	
 	card = keycard.OrgCard()
 	card.set_fields({
-		'Type':'Organization',
 		'Name':'Example, Inc.',
-		'Street':'1443 Dogwood Lane',
-		'City':'Nogales',
-		'Province':'AZ',
-		'Postal-Code':'85621',
-		'Country':'United States',
 		'Contact-Admin':'admin/example.com',
-		'Language':'English',
-		'Website':'https://www.example.com',
-		'Primary-Signing-Algorithm':'ed25519',
-		'Primary-Signing-Key':'l<V_`qb)QM=K#F>u-GCs?W1+>^nl1*#!%$NRxP-6',
-		'Secondary-Signing-Algorithm':'ed25519',
-		'Secondary-Signing-Key':'`D7QV39R926R3nf<NjU;pi)80xJxvj#1&iWD0!%6',
-		'Encryption-Key-Algorithm':'curve25519',
-		'Encryption-Key':'9+8r$)N}={KFhGD3H2rv<q8$72b4A$K!DN;bGrvt',
-		'Web-Access':'mail.example.com:2081',
-		'Mail-Access':'mail.example.com:2001',
-		'Message-Size-Limit':'100MB'
+		'Language':'en',
+		'Primary-Signing-Key':'ED25519:l<V_`qb)QM=K#F>u-GCs?W1+>^nl1*#!%$NRxP-6',
+		'Secondary-Signing-Key':'ED25519:`D7QV39R926R3nf<NjU;pi)80xJxvj#1&iWD0!%6',
+		'Encryption-Key':'CURVE25519:9+8r$)N}={KFhGD3H2rv<q8$72b4A$K!DN;bGrvt'
 	})
 
 	test_card_path = os.path.join(test_folder,'test_card.keycard')
@@ -130,21 +103,10 @@ def test_orgcard_sign_verify():
 	card.set_fields({
 		'Type':'Organization',
 		'Name':'Example, Inc.',
-		'Street':'1443 Dogwood Lane',
-		'City':'Nogales',
-		'Province':'AZ',
-		'Postal-Code':'85621',
-		'Country':'United States',
 		'Contact-Admin':'admin/example.com',
-		'Language':'English',
-		'Website':'https://www.example.com',
-		'Primary-Signing-Algorithm':'ed25519',
-		'Primary-Signing-Key':skey.verify_key.encode(Base85Encoder).decode(),
-		'Encryption-Key-Algorithm':'curve25519',
-		'Encryption-Key':ekey.public_key.encode(Base85Encoder).decode(),
-		'Web-Access':'mail.example.com:2081',
-		'Mail-Access':'mail.example.com:2001',
-		'Message-Size-Limit':'100MB'
+		'Language':'en',
+		'Primary-Signing-Key':'ED25519:' + skey.verify_key.encode(Base85Encoder).decode(),
+		'Encryption-Key':'CURVE25519:' + ekey.public_key.encode(Base85Encoder).decode()
 	})
 	rv = card.sign(skey.encode())
 	assert not rv.error(), 'Unexpected RetVal error'
@@ -170,12 +132,9 @@ def test_usercard():
 	card.set_fields({
 		'Workspace-ID':'00000000-1111-2222-3333-444444444444',
 		'Domain':'example.com',
-		'Contact-Request-Signing-Algorithm':'ed25519',
-		'Contact-Request-Signing-Key':'7dfD==!Jmt4cDtQDBxYa7(dV|N$}8mYwe$=RZuW|',
-		'Contact-Request-Encryption-Algorithm':'curve25519',
-		'Contact-Request-Encryption-Key':'fbqsEyXT`Sq?us{OgVygsK|zBP7njBmwT+Q_a*0E',
-		'Public-Encryption-Algorithm':'curve25519',
-		'Public-Encryption-Key':'0IaDFoy}NDe1@fzkg9z!5`@gclY20sRINMJd_{j!',
+		'Contact-Request-Signing-Key':'ED25519:7dfD==!Jmt4cDtQDBxYa7(dV|N$}8mYwe$=RZuW|',
+		'Contact-Request-Encryption-Key':'CURVE25519:fbqsEyXT`Sq?us{OgVygsK|zBP7njBmwT+Q_a*0E',
+		'Public-Encryption-Key':'CURVE25519:0IaDFoy}NDe1@fzkg9z!5`@gclY20sRINMJd_{j!',
 	})
 	card.signatures['User'] = 'TestBadUserSig'
 	card.signatures['Organization'] = 'TestBadOrgSig'
@@ -191,12 +150,9 @@ def test_usercard_bytestring():
 		'Name':'Corbin Simons',
 		'Workspace-ID':'4418bf6c-000b-4bb3-8111-316e72030468',
 		'Domain':'example.com',
-		'Contact-Request-Signing-Algorithm':'ed25519',
-		'Contact-Request-Signing-Key':'7dfD==!Jmt4cDtQDBxYa7(dV|N$}8mYwe$=RZuW|',
-		'Contact-Request-Encryption-Algorithm':'curve25519',
-		'Contact-Request-Encryption-Key':'yBZ0{1fE9{2<b~#i^R+JT-yh-y5M(Wyw_)}_SZOn',
-		'Public-Encryption-Algorithm':'curve25519',
-		'Public-Encryption-Key':'_`UC|vltn_%P5}~vwV^)oY){#uvQSSy(dOD_l(yE',
+		'Contact-Request-Signing-Key':'ED25519:7dfD==!Jmt4cDtQDBxYa7(dV|N$}8mYwe$=RZuW|',
+		'Contact-Request-Encryption-Key':'CURVE25519:yBZ0{1fE9{2<b~#i^R+JT-yh-y5M(Wyw_)}_SZOn',
+		'Public-Encryption-Key':'CURVE25519:_`UC|vltn_%P5}~vwV^)oY){#uvQSSy(dOD_l(yE',
 		'Expires':'20201002'
 	})
 
@@ -204,12 +160,9 @@ def test_usercard_bytestring():
 		b'Name:Corbin Simons\r\n' \
 		b'Workspace-ID:4418bf6c-000b-4bb3-8111-316e72030468\r\n' \
 		b'Domain:example.com\r\n' \
-		b'Contact-Request-Signing-Algorithm:ed25519\r\n' \
-		b'Contact-Request-Signing-Key:7dfD==!Jmt4cDtQDBxYa7(dV|N$}8mYwe$=RZuW|\r\n' \
-		b'Contact-Request-Encryption-Algorithm:curve25519\r\n' \
-		b'Contact-Request-Encryption-Key:yBZ0{1fE9{2<b~#i^R+JT-yh-y5M(Wyw_)}_SZOn\r\n' \
-		b'Public-Encryption-Algorithm:curve25519\r\n' \
-		b'Public-Encryption-Key:_`UC|vltn_%P5}~vwV^)oY){#uvQSSy(dOD_l(yE\r\n' \
+		b'Contact-Request-Signing-Key:ED25519:7dfD==!Jmt4cDtQDBxYa7(dV|N$}8mYwe$=RZuW|\r\n' \
+		b'Contact-Request-Encryption-Key:CURVE25519:yBZ0{1fE9{2<b~#i^R+JT-yh-y5M(Wyw_)}_SZOn\r\n' \
+		b'Public-Encryption-Key:CURVE25519:_`UC|vltn_%P5}~vwV^)oY){#uvQSSy(dOD_l(yE\r\n' \
 		b'Time-To-Live:7\r\n' \
 		b'Expires:20201002\r\n'
 	
@@ -228,12 +181,9 @@ def test_usercard_sign():
 		'Name':'Corbin Simons',
 		'Workspace-ID':'4418bf6c-000b-4bb3-8111-316e72030468',
 		'Domain':'example.com',
-		'Contact-Request-Signing-Algorithm':'ed25519',
-		'Contact-Request-Signing-Key':'7dfD==!Jmt4cDtQDBxYa7(dV|N$}8mYwe$=RZuW|',
-		'Contact-Request-Encryption-Algorithm':'curve25519',
-		'Contact-Request-Encryption-Key':'yBZ0{1fE9{2<b~#i^R+JT-yh-y5M(Wyw_)}_SZOn',
-		'Public-Encryption-Algorithm':'curve25519',
-		'Public-Encryption-Key':'_`UC|vltn_%P5}~vwV^)oY){#uvQSSy(dOD_l(yE',
+		'Contact-Request-Signing-Key':'ED25519:7dfD==!Jmt4cDtQDBxYa7(dV|N$}8mYwe$=RZuW|',
+		'Contact-Request-Encryption-Key':'CURVE25519:yBZ0{1fE9{2<b~#i^R+JT-yh-y5M(Wyw_)}_SZOn',
+		'Public-Encryption-Key':'CURVE25519:_`UC|vltn_%P5}~vwV^)oY){#uvQSSy(dOD_l(yE',
 		'Expires':'20201002'
 	})
 	expected_sig = '#sl4;saPEf*w~PxituHuiXrgP^tko9uO8kib;Wt$>*r(ECw8K;>Uq7zlAWx9%D9HU)`HV87@6Ht5elCJ'
@@ -258,12 +208,9 @@ def test_usercard_sign_verify():
 		'Name':'Corbin Simons',
 		'Workspace-ID':'4418bf6c-000b-4bb3-8111-316e72030468',
 		'Domain':'example.com',
-		'Contact-Request-Signing-Algorithm':'ed25519',
-		'Contact-Request-Signing-Key':'7dfD==!Jmt4cDtQDBxYa7(dV|N$}8mYwe$=RZuW|',
-		'Contact-Request-Encryption-Algorithm':'curve25519',
-		'Contact-Request-Encryption-Key':'yBZ0{1fE9{2<b~#i^R+JT-yh-y5M(Wyw_)}_SZOn',
-		'Public-Encryption-Algorithm':'curve25519',
-		'Public-Encryption-Key':'_`UC|vltn_%P5}~vwV^)oY){#uvQSSy(dOD_l(yE',
+		'Contact-Request-Signing-Key':'ED25519:7dfD==!Jmt4cDtQDBxYa7(dV|N$}8mYwe$=RZuW|',
+		'Contact-Request-Encryption-Key':'CURVE25519:yBZ0{1fE9{2<b~#i^R+JT-yh-y5M(Wyw_)}_SZOn',
+		'Public-Encryption-Key':'CURVE25519:_`UC|vltn_%P5}~vwV^)oY){#uvQSSy(dOD_l(yE',
 		'Expires':'20201002'
 	})
 
