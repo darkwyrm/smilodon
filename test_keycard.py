@@ -202,7 +202,7 @@ def test_usercard_sign():
 	assert card.signatures['User'] == expected_sig, "card did not yield the expected signature"
 
 
-def test_usercard_sign_verify():
+def test_usercard_verify():
 	'''Tests the signing of a user keycard'''
 	test_folder = setup_test('keycard_user_sign_verify')
 
@@ -234,7 +234,7 @@ def test_usercard_sign_verify():
 	vkey = nacl.signing.VerifyKey(skey.verify_key.encode())
 
 	# This throws an exception if the data doesn't verify
-	vkey.verify(card.make_bytestring(1), Base85Encoder.decode(card.signatures['User']))
+	vkey.verify(card.make_bytestring(1), Base85Encoder.decode(card.signatures['User'].split(':')[1]))
 
 	rv = card.verify(skey.verify_key.encode(), 'User')
 	assert not rv.error(), 'keycard failed to user verify'
@@ -262,4 +262,4 @@ def test_usercard_sign_verify():
 	assert not rv.error(), 'test keycard failed to org verify'
 
 if __name__ == '__main__':
-	test_usercard_sign()
+	test_usercard_verify()

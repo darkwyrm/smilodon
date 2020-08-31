@@ -11,6 +11,7 @@ from retval import RetVal, BadData, BadParameterValue, EmptyData, \
 		ExceptionThrown, ResourceNotFound, ResourceExists
 
 UnsupportedKeycardType = 'UnsupportedKeycardType'
+UnsupportedEncryptionType = 'UnsupportedEncryptionType'
 InvalidKeycard = 'InvalidKeycard'
 
 # These three return codes are associated with a second field, 'field', which indicates which
@@ -32,6 +33,26 @@ class __CardBase:
 		self.type = ''
 		self.signatures = dict()
 
+	def get_signature(self, sigtype: str) -> RetVal:
+		'''Retrieves the requested signature and type'''
+		if sigtype not in self.signatures:
+			return RetVal(ResourceNotFound, sigtype)
+		
+		if len(self.signatures[sigtype]) < 1:
+			return RetVal(SignatureMissing, sigtype)
+
+		parts = self.signatures[sigtype].split(':')
+		if len(parts) == 1:
+			return RetVal().set_value('signature', parts[0])
+		
+		if len(parts) == 2:
+			return RetVal().set_values({
+				'algorithm' : parts[0],
+				'signature' : parts[1]
+			})
+		
+		return RetVal(BadData, self.signatures[sigtype])
+	
 	def is_compliant(self):
 		'''Checks the fields to ensure that it meets spec requirements. If a field causes it 
 		to be noncompliant, the noncompliant field is also returned'''
@@ -168,13 +189,17 @@ class OrgCard(__CardBase):
 		
 		key = nacl.signing.SigningKey(signing_key)
 		signed = key.sign(self.make_bytestring(True), Base85Encoder)
-		self.signatures['Organization'] = signed.signature.decode()
+		self.signatures['Organization'] = 'ED25519:' + signed.signature.decode()
 		return RetVal()
 
 	def verify(self, verify_key: bytes):
 		'''Verifies the signature, given a verification key'''
-		if 'Organization' not in self.signatures or not self.signatures['Organization']:
-			return RetVal(SignatureMissing)
+		status = self.get_signature('Organization')
+		if status.error():
+			return status
+		
+		# TODO: Finish updating to match spec
+		signature = 
 		
 		rv = RetVal()
 		vkey = nacl.signing.VerifyKey(Base85Encoder.decode(verify_key))
@@ -329,39 +354,38 @@ class UserCard(__CardBase):
 		self.signatures[sigtype] = 'ED25519:' + signed.signature.decode()
 		return RetVal()
 
-	def verify(self, verify_key: bytes, sigtype: str):
+	def verify(self, verify_key: bytes, sigtype: str) -> RetVal:
 		'''Verifies a signature, given a verification key'''
 	
 		rv = RetVal()
 		if not verify_key:
-			rv.set_error(BadParameterValue)
-			rv['parameter'] = 'verify_key'
+			rv.set_error(BadParameterValue, 'missing verify key')
 			return rv 
 		
 		if sigtype not in ['Custody', 'User', 'Organization', 'Entry']:
-			rv.set_error(BadParameterValue)
-			rv['parameter'] = 'sigtype'
+			rv.set_error(BadParameterValue, 'bad signature type')
 			return rv 
 		
-		vkey = nacl.signing.VerifyKey(verify_key)
+		try:
+			parts = verify_key.decode().split(':')
+		except Exception as e:
+			return RetVal(ExceptionThrown, e)
 		
-		if 'Custody' in self.signatures and not self.signatures['Custody']:
-			# The Custody-Signature field must be populated if it exists
-			rv.set_error(NotCompliant)
-			rv['field'] = 'Custody-Signature'
-			return rv
-		
-		if sigtype == 'Organization' or sigtype == 'Entry':
-			if 'User' not in self.signatures or not self.signatures['User']:
-				rv.set_error(NotCompliant)
-				rv['field'] = 'User-Signature'
-				return rv
+		if len(parts) == 1:
+			vkey = nacl.signing.VerifyKey(verify_key)
+		elif len(parts) == 2:
+			if parts[0].upper() == 'ED25519':
+				try:
+					vkey = nacl.signing.VerifyKey(parts[1].encode())
+				except Exception as e:
+					return RetVal(ExceptionThrown, e)
+			else:
+				return RetVal(UnsupportedEncryptionType, parts[0].upper())
+		else:
+			return RetVal(BadParameterValue, 'Unrecognized verify key data')
 
-		if sigtype == 'Entry':
-			if 'Organization' not in self.signatures or not self.signatures['Organization']:
-				rv.set_error(NotCompliant)
-				rv['field'] = 'Organization-Signature'
-				return rv
+		if sigtype in self.signatures and not self.signatures[sigtype]:
+			return RetVal(NotCompliant, 'empty signature ' + sigtype)
 		
 		sig_map = {
 			'Custody' : 0,
@@ -369,11 +393,10 @@ class UserCard(__CardBase):
 			'Organization' : 2,
 			'Entry' : 3
 		}
-		# TODO: split the algorithm from the signature before attempting to verify
 		
 		try:
 			data = self.make_bytestring(sig_map[sigtype])
-			vkey.verify(data, Base85Encoder.decode(self.signatures[sigtype]))
+			vkey.verify(data, Base85Encoder.decode(self.signatures[sigtype]).split(':')[1])
 		except nacl.exceptions.BadSignatureError:
 			rv.set_error(InvalidKeycard)
 		
