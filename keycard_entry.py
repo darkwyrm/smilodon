@@ -8,7 +8,7 @@ import os
 import nacl.public
 import nacl.signing
 
-from retval import RetVal, Unimplemented
+from retval import RetVal, BadData, ExceptionThrown, Unimplemented
 
 UnsupportedKeycardType = 'UnsupportedKeycardType'
 InvalidKeycard = 'InvalidKeycard'
@@ -65,9 +65,35 @@ class EntryBase:
 	
 	def set(self, data: bytes) -> RetVal:
 		'''Sets the object's information from a bytestring'''
-		# TODO: Implement
 
-		return RetVal(Unimplemented)
+		try:
+			rawstring = data.decode()
+		except Exception as e:
+			return RetVal(ExceptionThrown, e)
+		
+		lines = rawstring.split('\r\n')
+		for line in lines:
+			if not line:
+				continue
+
+			parts = line.strip().split(':', 1)
+			if len(parts) != 2:
+				return RetVal(BadData, line)
+			
+			if parts[0] == 'Type':
+				if parts[0] != self.type:
+					return RetVal(BadData, "can't use %s data on a %s entry" % (parts[0], self.type))
+			
+			elif parts[0].endswith('Signature'):
+				sigparts = parts[0].split('-', 1)
+				if sigparts[0] not in [ 'Custody', 'User', 'Organization', 'Entry' ]:
+					return RetVal(BadData, 'bad signature line %s' % sigparts[0])
+				self.signatures[sigparts[0]] = parts[1]
+			
+			else:
+				self.fields[parts[0]] = parts[1]
+			
+		return RetVal()
 
 	def make_bytestring(self, include_signatures : int) -> bytes:
 		'''Creates a byte string from the fields in the keycard. Because this doesn't use join(), 
