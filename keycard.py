@@ -198,9 +198,6 @@ class OrgCard(__CardBase):
 		if status.error():
 			return status
 		
-		# TODO: Finish updating to match spec
-		signature = 
-		
 		rv = RetVal()
 		vkey = nacl.signing.VerifyKey(Base85Encoder.decode(verify_key))
 		try:
