@@ -4,7 +4,7 @@ import os
 import shutil
 import time
 
-import nacl.signing
+#import nacl.signing
 
 import keycard_entry as keycard
 
@@ -80,5 +80,50 @@ def test_set():
 			"set() didn't handle the signature correctly"
 
 
+def test_make_bytestring():
+	'''Tests make_bytestring()'''
+
+	basecard = keycard.EntryBase()
+	basecard.type = "Test"
+	basecard.field_names = [ 'Name', 'User-ID', 'Workspace-ID', 'Domain', 'Time-To-Live', 'Expires']
+	basecard.set_fields({
+		'Name':'Corbin Smith',
+		'User-ID':'csmith',
+		'Workspace-ID':'4418bf6c-000b-4bb3-8111-316e72030468',
+		'Domain':'example.com',
+		'Time-To-Live':'7',
+		'Expires':'20201002',
+		'Custody-Signature':'0000000000',
+		'User-Signature':'1111111111',
+		'Organization-Signature':'2222222222',
+		'Entry-Signature':'3333333333'
+	})
+
+	expected_out = \
+		b'Type:Test\r\n' \
+		b'Name:Corbin Smith\r\n' \
+		b'User-ID:csmith\r\n' \
+		b'Workspace-ID:4418bf6c-000b-4bb3-8111-316e72030468\r\n' \
+		b'Domain:example.com\r\n' \
+		b'Time-To-Live:7\r\n' \
+		b'Expires:20201002\r\n' \
+		b'Custody-Signature:0000000000\r\n' \
+		b'User-Signature:1111111111\r\n' \
+		b'Organization-Signature:2222222222\r\n' \
+		b'Entry-Signature:3333333333\r\n'
+	
+	actual_out = basecard.make_bytestring(4)
+	assert actual_out == expected_out, "user byte string didn't match"
+
+
+
+def test_set_expiration():
+	'''Tests set_expiration()'''
+	card = keycard.EntryBase()
+	card.set_expiration(7)
+	expiration = datetime.datetime.utcnow() + datetime.timedelta(7)
+	assert card.fields['Expires'] == expiration.strftime("%Y%m%d"), "Expiration calculations failed"
+
+
 if __name__ == '__main__':
-	test_set()
+	test_make_bytestring()
