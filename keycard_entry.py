@@ -69,11 +69,36 @@ class EntryBase:
 
 		return RetVal(Unimplemented)
 
-	def make_bytestring(self, include_signatures : bool) -> bytes:	# pylint: disable=unused-argument,no-self-use
-		'''Method to be implemented by child classes. Returns a bytes object representing the 
-		entry'''
-		return b''
+	def make_bytestring(self, include_signatures : int) -> bytes:
+		'''Creates a byte string from the fields in the keycard. Because this doesn't use join(), 
+		it is not affected by Python's line ending handling, which is critical in ensuring that 
+		signatures are not invalidated. The second parameterm, include_signatures, specifies 
+		which signatures to include. 0 = None, 1 = Custody only, 2 = Custody + User, 3+ = all'''
+		lines = list()
+		if self.type:
+			lines.append(b':'.join([b'Type', self.type.encode()]))
+
+		for field in self.field_names:
+			if field in self.fields and self.fields[field]:
+				lines.append(b':'.join([field.encode(), self.fields[field].encode()]))
+		
+		if include_signatures > 0 and 'Custody' in self.signatures:
+			lines.append(b''.join([b'Custody-Signature:',
+							self.signatures['Custody'].encode()]))
+		if include_signatures > 1 and 'User' in self.signatures:
+			lines.append(b''.join([b'User-Signature:',
+							self.signatures['User'].encode()]))
+		if include_signatures > 2 and 'Organization' in self.signatures:
+			lines.append(b''.join([b'Organization-Signature:',
+							self.signatures['Organization'].encode()]))
+		if include_signatures > 3 and 'Entry' in self.signatures:
+			lines.append(b''.join([b'Entry-Signature:',
+							self.signatures['Entry'].encode()]))
+
+		lines.append(b'')
+		return b'\r\n'.join(lines)
 	
+
 	def set_expiration(self, numdays=-1):
 		'''Sets the expiration field using the specific form of ISO8601 format recommended. 
 		If not specified, organizational keycards expire 1 year from the present time and user 
