@@ -54,14 +54,19 @@ class EntryBase:
 		# Any kind of editing invalidates the signatures
 		self.signatures = dict()
 
-	def set_fields(self, fields: dict):
+	def set_fields(self, fields: dict) -> RetVal:
 		'''Takes a dictionary of fields to be assigned to the object. Any field which is not part 
 		of the official spec is assigned but otherwise ignored.'''
-		for field in fields:
-			self.fields[field] = fields[field]
+		for k,v in fields.items():
+			if k.endswith('Signature'):
+				sigparts = k.split('-', 1)
+				if sigparts[0] not in [ 'Custody', 'User', 'Organization', 'Entry' ]:
+					return RetVal(BadData, 'bad signature line %s' % sigparts[0])
+				self.signatures[sigparts[0]] = v
+			else:
+				self.fields[k] = v
 		
-		# Any kind of editing invalidates the signatures
-		self.signatures = dict()
+		return RetVal()
 	
 	def set(self, data: bytes) -> RetVal:
 		'''Sets the object's information from a bytestring'''
