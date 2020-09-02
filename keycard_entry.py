@@ -8,7 +8,8 @@ import os
 import nacl.public
 import nacl.signing
 
-from retval import RetVal, BadData, ExceptionThrown, Unimplemented
+from retval import RetVal, BadData, BadParameterValue, ExceptionThrown, ResourceExists, \
+		ResourceNotFound, Unimplemented
 
 UnsupportedKeycardType = 'UnsupportedKeycardType'
 InvalidKeycard = 'InvalidKeycard'
@@ -22,6 +23,48 @@ SignatureMissing = 'SignatureMissing'
 
 class ComplianceException(Exception):
 	'''Custom exception for spec compliance failures'''
+
+class AlgoString:
+	'''This class encapsulates code for working with strings associated with an algorithm. This 
+	includes hashes and encryption keys.'''
+	def __init__(self):
+		self.prefix = ''
+		self.data = ''
+	
+	def set(self, data: str) -> RetVal:
+		'''Initializes the instance from data passed to it. The string is expected to follow the 
+		format ALGORITHM:DATA, where DATA is assumed to be base85-encoded raw byte data'''
+		
+		parts = data.split(':', 1)
+		if len(parts) == 1:
+			return RetVal(BadParameterValue, 'data is not colon-separated')
+		
+		self.prefix = parts[0]
+		self.data = parts[1]
+		return RetVal()
+
+	def set_bytes(self, data: bytes) -> RetVal:
+		'''Initializesthe instance from a byte string'''
+		try:
+			return self.set(data.decode())
+		except Exception as e:
+			return RetVal(BadData, e)
+	
+	def __str__(self):
+		return '%s:%s' % (self.prefix, self.data)
+	
+	def as_bytes(self) -> bytes:
+		'''Returns the instance information as a byte string'''
+		return b'%s:%s' % (self.prefix, self.data)
+	
+	def raw_data(self) -> bytes:
+		'''Decodes the internal data and returns it as a byte string. Note that it will not 
+		throw an exception and will instead return an error.'''
+		try:
+			return base64.b85decode(self.data)
+		except Exception as e:
+			return RetVal(BadData, e)
+
 
 class EntryBase:
 	'''Base class for all code common to org and user cards'''
@@ -45,15 +88,83 @@ class EntryBase:
 			if field not in self.fields or not self.fields[field]:
 				return RetVal(RequiredFieldMissing, 'missing field %s' % field)
 		
-		# Ensure signature compliance also exist.
+		# Ensure signature compliance
 		for info in self.signature_info:
 			if info['optional']:
 				# Optional signatures, if present, may not be empty
 				if info['name'] in self.signatures and not self.signatures[info['name']]:
-					return RetVal(SignatureMissing, '%s-Signature' % sig)
+					return RetVal(SignatureMissing, '%s-Signature' % info['name'])
 			else:
 				if info['name'] not in self.signatures or not self.signatures[info['name']]:
-					return RetVal(SignatureMissing, '%s-Signature' % sig)
+					return RetVal(SignatureMissing, '%s-Signature' % info['name'])
+
+		return RetVal()
+	
+	def get_signature(self, sigtype: str) -> RetVal:
+		'''Retrieves the requested signature and type'''
+		if sigtype not in self.signatures:
+			return RetVal(ResourceNotFound, sigtype)
+		
+		if len(self.signatures[sigtype]) < 1:
+			return RetVal(SignatureMissing, sigtype)
+
+		parts = self.signatures[sigtype].split(':')
+		if len(parts) == 1:
+			return RetVal().set_value('signature', parts[0])
+		
+		if len(parts) == 2:
+			return RetVal().set_values({
+				'algorithm' : parts[0],
+				'signature' : parts[1]
+			})
+		
+		return RetVal(BadData, self.signatures[sigtype])
+	
+	def make_bytestring(self, include_signatures : int) -> bytes:
+		'''Creates a byte string from the fields in the keycard. Because this doesn't use join(), 
+		it is not affected by Python's line ending handling, which is critical in ensuring that 
+		signatures are not invalidated. The second parameterm, include_signatures, specifies 
+		which signatures to include. 0 = None, 1 = Custody only, 2 = Custody + User, 3+ = all'''
+		lines = list()
+		if self.type:
+			lines.append(b':'.join([b'Type', self.type.encode()]))
+
+		for field in self.field_names:
+			if field in self.fields and self.fields[field]:
+				lines.append(b':'.join([field.encode(), self.fields[field].encode()]))
+		
+		if include_signatures > 0 and 'Custody' in self.signatures:
+			lines.append(b''.join([b'Custody-Signature:',
+							self.signatures['Custody'].encode()]))
+		if include_signatures > 1 and 'User' in self.signatures:
+			lines.append(b''.join([b'User-Signature:',
+							self.signatures['User'].encode()]))
+		if include_signatures > 2 and 'Organization' in self.signatures:
+			lines.append(b''.join([b'Organization-Signature:',
+							self.signatures['Organization'].encode()]))
+		if include_signatures > 3 and 'Entry' in self.signatures:
+			lines.append(b''.join([b'Entry-Signature:',
+							self.signatures['Entry'].encode()]))
+
+		lines.append(b'')
+		return b'\r\n'.join(lines)
+	
+	def save(self, path : str, clobber = False) -> RetVal:
+		'''Saves to the specified path, forcing CRLF line endings to prevent any weird behavior 
+		caused by line endings invalidating signatures.'''
+
+		if not path:
+			return RetVal(BadParameterValue, 'path may not be empty')
+		
+		if os.path.exists(path) and not clobber:
+			return RetVal(ResourceExists)
+		
+		try:
+			with open(path, 'wb') as f:
+				f.write(self.make_bytestring(True))
+		
+		except Exception as e:
+			return RetVal(ExceptionThrown, str(e))
 
 		return RetVal()
 	
@@ -111,37 +222,7 @@ class EntryBase:
 			
 		return RetVal()
 
-	def make_bytestring(self, include_signatures : int) -> bytes:
-		'''Creates a byte string from the fields in the keycard. Because this doesn't use join(), 
-		it is not affected by Python's line ending handling, which is critical in ensuring that 
-		signatures are not invalidated. The second parameterm, include_signatures, specifies 
-		which signatures to include. 0 = None, 1 = Custody only, 2 = Custody + User, 3+ = all'''
-		lines = list()
-		if self.type:
-			lines.append(b':'.join([b'Type', self.type.encode()]))
-
-		for field in self.field_names:
-			if field in self.fields and self.fields[field]:
-				lines.append(b':'.join([field.encode(), self.fields[field].encode()]))
-		
-		if include_signatures > 0 and 'Custody' in self.signatures:
-			lines.append(b''.join([b'Custody-Signature:',
-							self.signatures['Custody'].encode()]))
-		if include_signatures > 1 and 'User' in self.signatures:
-			lines.append(b''.join([b'User-Signature:',
-							self.signatures['User'].encode()]))
-		if include_signatures > 2 and 'Organization' in self.signatures:
-			lines.append(b''.join([b'Organization-Signature:',
-							self.signatures['Organization'].encode()]))
-		if include_signatures > 3 and 'Entry' in self.signatures:
-			lines.append(b''.join([b'Entry-Signature:',
-							self.signatures['Entry'].encode()]))
-
-		lines.append(b'')
-		return b'\r\n'.join(lines)
-	
-
-	def set_expiration(self, numdays=-1):
+	def set_expiration(self, numdays=-1) -> RetVal:
 		'''Sets the expiration field using the specific form of ISO8601 format recommended. 
 		If not specified, organizational keycards expire 1 year from the present time and user 
 		keycards expire after 90 days. Other types of keycards return an error.'''
@@ -156,6 +237,28 @@ class EntryBase:
 		expiration = datetime.datetime.utcnow() + datetime.timedelta(numdays)
 		self.fields['Expires'] = expiration.strftime("%Y%m%d")
 		return RetVal()
+
+	def sign(self, signing_key: bytes, sigtype: str) -> RetVal:
+		'''Adds a signature to the  Note that for any change in the keycard fields, this 
+		call must be made afterward. Note that successive signatures are deleted, such that 
+		updating a User signature will delete the Organization signature which depends on it. The 
+		sigtype must be Custody, User, or Organization, and the type is case-sensitive.'''
+		if not signing_key:
+			return RetVal(BadParameterValue, 'signing key')
+		
+		sig_names = [x['name'] for x in self.signature_info]
+		if sigtype not in sig_names:
+			return RetVal(BadParameterValue, 'sigtype')
+		
+		# TODO: create signing key -- depends on AlgoString class implementation
+		#key = nacl.signing.SigningKey(signing_key)
+		
+		# TODO: delete all invalidated signatures
+
+		# TODO: Sign and attach signature
+		# signed = key.sign(self.make_bytestring(sig_map[sigtype]), Base85Encoder)
+		# self.signatures[sigtype] = 'ED25519:' + signed.signature.decode()
+		return RetVal(Unimplemented)
 
 
 class OrgEntry(EntryBase):
@@ -192,7 +295,6 @@ class OrgEntry(EntryBase):
 		
 		self.fields['Time-To-Live'] = '30'
 		self.set_expiration()
-
 
 class Base85Encoder:
 	'''Base85 encoder for PyNaCl library'''
