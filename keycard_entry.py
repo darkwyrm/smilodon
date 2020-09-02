@@ -31,6 +31,7 @@ class EntryBase:
 		self.required_fields = list()
 		self.type = ''
 		self.signatures = dict()
+		self.signature_info = list()
 
 	def is_compliant(self) -> RetVal:
 		'''Checks the fields to ensure that it meets spec requirements. If a field causes it 
@@ -44,6 +45,16 @@ class EntryBase:
 			if field not in self.fields or not self.fields[field]:
 				return RetVal(RequiredFieldMissing, 'missing field %s' % field)
 		
+		# Ensure signature compliance also exist.
+		for info in self.signature_info:
+			if info['optional']:
+				# Optional signatures, if present, may not be empty
+				if info['name'] in self.signatures and not self.signatures[info['name']]:
+					return RetVal(SignatureMissing, '%s-Signature' % sig)
+			else:
+				if info['name'] not in self.signatures or not self.signatures[info['name']]:
+					return RetVal(SignatureMissing, '%s-Signature' % sig)
+
 		return RetVal()
 	
 	def set_field(self, field_name: str, field_value: str):
@@ -145,6 +156,42 @@ class EntryBase:
 		expiration = datetime.datetime.utcnow() + datetime.timedelta(numdays)
 		self.fields['Expires'] = expiration.strftime("%Y%m%d")
 		return RetVal()
+
+
+class OrgEntry(EntryBase):
+	'''Class for managing organization keycard entries'''
+	
+	def __init__(self):
+		super().__init__()
+		self.type = 'Organization'
+		self.field_names = [
+			'Name',
+			'Contact-Admin',
+			'Contact-Abuse',
+			'Contact-Support',
+			'Language',
+			'Primary-Signing-Key',
+			'Secondary-Signing-Key',
+			'Encryption-Key',
+			'Time-To-Live',
+			'Expires',
+			'Hash-ID'
+		]
+		self.required_fields = [
+			'Name',
+			'Contact-Admin',
+			'Primary-Signing-Key',
+			'Encryption-Key',
+			'Time-To-Live',
+			'Expires'
+		]
+		self.signature_info = [ 
+			{ 'name' : 'Custody', 'optional' : True },
+			{ 'name' : 'Organization', 'optional' : False },
+		]
+		
+		self.fields['Time-To-Live'] = '30'
+		self.set_expiration()
 
 
 class Base85Encoder:
