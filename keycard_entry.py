@@ -125,7 +125,7 @@ class EntryBase:
 		
 		return RetVal(BadData, self.signatures[sigtype])
 	
-	def make_bytestring(self, include_signatures : int) -> bytes:
+	def make_bytestring(self, include_signatures : bool) -> bytes:
 		'''Creates a byte string from the fields in the keycard. Because this doesn't use join(), 
 		it is not affected by Python's line ending handling, which is critical in ensuring that 
 		signatures are not invalidated. The second parameterm, include_signatures, specifies 
@@ -138,18 +138,12 @@ class EntryBase:
 			if field in self.fields and self.fields[field]:
 				lines.append(b':'.join([field.encode(), self.fields[field].encode()]))
 		
-		if include_signatures > 0 and 'Custody' in self.signatures:
-			lines.append(b''.join([b'Custody-Signature:',
-							self.signatures['Custody'].encode()]))
-		if include_signatures > 1 and 'User' in self.signatures:
-			lines.append(b''.join([b'User-Signature:',
-							self.signatures['User'].encode()]))
-		if include_signatures > 2 and 'Organization' in self.signatures:
-			lines.append(b''.join([b'Organization-Signature:',
-							self.signatures['Organization'].encode()]))
-		if include_signatures > 3 and 'Entry' in self.signatures:
-			lines.append(b''.join([b'Entry-Signature:',
-							self.signatures['Entry'].encode()]))
+		if include_signatures:
+			sig_names = [x['name'] for x in self.signature_info]
+			for name in sig_names:
+				if name in self.signatures:
+					lines.append(b''.join([name.encode() + b'-Signature:',
+									self.signatures[name].encode()]))
 
 		lines.append(b'')
 		return b'\r\n'.join(lines)
@@ -271,7 +265,7 @@ class EntryBase:
 			if clear_sig:
 				self.signatures[name] = ''
 
-		signed = key.sign(self.make_bytestring(sigtype), Base85Encoder)
+		signed = key.sign(self.make_bytestring(sigtype, ), Base85Encoder)
 		self.signatures[sigtype] = 'ED25519:' + signed.signature.decode()
 		return RetVal()
 

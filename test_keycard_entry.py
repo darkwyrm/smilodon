@@ -88,6 +88,13 @@ def test_make_bytestring():
 	basecard = keycard.EntryBase()
 	basecard.type = "Test"
 	basecard.field_names = [ 'Name', 'User-ID', 'Workspace-ID', 'Domain', 'Time-To-Live', 'Expires']
+	basecard.signature_info = [
+		{ 'name':'Custody', 'optional':True },
+		{ 'name':'User', 'optional':False },
+		{ 'name':'Organization', 'optional':False },
+		{ 'name':'Entry', 'optional':False }
+	]
+
 	basecard.set_fields({
 		'Name':'Corbin Smith',
 		'User-ID':'csmith',
@@ -114,7 +121,7 @@ def test_make_bytestring():
 		b'Organization-Signature:2222222222\r\n' \
 		b'Entry-Signature:3333333333\r\n'
 	
-	actual_out = basecard.make_bytestring(4)
+	actual_out = basecard.make_bytestring(True)
 	assert actual_out == expected_out, "user byte string didn't match"
 
 
@@ -164,6 +171,7 @@ def test_sign():
 	rv = basecard.sign(keystring, 'User')
 	assert not rv.error(), 'Unexpected RetVal error %s' % rv.error()
 	assert basecard.signatures['User'], 'entry failed to user sign'
+	# TODO: add this test once we can make entry files again
 	#assert basecard.signatures['User'] == expected_sig, "entry did not yield the expected signature"
 
 
