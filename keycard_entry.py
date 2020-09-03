@@ -126,11 +126,11 @@ class EntryBase:
 		
 		return RetVal(BadData, self.signatures[sigtype])
 	
-	def make_bytestring(self, include_signatures : bool) -> bytes:
+	def make_bytestring(self, include_signatures : int) -> bytes:
 		'''Creates a byte string from the fields in the keycard. Because this doesn't use join(), 
 		it is not affected by Python's line ending handling, which is critical in ensuring that 
 		signatures are not invalidated. The second parameterm, include_signatures, specifies 
-		which signatures to include. 0 = None, 1 = Custody only, 2 = Custody + User, 3+ = all'''
+		how many signatures to include. Passing a negative number specifies all signatures.'''
 		lines = list()
 		if self.type:
 			lines.append(b':'.join([b'Type', self.type.encode()]))
@@ -139,12 +139,15 @@ class EntryBase:
 			if field in self.fields and self.fields[field]:
 				lines.append(b':'.join([field.encode(), self.fields[field].encode()]))
 		
-		if include_signatures:
-			sig_names = [x['name'] for x in self.signature_info]
-			for name in sig_names:
-				if name in self.signatures and self.signatures[name]:
-					lines.append(b''.join([name.encode() + b'-Signature:',
-									self.signatures[name].encode()]))
+		if include_signatures > len(self.signature_info) or include_signatures < 0:
+			include_signatures = len(self.signature_info)
+		
+		sig_names = [x['name'] for x in self.signature_info]
+		for i in range(include_signatures):
+			name = sig_names[i]
+			if name in self.signatures and self.signatures[name]:
+				lines.append(b''.join([name.encode() + b'-Signature:',
+								self.signatures[name].encode()]))
 
 		lines.append(b'')
 		return b'\r\n'.join(lines)
@@ -161,7 +164,7 @@ class EntryBase:
 		
 		try:
 			with open(path, 'wb') as f:
-				f.write(self.make_bytestring(True))
+				f.write(self.make_bytestring(-1))
 		
 		except Exception as e:
 			return RetVal(ExceptionThrown, str(e))
@@ -258,14 +261,19 @@ class EntryBase:
 		# Clear all signatures which follow the current one. This expects that the signature_info
 		# field lists the signatures in the order that they are required to appear.		
 		clear_sig = False
-		for name in sig_names:
+		sigtype_index = 0
+
+		# We really do need to use an index here instead of just an iterator. Sheesh.
+		for i in range(len(sig_names)): # pylint: disable=consider-using-enumerate
+			name = sig_names[i]
 			if name == sigtype:
 				clear_sig = True
+				sigtype_index = i
 
 			if clear_sig:
 				self.signatures[name] = ''
 
-		signed = key.sign(self.make_bytestring(True), Base85Encoder)
+		signed = key.sign(self.make_bytestring(sigtype_index + 1), Base85Encoder)
 		self.signatures[sigtype] = 'ED25519:' + signed.signature.decode()
 		return RetVal()
 
@@ -275,7 +283,8 @@ class EntryBase:
 		if not verify_key:
 			return RetVal(BadParameterValue, 'missing verify key')
 		
-		if sigtype not in ['Custody', 'User', 'Organization', 'Entry']:
+		sig_names = [x['name'] for x in self.signature_info]
+		if sigtype not in sig_names:
 			return RetVal(BadParameterValue, 'bad signature type')
 		
 		if verify_key.prefix != 'ED25519':
@@ -295,7 +304,7 @@ class EntryBase:
 			return RetVal(ExceptionThrown, e)
 
 		try:
-			data = self.make_bytestring(True)
+			data = self.make_bytestring(sig_names.index(sigtype))
 			vkey.verify(data, sig.raw_data())
 		except nacl.exceptions.BadSignatureError:
 			return RetVal(InvalidKeycard)

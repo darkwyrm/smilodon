@@ -121,7 +121,7 @@ def test_make_bytestring():
 		b'Organization-Signature:2222222222\r\n' \
 		b'Entry-Signature:3333333333\r\n'
 	
-	actual_out = basecard.make_bytestring(True)
+	actual_out = basecard.make_bytestring(4)
 	assert actual_out == expected_out, "user byte string didn't match"
 
 
@@ -177,11 +177,9 @@ def test_sign():
 	assert basecard.signatures['User'] == expected_sig, "entry did not yield the expected signature"
 
 
-def test_usercard_verify():
-	'''Tests the signing of a user keycard'''
+def test_verify():
+	'''Tests the signing of a test keycard entry'''
 	skey = nacl.signing.SigningKey(b'{Ue^0)?k`s(>pNG&Wg9f5b;VHN1^PC*c4-($G#>}', Base85Encoder)
-	skeystring = AlgoString()
-	skeystring.set('ED25519:' + base64.b85encode(skey.encode()).decode())
 	# crskey = nacl.signing.SigningKey(b'GS30y3fdJX0H7t&p(!m3oXqlZI1ghz+o!B7Y92Y%', Base85Encoder)
 	# crekey = nacl.public.PrivateKey(b'VyFX5PC~?eL5)>q|6W7ciRrOJw$etlej<tY$f+t_', Base85Encoder)
 	# ekey = nacl.public.PrivateKey(b'Wsx6BC(HP~goS-C_`K=6Daqr97kapfc=vQUzi?KI', Base85Encoder)
@@ -211,9 +209,15 @@ def test_usercard_verify():
 		{ 'name':'Entry', 'optional':False }
 	]
 
-	rv = basecard.sign(skeystring, 'User')
+	keystring = AlgoString()
+	keystring.set('ED25519:' + base64.b85encode(skey.encode()).decode())
+	rv = basecard.sign(keystring, 'User')
 	assert not rv.error(), 'Unexpected RetVal error %s' % rv.error()
 	assert basecard.signatures['User'], 'entry failed to user sign'
+	
+	expected_sig = \
+		'ED25519:&7=iP?(=08IB44fog$pB7C*4(s9+7DRe=p(+1Mnoh{|avuYNAFDHG-H%0dFmYmyQL3DtPhup-*n?doI+'
+	assert basecard.signatures['User'] == expected_sig, "entry did not yield the expected signature"
 
 	vkey = nacl.signing.VerifyKey(skey.verify_key.encode())
 	vkeystring = AlgoString()
