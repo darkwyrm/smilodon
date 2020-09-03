@@ -67,6 +67,7 @@ class AlgoString:
 		return self.prefix and self.data
 	
 	def make_empty(self):
+		'''Makes the entry empty'''
 		self.prefix = ''
 		self.data = ''
 
@@ -264,10 +265,8 @@ class EntryBase:
 			if clear_sig:
 				self.signatures[name] = ''
 
-		print(self.make_bytestring(True))
 		signed = key.sign(self.make_bytestring(True), Base85Encoder)
 		self.signatures[sigtype] = 'ED25519:' + signed.signature.decode()
-		print(self.signatures[sigtype])
 		return RetVal()
 
 	def verify(self, verify_key: AlgoString, sigtype: str) -> RetVal:
