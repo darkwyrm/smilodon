@@ -1,12 +1,14 @@
 '''This module tests the KeyCard class'''
+import base64
 import datetime
 import os
 import shutil
 import time
 
-#import nacl.signing
+import nacl.signing
 
 import keycard_entry as keycard
+from keycard_entry import AlgoString, Base85Encoder
 
 # Pylint doesn't detect the use of this import:
 from retval import RetVal # pylint: disable=unused-import
@@ -123,6 +125,47 @@ def test_set_expiration():
 	card.set_expiration(7)
 	expiration = datetime.datetime.utcnow() + datetime.timedelta(7)
 	assert card.fields['Expires'] == expiration.strftime("%Y%m%d"), "Expiration calculations failed"
+
+
+def test_sign():
+	'''Tests signing of a keycard entry'''
+	skey = nacl.signing.SigningKey(b'{Ue^0)?k`s(>pNG&Wg9f5b;VHN1^PC*c4-($G#>}', Base85Encoder)
+	# crskey = nacl.signing.SigningKey(b'GS30y3fdJX0H7t&p(!m3oXqlZI1ghz+o!B7Y92Y%', Base85Encoder)
+	# crekey = nacl.public.PrivateKey(b'VyFX5PC~?eL5)>q|6W7ciRrOJw$etlej<tY$f+t_', Base85Encoder)
+	# ekey = nacl.public.PrivateKey(b'Wsx6BC(HP~goS-C_`K=6Daqr97kapfc=vQUzi?KI', Base85Encoder)
+
+	basecard = keycard.EntryBase()
+	basecard.type = "Test"
+	basecard.field_names = [ 'Name', 'Workspace-ID', 'Domain', 'Contact-Request-Signing-Key',
+			'Contact-Request-Encryption-Key', 'Public-Encryption-Key', 'Expires']
+	basecard.set_fields({
+		'Name':'Corbin Simons',
+		'Workspace-ID':'4418bf6c-000b-4bb3-8111-316e72030468',
+		'Domain':'example.com',
+		'Contact-Request-Signing-Key':'ED25519:7dfD==!Jmt4cDtQDBxYa7(dV|N$}8mYwe$=RZuW|',
+		'Contact-Request-Encryption-Key':'CURVE25519:yBZ0{1fE9{2<b~#i^R+JT-yh-y5M(Wyw_)}_SZOn',
+		'Public-Encryption-Key':'CURVE25519:_`UC|vltn_%P5}~vwV^)oY){#uvQSSy(dOD_l(yE',
+		'Expires':'20201002',
+
+		# These junk signatures will end up being cleared when sign('User') is called
+		'User-Signature':'1111111111',
+		'Organization-Signature':'2222222222',
+		'Entry-Signature':'3333333333'
+	})
+	basecard.signature_info = [
+		{ 'name':'Custody', 'optional':True },
+		{ 'name':'User', 'optional':False },
+		{ 'name':'Organization', 'optional':False },
+		{ 'name':'Entry', 'optional':False }
+	]
+
+	keystring = AlgoString()
+	keystring.set('ED25519:' + base64.b85encode(skey.encode()).decode())
+	rv = basecard.sign(keystring, 'User')
+	assert not rv.error(), 'Unexpected RetVal error %s' % rv.error()
+	assert basecard.signatures['User'], 'entry failed to user sign'
+	#assert basecard.signatures['User'] == expected_sig, "entry did not yield the expected signature"
+
 
 
 if __name__ == '__main__':

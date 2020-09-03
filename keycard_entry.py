@@ -9,9 +9,10 @@ import nacl.public
 import nacl.signing
 
 from retval import RetVal, BadData, BadParameterValue, ExceptionThrown, ResourceExists, \
-		ResourceNotFound, Unimplemented
+		ResourceNotFound
 
 UnsupportedKeycardType = 'UnsupportedKeycardType'
+UnsupportedEncryptionType = 'UnsupportedEncryptionType'
 InvalidKeycard = 'InvalidKeycard'
 InvalidEntry = 'InvalidEntry'
 
@@ -58,12 +59,16 @@ class AlgoString:
 		return b'%s:%s' % (self.prefix, self.data)
 	
 	def raw_data(self) -> bytes:
-		'''Decodes the internal data and returns it as a byte string. Note that it will not 
-		throw an exception and will instead return an error.'''
-		try:
-			return base64.b85decode(self.data)
-		except Exception as e:
-			return RetVal(BadData, e)
+		'''Decodes the internal data and returns it as a byte string.'''
+		return base64.b85decode(self.data)
+	
+	def is_valid(self) -> bool:
+		'''Returns false if the prefix and/or the data is missing'''
+		return self.prefix and self.data
+	
+	def make_empty(self):
+		self.prefix = ''
+		self.data = ''
 
 
 class EntryBase:
@@ -238,27 +243,37 @@ class EntryBase:
 		self.fields['Expires'] = expiration.strftime("%Y%m%d")
 		return RetVal()
 
-	def sign(self, signing_key: bytes, sigtype: str) -> RetVal:
+	def sign(self, signing_key: AlgoString, sigtype: str) -> RetVal:
 		'''Adds a signature to the  Note that for any change in the keycard fields, this 
 		call must be made afterward. Note that successive signatures are deleted, such that 
 		updating a User signature will delete the Organization signature which depends on it. The 
 		sigtype must be Custody, User, or Organization, and the type is case-sensitive.'''
-		if not signing_key:
+		if not signing_key.is_valid():
 			return RetVal(BadParameterValue, 'signing key')
+		
+		if signing_key.prefix != 'ED25519':
+			return RetVal(UnsupportedEncryptionType, signing_key.prefix)
 		
 		sig_names = [x['name'] for x in self.signature_info]
 		if sigtype not in sig_names:
 			return RetVal(BadParameterValue, 'sigtype')
 		
-		# TODO: create signing key -- depends on AlgoString class implementation
-		#key = nacl.signing.SigningKey(signing_key)
-		
-		# TODO: delete all invalidated signatures
+		key = nacl.signing.SigningKey(signing_key.raw_data())
 
-		# TODO: Sign and attach signature
-		# signed = key.sign(self.make_bytestring(sig_map[sigtype]), Base85Encoder)
-		# self.signatures[sigtype] = 'ED25519:' + signed.signature.decode()
-		return RetVal(Unimplemented)
+		# Clear all signatures which follow the current one. This expects that the signature_info
+		# field lists the signatures in the order that they are required to appear.		
+		clear_sig = False
+		for name in sig_names:
+			if name == sigtype:
+				clear_sig = True
+				continue
+
+			if clear_sig:
+				self.signatures[name] = ''
+
+		signed = key.sign(self.make_bytestring(sigtype), Base85Encoder)
+		self.signatures[sigtype] = 'ED25519:' + signed.signature.decode()
+		return RetVal()
 
 
 class OrgEntry(EntryBase):
@@ -290,7 +305,7 @@ class OrgEntry(EntryBase):
 		]
 		self.signature_info = [ 
 			{ 'name' : 'Custody', 'optional' : True },
-			{ 'name' : 'Organization', 'optional' : False },
+			{ 'name' : 'Organization', 'optional' : False }
 		]
 		
 		self.fields['Time-To-Live'] = '30'
