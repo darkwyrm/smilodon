@@ -269,6 +269,39 @@ class EntryBase:
 		self.signatures[sigtype] = 'ED25519:' + signed.signature.decode()
 		return RetVal()
 
+	def verify(self, verify_key: AlgoString, sigtype: str) -> RetVal:
+		'''Verifies a signature, given a verification key'''
+	
+		if not verify_key:
+			return RetVal(BadParameterValue, 'missing verify key')
+		
+		if sigtype not in ['Custody', 'User', 'Organization', 'Entry']:
+			return RetVal(BadParameterValue, 'bad signature type')
+		
+		if verify_key.prefix != 'ED25519':
+			return RetVal(UnsupportedEncryptionType, verify_key.prefix)
+
+		if sigtype in self.signatures and not self.signatures[sigtype]:
+			return RetVal(NotCompliant, 'empty signature ' + sigtype)
+		
+		sig = AlgoString()
+		status = sig.set(self.signatures[sigtype])
+		if status.error():
+			return status
+
+		try:
+			vkey = nacl.signing.VerifyKey(verify_key.raw_data())
+		except Exception as e:
+			return RetVal(ExceptionThrown, e)
+
+		try:
+			data = self.make_bytestring(True)
+			vkey.verify(data, sig.raw_data())
+		except nacl.exceptions.BadSignatureError:
+			return RetVal(InvalidKeycard)
+		
+		return RetVal()
+
 
 class OrgEntry(EntryBase):
 	'''Class for managing organization keycard entries'''
