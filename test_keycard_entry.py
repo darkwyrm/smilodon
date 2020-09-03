@@ -171,8 +171,10 @@ def test_sign():
 	rv = basecard.sign(keystring, 'User')
 	assert not rv.error(), 'Unexpected RetVal error %s' % rv.error()
 	assert basecard.signatures['User'], 'entry failed to user sign'
-	# TODO: add this test once we can make entry files again
-	#assert basecard.signatures['User'] == expected_sig, "entry did not yield the expected signature"
+	
+	expected_sig = \
+		'ED25519:&7=iP?(=08IB44fog$pB7C*4(s9+7DRe=p(+1Mnoh{|avuYNAFDHG-H%0dFmYmyQL3DtPhup-*n?doI+'
+	assert basecard.signatures['User'] == expected_sig, "entry did not yield the expected signature"
 
 
 def test_usercard_verify():
@@ -251,4 +253,4 @@ def test_usercard_verify():
 
 
 if __name__ == '__main__':
-	test_usercard_verify()
+	test_sign()

@@ -141,7 +141,7 @@ class EntryBase:
 		if include_signatures:
 			sig_names = [x['name'] for x in self.signature_info]
 			for name in sig_names:
-				if name in self.signatures:
+				if name in self.signatures and self.signatures[name]:
 					lines.append(b''.join([name.encode() + b'-Signature:',
 									self.signatures[name].encode()]))
 
@@ -260,13 +260,14 @@ class EntryBase:
 		for name in sig_names:
 			if name == sigtype:
 				clear_sig = True
-				continue
 
 			if clear_sig:
 				self.signatures[name] = ''
 
-		signed = key.sign(self.make_bytestring(sigtype, ), Base85Encoder)
+		print(self.make_bytestring(True))
+		signed = key.sign(self.make_bytestring(True), Base85Encoder)
 		self.signatures[sigtype] = 'ED25519:' + signed.signature.decode()
+		print(self.signatures[sigtype])
 		return RetVal()
 
 	def verify(self, verify_key: AlgoString, sigtype: str) -> RetVal:
