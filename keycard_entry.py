@@ -86,7 +86,7 @@ class EntryBase:
 		'''Checks the fields to ensure that it meets spec requirements. If a field causes it 
 		to be noncompliant, the noncompliant field is also returned'''
 
-		if self.type != 'User' and self.type != 'Organization':
+		if self.type not in [ 'User', 'Organization']:
 			return RetVal(UnsupportedKeycardType, 'unsupported card type %s' % self.type)
 		
 		# Check for existence of required fields
