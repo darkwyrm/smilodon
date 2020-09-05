@@ -179,8 +179,16 @@ def test_sign():
 
 def test_verify():
 	'''Tests the signing of a test keycard entry'''
+	# This is an extensive test because while it doesn't utilize all the fields that a standard
+	# entry would normally have, it tests signing and verification of user, org, and entry
+	# signatures. This test is also only intended to confirm success states of the method.
+
+	# User signing key
 	skey = nacl.signing.SigningKey(b'{Ue^0)?k`s(>pNG&Wg9f5b;VHN1^PC*c4-($G#>}', Base85Encoder)
-	# crskey = nacl.signing.SigningKey(b'GS30y3fdJX0H7t&p(!m3oXqlZI1ghz+o!B7Y92Y%', Base85Encoder)
+
+	# Organization signing key
+	oskey = nacl.signing.SigningKey(b'GS30y3fdJX0H7t&p(!m3oXqlZI1ghz+o!B7Y92Y%', Base85Encoder)
+
 	# crekey = nacl.public.PrivateKey(b'VyFX5PC~?eL5)>q|6W7ciRrOJw$etlej<tY$f+t_', Base85Encoder)
 	# ekey = nacl.public.PrivateKey(b'Wsx6BC(HP~goS-C_`K=6Daqr97kapfc=vQUzi?KI', Base85Encoder)
 
@@ -209,6 +217,8 @@ def test_verify():
 		{ 'name':'Entry', 'optional':False }
 	]
 
+	# User sign and verify
+
 	keystring = AlgoString()
 	keystring.set('ED25519:' + base64.b85encode(skey.encode()).decode())
 	rv = basecard.sign(keystring, 'User')
@@ -217,7 +227,8 @@ def test_verify():
 	
 	expected_sig = \
 		'ED25519:&7=iP?(=08IB44fog$pB7C*4(s9+7DRe=p(+1Mnoh{|avuYNAFDHG-H%0dFmYmyQL3DtPhup-*n?doI+'
-	assert basecard.signatures['User'] == expected_sig, "entry did not yield the expected signature"
+	assert basecard.signatures['User'] == expected_sig, \
+			"entry did not yield the expected user signature"
 
 	vkey = nacl.signing.VerifyKey(skey.verify_key.encode())
 	vkeystring = AlgoString()
@@ -227,33 +238,43 @@ def test_verify():
 	rv = basecard.verify(vkeystring, 'User')
 	assert not rv.error(), 'entry failed to user verify'
 
-	# This throws an exception if the data doesn't verify
-	# vkey.verify(basecard.make_bytestring(True), Base85Encoder.decode(card.signatures['User'].split(':')[1]))
+	# Organization sign and verify
 
-	# rv = card.verify(skey.verify_key.encode(), 'User')
-	# assert not rv.error(), 'keycard failed to user verify'
+	okeystring = AlgoString()
+	okeystring.set('ED25519:' + base64.b85encode(oskey.encode()).decode())
+	rv = basecard.sign(okeystring, 'Organization')
+	assert not rv.error(), 'Unexpected RetVal error %s' % rv.error()
+	assert basecard.signatures['Organization'], 'entry failed to user sign'
 
-	# org_skey = nacl.signing.SigningKey(b'JCfIfVhvn|k4Q%M2>@)ENbX%fE_+0Ml2%oz<Mss?',Base85Encoder)
-	# rv = card.sign(org_skey.encode(), 'Organization')
-	# assert not rv.error(), 'Unexpected RetVal error'
-	# assert card.signatures['Organization'], 'keycard failed to org sign'
+	# TODO: Generate expected signature and enable this assertion	
+	# expected_sig = \
+	# 	'ED25519:&7=iP?(=08IB44fog$pB7C*4(s9+7DRe=p(+1Mnoh{|avuYNAFDHG-H%0dFmYmyQL3DtPhup-*n?doI+'
+	# assert basecard.signatures['Organization'] == expected_sig, \
+	# 		"entry did not yield the expected org signature"
+	
 
-	# rv = card.verify(org_skey.verify_key.encode(), 'Organization')
-	# assert not rv.error(), 'keycard failed to org verify'
+	ovkey = nacl.signing.VerifyKey(oskey.verify_key.encode())
+	ovkeystring = AlgoString()
+	ovkeystring.prefix = 'ED25519'
+	ovkeystring.data = base64.b85encode(ovkey.encode()).decode()
 
-	# test_card_path = os.path.join(test_folder, 'test_user_card.keycard')
-	# rv = card.save(test_card_path)
-	# assert not rv.error(), "failed to save test keycard"
+	rv = basecard.verify(ovkeystring, 'Organization')
+	assert not rv.error(), 'entry failed to org verify'
 
-	# rv = keycard.load_keycard(test_card_path)
-	# assert not rv.error(), "failed to load test keycard"
-	# testcard = rv['card']
+	# Entry sign and verify
 
-	# rv = testcard.verify(skey.verify_key.encode(), 'User')
-	# assert not rv.error(), 'test keycard failed to user verify'
+	rv = basecard.sign(keystring, 'Entry')
+	assert not rv.error(), 'Unexpected RetVal error %s' % rv.error()
+	assert basecard.signatures['Entry'], 'entry failed to entry sign'
+	
+	# TODO: Generate expected signature and enable this assertion	
+	# expected_sig = \
+	# 	'ED25519:&7=iP?(=08IB44fog$pB7C*4(s9+7DRe=p(+1Mnoh{|avuYNAFDHG-H%0dFmYmyQL3DtPhup-*n?doI+'
+	# assert basecard.signatures['Entry'] == expected_sig, \
+	# 		"entry did not yield the expected entry signature"
 
-	# rv = testcard.verify(org_skey.verify_key.encode(), 'Organization')
-	# assert not rv.error(), 'test keycard failed to org verify'
+	rv = basecard.verify(vkeystring, 'Entry')
+	assert not rv.error(), 'entry failed to entry verify'
 
 
 if __name__ == '__main__':
