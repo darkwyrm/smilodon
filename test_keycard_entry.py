@@ -49,15 +49,6 @@ def test_set_fields():
 			'noncompliant-field' in card.fields, "set_fields() didn't work right"
 
 
-# TODO: Implement test_is_compliant() once subclasses are implemented
-def test_is_compliant():
-	'''Tests compliance testing for the base class and its subclasses'''
-	
-	basecard = keycard.EntryBase()
-	status = basecard.is_compliant()
-	assert status.error(), "EntryBase met compliance and shouldn't"
-
-
 def test_set():
 	'''Tests set()'''
 
@@ -277,5 +268,112 @@ def test_verify():
 	assert not rv.error(), 'entry failed to entry verify'
 
 
-if __name__ == '__main__':
-	test_sign()
+def test_base_is_compliant():
+	'''Tests compliance testing for the base class'''
+	basecard = keycard.EntryBase()
+	status = basecard.is_compliant()
+	assert status.error(), "EntryBase met compliance and shouldn't"
+
+
+def test_is_compliant_user():
+	'''Tests compliance testing for the UserEntry class'''
+
+	# User signing key
+	skey = nacl.signing.SigningKey(b'{Ue^0)?k`s(>pNG&Wg9f5b;VHN1^PC*c4-($G#>}', Base85Encoder)
+
+	# Organization signing key
+	oskey = nacl.signing.SigningKey(b'GS30y3fdJX0H7t&p(!m3oXqlZI1ghz+o!B7Y92Y%', Base85Encoder)
+
+	usercard = keycard.UserEntry()
+	usercard.type = "Test"
+	usercard.set_fields({
+		'Name':'Corbin Simons',
+		'Workspace-ID':'4418bf6c-000b-4bb3-8111-316e72030468',
+		'User-ID':'csimons',
+		'Domain':'example.com',
+		'Contact-Request-Signing-Key':'ED25519:7dfD==!Jmt4cDtQDBxYa7(dV|N$}8mYwe$=RZuW|',
+		'Contact-Request-Encryption-Key':'CURVE25519:yBZ0{1fE9{2<b~#i^R+JT-yh-y5M(Wyw_)}_SZOn',
+		'Public-Encryption-Key':'CURVE25519:_`UC|vltn_%P5}~vwV^)oY){#uvQSSy(dOD_l(yE'
+	})
+
+	# User sign and verify
+
+	keystring = AlgoString()
+	keystring.set('ED25519:' + base64.b85encode(skey.encode()).decode())
+	rv = usercard.sign(keystring, 'User')
+	assert not rv.error(), 'Unexpected RetVal error %s / %s' % (rv.error(), rv.info())
+	assert usercard.signatures['User'], 'entry failed to user sign'
+	
+	vkey = nacl.signing.VerifyKey(skey.verify_key.encode())
+	vkeystring = AlgoString()
+	vkeystring.prefix = 'ED25519'
+	vkeystring.data = base64.b85encode(vkey.encode()).decode()
+
+	rv = usercard.verify(vkeystring, 'User')
+	assert not rv.error(), 'entry failed to user verify'
+
+	# Organization sign and verify
+
+	okeystring = AlgoString()
+	okeystring.set('ED25519:' + base64.b85encode(oskey.encode()).decode())
+	rv = usercard.sign(okeystring, 'Organization')
+	assert not rv.error(), 'Unexpected RetVal error %s' % rv.error()
+	assert usercard.signatures['Organization'], 'entry failed to user sign'
+
+	ovkey = nacl.signing.VerifyKey(oskey.verify_key.encode())
+	ovkeystring = AlgoString()
+	ovkeystring.prefix = 'ED25519'
+	ovkeystring.data = base64.b85encode(ovkey.encode()).decode()
+
+	rv = usercard.verify(ovkeystring, 'Organization')
+	assert not rv.error(), 'entry failed to org verify'
+
+	# Entry sign and verify
+
+	rv = usercard.sign(keystring, 'Entry')
+	assert not rv.error(), 'Unexpected RetVal error %s' % rv.error()
+	assert usercard.signatures['Entry'], 'entry failed to entry sign'
+	
+	rv = usercard.verify(vkeystring, 'Entry')
+	assert not rv.error(), 'entry failed to entry verify'
+
+	status = usercard.is_compliant()
+	assert status.error(), "UserEntry wasn't compliant"
+
+
+def test_is_compliant_org():
+	'''Tests compliance testing for the OrgEntry class'''
+
+	# Organization signing key
+	oskey = nacl.signing.SigningKey(b'GS30y3fdJX0H7t&p(!m3oXqlZI1ghz+o!B7Y92Y%', Base85Encoder)
+
+	orgcard = keycard.UserEntry()
+	orgcard.type = "Test"
+	orgcard.set_fields({
+		'Name':'Acme Widgets, Inc',
+		'Contact-Admin':'admin/example.com',
+		'Contact-Abuse':'abuse/example.com',
+		'Language':'en',
+		'Primary-Signing-Key':'ED25519:7dfD==!Jmt4cDtQDBxYa7(dV|N$}8mYwe$=RZuW|',
+		'Encryption-Key':'CURVE25519:_`UC|vltn_%P5}~vwV^)oY){#uvQSSy(dOD_l(yE'
+	})
+
+	# sign and verify
+
+	okeystring = AlgoString()
+	okeystring.set('ED25519:' + base64.b85encode(oskey.encode()).decode())
+	rv = orgcard.sign(okeystring, 'Organization')
+	assert not rv.error(), 'Unexpected RetVal error %s' % rv.error()
+	assert orgcard.signatures['Organization'], 'entry failed to user sign'
+
+	ovkey = nacl.signing.VerifyKey(oskey.verify_key.encode())
+	ovkeystring = AlgoString()
+	ovkeystring.prefix = 'ED25519'
+	ovkeystring.data = base64.b85encode(ovkey.encode()).decode()
+	print(ovkeystring)
+
+	rv = orgcard.verify(ovkeystring, 'Organization')
+	assert not rv.error(), 'entry failed to org verify'
+
+	status = orgcard.is_compliant()
+	assert status.error(), "OrgEntry wasn't compliant"
