@@ -347,6 +347,44 @@ class OrgEntry(EntryBase):
 		self.fields['Time-To-Live'] = '30'
 		self.set_expiration()
 
+
+class UserEntry(EntryBase):
+	'''Represents a user keycard entry'''
+	def __init__(self):
+		super().__init__()
+		self.type = 'User'
+		self.field_names = [
+			'Name',
+			'Workspace-ID',
+			'User-ID',
+			'Domain',
+			'Contact-Request-Signing-Key',
+			'Contact-Request-Encryption-Key',
+			'Public-Encryption-Key',
+			'Alternate-Encryption-Key',
+			'Time-To-Live',
+			'Expires'
+		]
+		self.required_fields = [
+			'Workspace-ID',
+			'Domain',
+			'Contact-Request-Signing-Key',
+			'Contact-Request-Encryption-Key',
+			'Public-Encryption-Key',
+			'Time-To-Live',
+			'Expires'
+		]
+		self.signature_info = [ 
+			{ 'name' : 'Custody', 'optional' : True },
+			{ 'name' : 'User', 'optional' : False },
+			{ 'name' : 'Organization', 'optional' : False },
+			{ 'name' : 'Entry', 'optional' : False }
+		]
+		
+		self.fields['Time-To-Live'] = '7'
+		self.set_expiration()
+
+
 class Base85Encoder:
 	'''Base85 encoder for PyNaCl library'''
 	@staticmethod
