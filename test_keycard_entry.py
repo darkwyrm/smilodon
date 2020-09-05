@@ -285,7 +285,6 @@ def test_is_compliant_user():
 	oskey = nacl.signing.SigningKey(b'GS30y3fdJX0H7t&p(!m3oXqlZI1ghz+o!B7Y92Y%', Base85Encoder)
 
 	usercard = keycard.UserEntry()
-	usercard.type = "Test"
 	usercard.set_fields({
 		'Name':'Corbin Simons',
 		'Workspace-ID':'4418bf6c-000b-4bb3-8111-316e72030468',
@@ -338,7 +337,7 @@ def test_is_compliant_user():
 	assert not rv.error(), 'entry failed to entry verify'
 
 	status = usercard.is_compliant()
-	assert status.error(), "UserEntry wasn't compliant"
+	assert not status.error(), "UserEntry wasn't compliant"
 
 
 def test_is_compliant_org():
@@ -347,8 +346,7 @@ def test_is_compliant_org():
 	# Organization signing key
 	oskey = nacl.signing.SigningKey(b'GS30y3fdJX0H7t&p(!m3oXqlZI1ghz+o!B7Y92Y%', Base85Encoder)
 
-	orgcard = keycard.UserEntry()
-	orgcard.type = "Test"
+	orgcard = keycard.OrgEntry()
 	orgcard.set_fields({
 		'Name':'Acme Widgets, Inc',
 		'Contact-Admin':'admin/example.com',
@@ -376,4 +374,4 @@ def test_is_compliant_org():
 	assert not rv.error(), 'entry failed to org verify'
 
 	status = orgcard.is_compliant()
-	assert status.error(), "OrgEntry wasn't compliant"
+	assert not status.error(), "OrgEntry wasn't compliant"
