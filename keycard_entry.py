@@ -9,7 +9,7 @@ import nacl.public
 import nacl.signing
 
 from retval import RetVal, BadData, BadParameterValue, ExceptionThrown, ResourceExists, \
-		ResourceNotFound
+		ResourceNotFound, Unimplemented
 
 UnsupportedKeycardType = 'UnsupportedKeycardType'
 UnsupportedEncryptionType = 'UnsupportedEncryptionType'
@@ -383,6 +383,41 @@ class UserEntry(EntryBase):
 		
 		self.fields['Time-To-Live'] = '7'
 		self.set_expiration()
+
+
+class Keycard:
+	'''Encapsulates a chain of keycard entries and higher-level management methods'''
+	def __init__(self, cardtype = ''):
+		self.type = cardtype
+		self.entries = list()
+	
+	def load(self, path: str) -> RetVal:
+		'''Loads a keycard from a file'''
+		return RetVal(Unimplemented)
+
+	def save(self, path: str, clobber: bool) -> RetVal:
+		'''Saves a keycard to a file'''
+		if not path:
+			return RetVal(BadParameterValue, 'path may not be empty')
+		
+		if os.path.exists(path) and not clobber:
+			return RetVal(ResourceExists)
+			
+		try:
+			with open(path, 'wb') as f:
+				for entry in self.entries:
+					f.write(b'----- BEGIN ENTRY -----\r\n')
+					f.write(entry.make_bytestring(-1))
+					f.write(b'----- END ENTRY -----\r\n')
+			
+		except Exception as e:
+			return RetVal(ExceptionThrown, str(e))
+
+		return RetVal()
+	
+	def verify(self) -> RetVal:
+		'''Verifies the card's entire chain of entries'''
+		return RetVal(Unimplemented)
 
 
 class Base85Encoder:
