@@ -455,6 +455,7 @@ class Keycard:
 	
 	def load(self, path: str) -> RetVal:
 		'''Loads a keycard from a file'''
+		# TODO: Implement load()
 		return RetVal(Unimplemented)
 
 	def save(self, path: str, clobber: bool) -> RetVal:
@@ -479,6 +480,7 @@ class Keycard:
 	
 	def verify(self) -> RetVal:
 		'''Verifies the card's entire chain of entries'''
+		# TODO: Implement verify()
 		return RetVal(Unimplemented)
 
 
