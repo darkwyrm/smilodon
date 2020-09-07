@@ -39,6 +39,17 @@ class RetVal:
 	def __setitem__(self, key, value):
 		self._fields[key] = value
 	
+	def __str__(self):
+		out = list()
+		out.append('Error: ' + self._fields['_error'])
+		out.append('Info: ' + self._fields['_info'])
+
+		for k,v in self._fields.items():
+			if k in ['_error', '_info']:
+				continue
+			out.append('%s: %s' % (k,v))
+		return '\n'.join(out)
+
 	def set_error(self, value, info=''):
 		'''Sets the error value of the object'''
 		self._fields['_error'] = value
@@ -51,7 +62,7 @@ class RetVal:
 
 	def fields(self) -> list:
 		'''Returns a list of the attached data fields in the object'''
-		out = self._fields.keys()
+		out = self._fields
 		del out['_error']
 		del out['_info']
 		return out
