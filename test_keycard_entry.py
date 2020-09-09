@@ -390,12 +390,34 @@ def test_is_compliant_org():
 	assert not status.error(), "OrgEntry wasn't compliant"
 
 
-def test_user_chain():
+def test_user_chain_verify():
 	'''Tests chaining of user entries'''
 	userentry = make_test_userentry()
 
-	status = userentry.chain(True, True)
-	assert not status.error(), 'userentry.chain returned an error: %s' % status.error()
+	# Organization signing key
+	oskeystring = AlgoString('ED25519:GS30y3fdJX0H7t&p(!m3oXqlZI1ghz+o!B7Y92Y%')
+	
+	chaindata = userentry.chain(True, True)
+	assert not chaindata.error(), f'userentry.chain returned an error: {chaindata.error()}'
 
-	print('\n' + str(status))
+	new_entry = chaindata['entry']
 
+	# Now that we have a new entry, it only has a valid custody signature. Add all the other 
+	# signatures needed to be compliant and then verify the whole thing.
+
+	skeystring = AlgoString()
+	status = skeystring.set(chaindata['sign.private'])
+	assert not status.error(), 'test_user_chain: new signing key has bad format'
+	
+	status = new_entry.sign(skeystring, 'User')
+	assert not status.error(), f'new entry failed to user sign: {status}'
+
+	status = new_entry.sign(oskeystring, 'Organization')
+	assert not status.error(), f'new entry failed to org sign: {status}'
+
+	status = new_entry.sign(skeystring, 'Entry')
+	assert not status.error(), f'new entry failed to entry sign: {status}'
+
+
+if __name__ == '__main__':
+	test_user_chain_verify()
