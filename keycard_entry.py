@@ -85,6 +85,9 @@ class EntryBase:
 		self.signatures = dict()
 		self.signature_info = list()
 	
+	def __str__(self):
+		return self.make_bytestring(-1).decode()
+	
 	def is_compliant(self) -> RetVal:
 		'''Checks the fields to ensure that it meets spec requirements. If a field causes it 
 		to be noncompliant, the noncompliant field is also returned'''
@@ -418,21 +421,21 @@ class UserEntry(EntryBase):
 		out['sign.private'] = 'ED2559:' + skey.encode(Base85Encoder).decode()
 		out['crsign.public'] = 'ED2559:' + crskey.verify_key.encode(Base85Encoder).decode()
 		out['crsign.private'] = 'ED2559:' + crskey.encode(Base85Encoder).decode()
-		out['crencrypt.public'] = 'CURVE25519' + crekey.public_key.encode(Base85Encoder).decode()
-		out['crencrypt.private'] = 'CURVE25519' + crekey.encode(Base85Encoder).decode()
+		out['crencrypt.public'] = 'CURVE25519:' + crekey.public_key.encode(Base85Encoder).decode()
+		out['crencrypt.private'] = 'CURVE25519:' + crekey.encode(Base85Encoder).decode()
 		
 		if replace_enc_key:
 			ekey = nacl.public.PrivateKey.generate()
-			out['encrypt.public'] ='CURVE25519' +  ekey.public_key.encode(Base85Encoder).decode()
-			out['encrypt.private'] = 'CURVE25519' + ekey.encode(Base85Encoder).decode()
+			out['encrypt.public'] ='CURVE25519:' +  ekey.public_key.encode(Base85Encoder).decode()
+			out['encrypt.private'] = 'CURVE25519:' + ekey.encode(Base85Encoder).decode()
 		else:
 			out['encrypt.public'] = ''
 			out['encrypt.private'] = ''
 
 		if replace_alt_key:
 			aekey = nacl.public.PrivateKey.generate()
-			out['altencrypt.public'] = 'CURVE25519' + aekey.public_key.encode(Base85Encoder).decode()
-			out['altencrypt.private'] = 'CURVE25519' + aekey.encode(Base85Encoder).decode()
+			out['altencrypt.public'] = 'CURVE25519:' + aekey.public_key.encode(Base85Encoder).decode()
+			out['altencrypt.private'] = 'CURVE25519:' + aekey.encode(Base85Encoder).decode()
 		else:
 			out['altencrypt.public'] = ''
 			out['altencrypt.private'] = ''
