@@ -417,10 +417,10 @@ class UserEntry(EntryBase):
 		crskey = nacl.signing.SigningKey.generate()
 		crekey = nacl.public.PrivateKey.generate()
 
-		out['sign.public'] = 'ED2559:' + skey.verify_key.encode(Base85Encoder).decode()
-		out['sign.private'] = 'ED2559:' + skey.encode(Base85Encoder).decode()
-		out['crsign.public'] = 'ED2559:' + crskey.verify_key.encode(Base85Encoder).decode()
-		out['crsign.private'] = 'ED2559:' + crskey.encode(Base85Encoder).decode()
+		out['sign.public'] = 'ED25519:' + skey.verify_key.encode(Base85Encoder).decode()
+		out['sign.private'] = 'ED25519:' + skey.encode(Base85Encoder).decode()
+		out['crsign.public'] = 'ED25519:' + crskey.verify_key.encode(Base85Encoder).decode()
+		out['crsign.private'] = 'ED25519:' + crskey.encode(Base85Encoder).decode()
 		out['crencrypt.public'] = 'CURVE25519:' + crekey.public_key.encode(Base85Encoder).decode()
 		out['crencrypt.private'] = 'CURVE25519:' + crekey.encode(Base85Encoder).decode()
 		
