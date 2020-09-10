@@ -397,7 +397,7 @@ def test_user_chain_verify():
 	# Organization signing key
 	oskeystring = AlgoString('ED25519:GS30y3fdJX0H7t&p(!m3oXqlZI1ghz+o!B7Y92Y%')
 	
-	chaindata = userentry.chain(True, True)
+	chaindata = userentry.chain(True)
 	assert not chaindata.error(), f'userentry.chain returned an error: {chaindata.error()}'
 
 	new_entry = chaindata['entry']
