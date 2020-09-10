@@ -67,7 +67,7 @@ def make_test_userentry() -> keycard.UserEntry:
 	vkeystring.prefix = 'ED25519'
 	vkeystring.data = base64.b85encode(vkey.encode()).decode()
 
-	rv = usercard.verify(vkeystring, 'User')
+	rv = usercard.verify_signature(vkeystring, 'User')
 	assert not rv.error(), 'entry failed to user verify'
 
 	# Organization sign and verify
@@ -83,7 +83,7 @@ def make_test_userentry() -> keycard.UserEntry:
 	ovkeystring.prefix = 'ED25519'
 	ovkeystring.data = base64.b85encode(ovkey.encode()).decode()
 
-	rv = usercard.verify(ovkeystring, 'Organization')
+	rv = usercard.verify_signature(ovkeystring, 'Organization')
 	assert not rv.error(), 'entry failed to org verify'
 
 	# Entry sign and verify
@@ -92,7 +92,7 @@ def make_test_userentry() -> keycard.UserEntry:
 	assert not rv.error(), 'Unexpected RetVal error %s' % rv.error()
 	assert usercard.signatures['Entry'], 'entry failed to entry sign'
 	
-	rv = usercard.verify(vkeystring, 'Entry')
+	rv = usercard.verify_signature(vkeystring, 'Entry')
 	assert not rv.error(), 'entry failed to entry verify'
 
 	status = usercard.is_compliant()
@@ -240,7 +240,7 @@ def test_sign():
 	assert basecard.signatures['User'] == expected_sig, "entry did not yield the expected signature"
 
 
-def test_verify():
+def test_verify_signature():
 	'''Tests the signing of a test keycard entry'''
 	# This is an extensive test because while it doesn't utilize all the fields that a standard
 	# entry would normally have, it tests signing and verification of user, org, and entry
@@ -298,7 +298,7 @@ def test_verify():
 	vkeystring.prefix = 'ED25519'
 	vkeystring.data = base64.b85encode(vkey.encode()).decode()
 
-	rv = basecard.verify(vkeystring, 'User')
+	rv = basecard.verify_signature(vkeystring, 'User')
 	assert not rv.error(), 'entry failed to user verify'
 
 	# Organization sign and verify
@@ -320,7 +320,7 @@ def test_verify():
 	ovkeystring.prefix = 'ED25519'
 	ovkeystring.data = base64.b85encode(ovkey.encode()).decode()
 
-	rv = basecard.verify(ovkeystring, 'Organization')
+	rv = basecard.verify_signature(ovkeystring, 'Organization')
 	assert not rv.error(), 'entry failed to org verify'
 
 	# Entry sign and verify
@@ -334,7 +334,7 @@ def test_verify():
 	assert basecard.signatures['Entry'] == expected_sig, \
 			"entry did not yield the expected entry signature"
 
-	rv = basecard.verify(vkeystring, 'Entry')
+	rv = basecard.verify_signature(vkeystring, 'Entry')
 	assert not rv.error(), 'entry failed to entry verify'
 
 
@@ -381,7 +381,7 @@ def test_is_compliant_org():
 	ovkeystring.prefix = 'ED25519'
 	ovkeystring.data = base64.b85encode(ovkey.encode()).decode()
 
-	rv = orgcard.verify(ovkeystring, 'Organization')
+	rv = orgcard.verify_signature(ovkeystring, 'Organization')
 	assert not rv.error(), 'entry failed to org verify'
 
 	status = orgcard.is_compliant()

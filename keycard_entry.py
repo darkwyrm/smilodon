@@ -284,7 +284,7 @@ class EntryBase:
 		self.signatures[sigtype] = 'ED25519:' + signed.signature.decode()
 		return RetVal()
 
-	def verify(self, verify_key: AlgoString, sigtype: str) -> RetVal:
+	def verify_signature(self, verify_key: AlgoString, sigtype: str) -> RetVal:
 		'''Verifies a signature, given a verification key'''
 	
 		if not verify_key:
@@ -353,6 +353,26 @@ class OrgEntry(EntryBase):
 		
 		self.fields['Time-To-Live'] = '30'
 		self.set_expiration()
+
+	def chain(self, rotate_optional: bool) -> RetVal:
+		'''Creates a new OrgEntry object with new keys and a custody signature. The keys are 
+		returned in AlgoString format using the following fields:
+		entry
+		sign.public / sign.private -- primary signing keypair
+		altsign.public / crsign.private -- contact request signing keypair
+		encrypt.public / encrypt.private -- general-purpose public encryption keypair
+
+		For organization entries, rotating optional keys works a little differently: the primary 
+		signing key becomes the secondary signing key in the new entry. When rotation is False, 
+		which is recommended only in instances of revocation, the secondary key is removed.
+		'''
+		# TODO: Implement OrgEntry.chain()
+		return RetVal(Unimplemented)
+	
+	def verify_chain(self, previous: EntryBase) -> RetVal:
+		'''Verifies the chain of custody between the provided previous entry and the current one.'''
+		# TODO: Implement OrgEntry.verify_chain()
+		return RetVal(Unimplemented)
 
 
 class UserEntry(EntryBase):
@@ -446,6 +466,10 @@ class UserEntry(EntryBase):
 		out['entry'] = new_entry
 		return out
 		
+	def verify_chain(self, previous: EntryBase) -> RetVal:
+		'''Verifies the chain of custody between the provided previous entry and the current one.'''
+		# TODO: Implement UserEntry.verify_chain()
+		return RetVal(Unimplemented)
 
 
 class Keycard:
