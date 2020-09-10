@@ -309,11 +309,10 @@ def test_verify():
 	assert not rv.error(), 'Unexpected RetVal error %s' % rv.error()
 	assert basecard.signatures['Organization'], 'entry failed to user sign'
 
-	# TODO: Generate expected signature and enable this assertion	
-	# expected_sig = \
-	# 	'ED25519:&7=iP?(=08IB44fog$pB7C*4(s9+7DRe=p(+1Mnoh{|avuYNAFDHG-H%0dFmYmyQL3DtPhup-*n?doI+'
-	# assert basecard.signatures['Organization'] == expected_sig, \
-	# 		"entry did not yield the expected org signature"
+	expected_sig = \
+		'ED25519:1k*c9Ij~7~!LTKVi%03t>lNWyu;z&HstS*_w{vLuWY`b=)wxQDqQqryUoR#=u<GKg+8pGgH7e!#0>%IX'
+	assert basecard.signatures['Organization'] == expected_sig, \
+			"entry did not yield the expected org signature"
 	
 
 	ovkey = nacl.signing.VerifyKey(oskey.verify_key.encode())
@@ -330,11 +329,10 @@ def test_verify():
 	assert not rv.error(), 'Unexpected RetVal error %s' % rv.error()
 	assert basecard.signatures['Entry'], 'entry failed to entry sign'
 	
-	# TODO: Generate expected signature and enable this assertion	
-	# expected_sig = \
-	# 	'ED25519:&7=iP?(=08IB44fog$pB7C*4(s9+7DRe=p(+1Mnoh{|avuYNAFDHG-H%0dFmYmyQL3DtPhup-*n?doI+'
-	# assert basecard.signatures['Entry'] == expected_sig, \
-	# 		"entry did not yield the expected entry signature"
+	expected_sig = \
+		'ED25519:oXQvALV4gf2pn|IQhf2^KKBoL`8w7n{Q(Du{W2X05>WY{hVEeMoM|9NGUpKkjIutFlp$y8(E(EdzTx)<'
+	assert basecard.signatures['Entry'] == expected_sig, \
+			"entry did not yield the expected entry signature"
 
 	rv = basecard.verify(vkeystring, 'Entry')
 	assert not rv.error(), 'entry failed to entry verify'
