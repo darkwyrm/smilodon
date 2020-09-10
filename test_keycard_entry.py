@@ -390,7 +390,7 @@ def test_is_compliant_org():
 	assert not status.error(), "OrgEntry wasn't compliant"
 
 
-def test_user_chain_verify():
+def test_user_chain():
 	'''Tests chaining of user entries'''
 	userentry = make_test_userentry()
 
@@ -422,6 +422,33 @@ def test_user_chain_verify():
 	assert not status.error(), f'new entry failed compliance check: {status}'
 
 
+def test_keycard_chain_verify():
+	'''Tests entry rotation of a keycard'''
+	userentry = make_test_userentry()
+
+	card = keycard.Keycard()
+	card.entries.append(userentry)
+
+	chaindata = card.chain(True)
+	assert not chaindata.error(), f'keycard chain failed: {chaindata}'
+
+	new_entry = chaindata['entry']
+	oskeystring = AlgoString('ED25519:GS30y3fdJX0H7t&p(!m3oXqlZI1ghz+o!B7Y92Y%')
+
+	skeystring = AlgoString(chaindata['sign.private'])
+	status = new_entry.sign(skeystring, 'User')
+	assert not status.error(), f'chained entry failed to user sign: {status}'
+
+	status = new_entry.sign(oskeystring, 'Organization')
+	assert not status.error(), f'chained entry failed to org sign: {status}'
+
+	status = new_entry.sign(skeystring, 'Entry')
+	assert not status.error(), f'chained entry failed to entry sign: {status}'
+
+	card.entries[-1] = new_entry
+	status = card.verify()
+	assert not status.error(), f'keycard failed to verify: {status}'
+
 
 if __name__ == '__main__':
-	test_user_chain_verify()
+	test_keycard_chain_verify()
