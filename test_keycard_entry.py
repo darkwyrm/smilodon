@@ -418,6 +418,10 @@ def test_user_chain_verify():
 	status = new_entry.sign(skeystring, 'Entry')
 	assert not status.error(), f'new entry failed to entry sign: {status}'
 
+	status = new_entry.is_compliant()
+	assert not status.error(), f'new entry failed compliance check: {status}'
+
+
 
 if __name__ == '__main__':
 	test_user_chain_verify()
