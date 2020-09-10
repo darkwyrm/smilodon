@@ -474,17 +474,16 @@ class Keycard:
 
 		skeystring = AlgoString()
 		status = skeystring.set(chaindata['sign.private'])
-		if not status.error():
+		if status.error():
 			return status
 		
 		status = new_entry.sign(skeystring, 'User')
-		if not status.error():
+		if status.error():
 			return status
 		
-		# TODO: Finish implementation
-
-
-
+		chaindata['entry'] = new_entry
+		self.entries.append(new_entry)
+		return chaindata
 	
 	def load(self, path: str) -> RetVal:
 		'''Loads a keycard from a file'''
