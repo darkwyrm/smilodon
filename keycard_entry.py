@@ -11,6 +11,7 @@ import nacl.signing
 from retval import RetVal, BadData, BadParameterValue, ExceptionThrown, ResourceExists, \
 		ResourceNotFound, Unimplemented
 
+FeatureNotAvailable = 'FeatureNotAvailable'
 UnsupportedKeycardType = 'UnsupportedKeycardType'
 UnsupportedEncryptionType = 'UnsupportedEncryptionType'
 InvalidKeycard = 'InvalidKeycard'
@@ -390,7 +391,7 @@ class UserEntry(EntryBase):
 		self.fields['Time-To-Live'] = '7'
 		self.set_expiration()
 	
-	def chain(self, replace_enc_key: bool, replace_alt_key: bool) -> RetVal:
+	def chain(self, rotate_optional: bool) -> RetVal:
 		'''Creates a new UserEntry object with new keys and a custody signature. The keys are 
 		returned in AlgoString format using the following fields:
 		entry
@@ -424,22 +425,19 @@ class UserEntry(EntryBase):
 		out['crencrypt.public'] = 'CURVE25519:' + crekey.public_key.encode(Base85Encoder).decode()
 		out['crencrypt.private'] = 'CURVE25519:' + crekey.encode(Base85Encoder).decode()
 		
-		if replace_enc_key:
+		if rotate_optional:
 			ekey = nacl.public.PrivateKey.generate()
 			out['encrypt.public'] ='CURVE25519:' +  ekey.public_key.encode(Base85Encoder).decode()
 			out['encrypt.private'] = 'CURVE25519:' + ekey.encode(Base85Encoder).decode()
-		else:
-			out['encrypt.public'] = ''
-			out['encrypt.private'] = ''
 
-		if replace_alt_key:
 			aekey = nacl.public.PrivateKey.generate()
 			out['altencrypt.public'] = 'CURVE25519:' + aekey.public_key.encode(Base85Encoder).decode()
 			out['altencrypt.private'] = 'CURVE25519:' + aekey.encode(Base85Encoder).decode()
 		else:
+			out['encrypt.public'] = ''
+			out['encrypt.private'] = ''
 			out['altencrypt.public'] = ''
 			out['altencrypt.private'] = ''
-		
 
 		status = new_entry.sign(AlgoString(self.fields['Contact-Request-Signing-Key']), 'Custody')
 		if status.error():
@@ -455,6 +453,38 @@ class Keycard:
 	def __init__(self, cardtype = ''):
 		self.type = cardtype
 		self.entries = list()
+	
+	def chain(self, rotate_optional = True) -> RetVal:
+		'''Appends a new entry to the chain, optionally rotating keys which aren't required to be 
+		changed. This method requires that the root entry already exist. Note that user cards will 
+		not have all the required signatures when the call returns'''
+		if len(self.entries) < 1:
+			return RetVal(ResourceNotFound, 'missing root entry')
+
+		# Just in case we get some squirrelly non-Org, non-User card type
+		chain_method = getattr(self.entries[-1], "chain", None)
+		if not chain_method or not callable(chain_method):
+			return RetVal(FeatureNotAvailable, "entry doesn't support chaining")
+		
+		chaindata = self.entries[-1].chain(rotate_optional)
+		if chaindata.error():
+			return chaindata
+		
+		new_entry = chaindata['entry']
+
+		skeystring = AlgoString()
+		status = skeystring.set(chaindata['sign.private'])
+		if not status.error():
+			return status
+		
+		status = new_entry.sign(skeystring, 'User')
+		if not status.error():
+			return status
+		
+		# TODO: Finish implementation
+
+
+
 	
 	def load(self, path: str) -> RetVal:
 		'''Loads a keycard from a file'''
