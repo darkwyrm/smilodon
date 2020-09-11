@@ -364,10 +364,40 @@ class OrgEntry(EntryBase):
 
 		For organization entries, rotating optional keys works a little differently: the primary 
 		signing key becomes the secondary signing key in the new entry. When rotation is False, 
-		which is recommended only in instances of revocation, the secondary key is removed.
+		which is recommended only in instances of revocation, the secondary key is removed. Only 
+		when rotate_optional is True is the field altsign.private returned.
 		'''
-		# TODO: Implement OrgEntry.chain()
-		return RetVal(Unimplemented)
+		status = self.is_compliant()
+		if status.error():
+			return status
+		
+		new_entry = OrgEntry()
+		new_entry.fields = self.fields
+
+		out = RetVal()
+
+		skey = nacl.signing.SigningKey.generate()
+		crskey = nacl.signing.SigningKey.generate()
+		crekey = nacl.public.PrivateKey.generate()
+
+		out['sign.public'] = 'ED25519:' + skey.verify_key.encode(Base85Encoder).decode()
+		out['sign.private'] = 'ED25519:' + skey.encode(Base85Encoder).decode()
+		out['encrypt.public'] = 'CURVE25519:' + crekey.public_key.encode(Base85Encoder).decode()
+		out['encrypt.private'] = 'CURVE25519:' + crekey.encode(Base85Encoder).decode()
+		
+		if rotate_optional:
+			out['altsign.public'] = 'ED25519:' + crskey.verify_key.encode(Base85Encoder).decode()
+			out['altsign.private'] = 'ED25519:' + crskey.encode(Base85Encoder).decode()
+		else:
+			out['altsign.public'] = self.fields['Primary-Signing-Key']
+			out['altsign.private'] = ''
+
+		status = new_entry.sign(AlgoString(self.fields['Contact-Request-Signing-Key']), 'Custody')
+		if status.error():
+			return status
+
+		out['entry'] = new_entry
+		return out
 	
 	def verify_chain(self, previous: EntryBase) -> RetVal:
 		'''Verifies the chain of custody between the provided previous entry and the current one.'''
@@ -468,7 +498,7 @@ class UserEntry(EntryBase):
 		
 	def verify_chain(self, previous: EntryBase) -> RetVal:
 		'''Verifies the chain of custody between the provided previous entry and the current one.'''
-		
+
 		if previous.type != 'User':
 			return RetVal(BadParameterValue, 'entry type mismatch')
 		
