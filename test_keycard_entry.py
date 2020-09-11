@@ -101,6 +101,49 @@ def make_test_userentry() -> keycard.UserEntry:
 	return usercard
 
 
+def make_test_orgentry() -> keycard.OrgEntry:
+	'''Generates an organizational entry for testing purposes'''
+
+	# Primary signing key
+	pskey = nacl.signing.SigningKey(b'GS30y3fdJX0H7t&p(!m3oXqlZI1ghz+o!B7Y92Y%', Base85Encoder)
+	
+	# Secondary signing key
+	sskey = nacl.signing.SigningKey(b'GS30y3fdJX0H7t&p(!m3oXqlZI1ghz+o!B7Y92Y%', Base85Encoder)
+	
+	# Encryption key
+	ekey = nacl.public.PrivateKey(b'Wsx6BC(HP~goS-C_`K=6Daqr97kapfc=vQUzi?KI', Base85Encoder)
+
+	# TODO: Rework fields into org card
+	orgcard = keycard.OrgEntry()
+	orgcard.set_fields({
+		'Name':'Corbin Simons',
+		'Workspace-ID':'4418bf6c-000b-4bb3-8111-316e72030468',
+		'User-ID':'csimons',
+		'Domain':'example.com',
+		'Contact-Request-Signing-Key':'ED25519:7dfD==!Jmt4cDtQDBxYa7(dV|N$}8mYwe$=RZuW|',
+		'Contact-Request-Encryption-Key':'CURVE25519:yBZ0{1fE9{2<b~#i^R+JT-yh-y5M(Wyw_)}_SZOn',
+		'Public-Encryption-Key':'CURVE25519:_`UC|vltn_%P5}~vwV^)oY){#uvQSSy(dOD_l(yE'
+	})
+
+	# Organization sign and verify
+
+	pskeystring = AlgoString()
+	pskeystring.set('ED25519:' + base64.b85encode(pskey.encode()).decode())
+	rv = orgcard.sign(pskeystring, 'Organization')
+	assert not rv.error(), 'Unexpected RetVal error %s' % rv.error()
+	assert orgcard.signatures['Organization'], 'entry failed to user sign'
+
+	ovkey = nacl.signing.VerifyKey(pskey.verify_key.encode())
+	ovkeystring = AlgoString()
+	ovkeystring.prefix = 'ED25519'
+	ovkeystring.data = base64.b85encode(ovkey.encode()).decode()
+
+	rv = orgcard.verify_signature(ovkeystring, 'Organization')
+	assert not rv.error(), 'org entry failed to verify'
+
+	return orgcard
+
+
 def test_set_field():
 	'''Tests setfield'''
 	card = keycard.EntryBase()
