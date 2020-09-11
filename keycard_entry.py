@@ -468,8 +468,20 @@ class UserEntry(EntryBase):
 		
 	def verify_chain(self, previous: EntryBase) -> RetVal:
 		'''Verifies the chain of custody between the provided previous entry and the current one.'''
-		# TODO: Implement UserEntry.verify_chain()
-		return RetVal(Unimplemented)
+		
+		if previous.type != 'User':
+			return RetVal(BadParameterValue, 'entry type mismatch')
+		
+		if 'Custody' not in self.signatures or not self.signatures['Custody']:
+			return RetVal(ResourceNotFound, 'custody signature missing')
+		
+		if 'Contact-Request-Signing-Key' not in previous.fields or \
+				not previous.fields['Contact-Request-Signing-Key']:
+			return RetVal(ResourceNotFound, 'signing key missing')
+		
+		status = self.verify_signature(AlgoString(previous.fields['Contact-Request-Signing-Key']),
+				'Custody')
+		return status
 
 
 class Keycard:

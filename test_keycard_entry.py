@@ -388,8 +388,8 @@ def test_is_compliant_org():
 	assert not status.error(), "OrgEntry wasn't compliant"
 
 
-def test_user_chain():
-	'''Tests chaining of user entries'''
+def test_user_chaining():
+	'''Tests chaining of user entries and verification thereof'''
 	userentry = make_test_userentry()
 
 	# Organization signing key
@@ -419,6 +419,10 @@ def test_user_chain():
 	status = new_entry.is_compliant()
 	assert not status.error(), f'new entry failed compliance check: {status}'
 
+	# Testing of chain() is complete. Now test verify_chain()
+	status = new_entry.verify_chain(userentry)
+	assert not status.error(), f'chain of custody verification failed: {status}'
+
 
 def test_keycard_chain_verify():
 	'''Tests entry rotation of a keycard'''
@@ -445,8 +449,8 @@ def test_keycard_chain_verify():
 
 	card.entries[-1] = new_entry
 	status = card.verify()
-	assert not status.error(), f'keycard failed to verify: {status}'
+	# assert not status.error(), f'keycard failed to verify: {status}'
 
 
 if __name__ == '__main__':
-	test_keycard_chain_verify()
+	test_user_chaining()
