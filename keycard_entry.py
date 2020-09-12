@@ -441,9 +441,10 @@ class UserEntry(EntryBase):
 		self.fields['Time-To-Live'] = '7'
 		self.set_expiration()
 	
-	def chain(self, rotate_optional: bool) -> RetVal:
-		'''Creates a new UserEntry object with new keys and a custody signature. The keys are 
-		returned in AlgoString format using the following fields:
+	def chain(self, key: AlgoString, rotate_optional: bool) -> RetVal:
+		'''Creates a new UserEntry object with new keys and a custody signature. It requires the 
+		previous contact request signing key passed as an AlgoString. The new keys are returned in 
+		AlgoString format using the following fields:
 		entry
 		sign.public / sign.private -- primary signing keypair
 		crsign.public / crsign.private -- contact request signing keypair
@@ -475,6 +476,9 @@ class UserEntry(EntryBase):
 		out['crencrypt.public'] = 'CURVE25519:' + crekey.public_key.encode(Base85Encoder).decode()
 		out['crencrypt.private'] = 'CURVE25519:' + crekey.encode(Base85Encoder).decode()
 		
+		new_entry.fields['Contact-Request-Signing-Key'] = out['crsign.public']
+		new_entry.fields['Contact-Request-Encryption-Key'] = out['crencrypt.public']
+
 		if rotate_optional:
 			ekey = nacl.public.PrivateKey.generate()
 			out['encrypt.public'] ='CURVE25519:' +  ekey.public_key.encode(Base85Encoder).decode()
@@ -483,6 +487,9 @@ class UserEntry(EntryBase):
 			aekey = nacl.public.PrivateKey.generate()
 			out['altencrypt.public'] = 'CURVE25519:' + aekey.public_key.encode(Base85Encoder).decode()
 			out['altencrypt.private'] = 'CURVE25519:' + aekey.encode(Base85Encoder).decode()
+			
+			new_entry.fields['Public-Encryption-Key'] = out['encrypt.public']
+			new_entry.fields['Alternate-Encryption-Key'] = out['altencrypt.public']
 		else:
 			out['encrypt.public'] = ''
 			out['encrypt.private'] = ''
