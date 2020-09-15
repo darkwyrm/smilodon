@@ -456,6 +456,9 @@ class UserEntry(EntryBase):
 		they can be rotated on a different schedule from the other keys. These fields are only 
 		returned if there are no errors.
 		'''
+		if key.prefix != 'ED25519':
+			return RetVal(BadParameterValue, f'wrong key type {key.prefix}')
+		
 		status = self.is_compliant()
 		if status.error():
 			return status
@@ -496,7 +499,7 @@ class UserEntry(EntryBase):
 			out['altencrypt.public'] = ''
 			out['altencrypt.private'] = ''
 
-		status = new_entry.sign(AlgoString(self.fields['Contact-Request-Signing-Key']), 'Custody')
+		status = new_entry.sign(key, 'Custody')
 		if status.error():
 			return status
 
