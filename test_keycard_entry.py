@@ -435,10 +435,13 @@ def test_user_chaining():
 	'''Tests chaining of user entries and verification thereof'''
 	userentry = make_test_userentry()
 
+	# User signing key
+	skeystring = AlgoString('ED25519:{Ue^0)?k`s(>pNG&Wg9f5b;VHN1^PC*c4-($G#>}')
+
 	# Organization signing key
 	oskeystring = AlgoString('ED25519:GS30y3fdJX0H7t&p(!m3oXqlZI1ghz+o!B7Y92Y%')
 	
-	chaindata = userentry.chain(True)
+	chaindata = userentry.chain(skeystring, True)
 	assert not chaindata.error(), f'userentry.chain returned an error: {chaindata.error()}'
 
 	new_entry = chaindata['entry']
@@ -446,7 +449,7 @@ def test_user_chaining():
 	# Now that we have a new entry, it only has a valid custody signature. Add all the other 
 	# signatures needed to be compliant and then verify the whole thing.
 
-	skeystring = AlgoString()
+	# The signing key is replaced during chain()
 	status = skeystring.set(chaindata['sign.private'])
 	assert not status.error(), 'test_user_chain: new signing key has bad format'
 	
