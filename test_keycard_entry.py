@@ -195,10 +195,10 @@ def test_make_bytestring():
 	basecard.type = "Test"
 	basecard.field_names = [ 'Name', 'User-ID', 'Workspace-ID', 'Domain', 'Time-To-Live', 'Expires']
 	basecard.signature_info = [
-		{ 'name':'Custody', 'optional':True },
-		{ 'name':'User', 'optional':False },
-		{ 'name':'Organization', 'optional':False },
-		{ 'name':'Entry', 'optional':False }
+		{ 'name' : 'Custody', 'level' : 1, 'optional' : True },
+		{ 'name' : 'User', 'level' : 2, 'optional' : False },
+		{ 'name' : 'Organization', 'level' : 3, 'optional' : False },
+		{ 'name' : 'Entry', 'level' : 4, 'optional' : False }
 	]
 
 	basecard.set_fields({
@@ -227,7 +227,7 @@ def test_make_bytestring():
 		b'Organization-Signature:2222222222\r\n' \
 		b'Entry-Signature:3333333333\r\n'
 	
-	actual_out = basecard.make_bytestring(4)
+	actual_out = basecard.make_bytestring(-1)
 	assert actual_out == expected_out, "user byte string didn't match"
 
 

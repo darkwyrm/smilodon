@@ -133,10 +133,10 @@ class EntryBase:
 		
 		return RetVal(BadData, self.signatures[sigtype])
 	
-	def make_bytestring(self, include_signatures : int) -> bytes:
+	def make_bytestring(self, signature_level : int) -> bytes:
 		'''Creates a byte string from the fields in the keycard. Because this doesn't use join(), 
 		it is not affected by Python's line ending handling, which is critical in ensuring that 
-		signatures are not invalidated. The second parameterm, include_signatures, specifies 
+		signatures are not invalidated. The second parameter, signature_level, specifies 
 		how many signatures to include. Passing a negative number specifies all signatures.'''
 		lines = list()
 		if self.type:
@@ -146,11 +146,11 @@ class EntryBase:
 			if field in self.fields and self.fields[field]:
 				lines.append(b':'.join([field.encode(), self.fields[field].encode()]))
 		
-		if include_signatures > len(self.signature_info) or include_signatures < 0:
-			include_signatures = len(self.signature_info)
+		if signature_level > len(self.signature_info) or signature_level < 0:
+			signature_level = self.signature_info[-1]['level']
 		
 		sig_names = [x['name'] for x in self.signature_info]
-		for i in range(include_signatures):
+		for i in range(signature_level):
 			name = sig_names[i]
 			if name in self.signatures and self.signatures[name]:
 				lines.append(b''.join([name.encode() + b'-Signature:',
@@ -347,8 +347,8 @@ class OrgEntry(EntryBase):
 			'Expires'
 		]
 		self.signature_info = [ 
-			{ 'name' : 'Custody', 'optional' : True },
-			{ 'name' : 'Organization', 'optional' : False }
+			{ 'name' : 'Custody', 'level' : 1, 'optional' : True },
+			{ 'name' : 'Organization', 'level' : 2, 'optional' : False }
 		]
 		
 		self.fields['Time-To-Live'] = '30'
@@ -432,10 +432,10 @@ class UserEntry(EntryBase):
 			'Expires'
 		]
 		self.signature_info = [ 
-			{ 'name' : 'Custody', 'optional' : True },
-			{ 'name' : 'User', 'optional' : False },
-			{ 'name' : 'Organization', 'optional' : False },
-			{ 'name' : 'Entry', 'optional' : False }
+			{ 'name' : 'Custody', 'level' : 1, 'optional' : True },
+			{ 'name' : 'User', 'level' : 2, 'optional' : False },
+			{ 'name' : 'Organization', 'level' : 3, 'optional' : False },
+			{ 'name' : 'Entry', 'level' : 4, 'optional' : False }
 		]
 		
 		self.fields['Time-To-Live'] = '7'
