@@ -470,43 +470,29 @@ class UserEntry(EntryBase):
 
 		out = RetVal()
 
-		# skey = nacl.signing.SigningKey.generate()
-		# crskey = nacl.signing.SigningKey.generate()
-		# crekey = nacl.public.PrivateKey.generate()
+		skey = nacl.signing.SigningKey.generate()
+		crskey = nacl.signing.SigningKey.generate()
+		crekey = nacl.public.PrivateKey.generate()
 
-		# out['sign.public'] = 'ED25519:' + skey.verify_key.encode(Base85Encoder).decode()
-		# out['sign.private'] = 'ED25519:' + skey.encode(Base85Encoder).decode()
-		# out['crsign.public'] = 'ED25519:' + crskey.verify_key.encode(Base85Encoder).decode()
-		# out['crsign.private'] = 'ED25519:' + crskey.encode(Base85Encoder).decode()
-		# out['crencrypt.public'] = 'CURVE25519:' + crekey.public_key.encode(Base85Encoder).decode()
-		# out['crencrypt.private'] = 'CURVE25519:' + crekey.encode(Base85Encoder).decode()
-		
-		# FIXME: DEBUG CODE
-		out['sign.public'] = r'ED25519:uCTjK$=B#R0g9rp=Vf32oyKqq@>qbrWkvPk-s*vc'
-		out['sign.private'] = r'ED25519:h*KRbZ^q8ttgCfyuTqtYY{1(z%sH!W8s}#mCy<BM'
-		out['crsign.public'] = r'ED25519:@YvR2n9>H4NMVB@Xo>4<<Uf|+#P@Y?C1Cvt3V#5)'
-		out['crsign.private'] = r'ED25519:mMB11cW=W^lhfTd19v=D(q3-S9l!dY*wkdIb>{v0'
-		out['crencrypt.public'] = r'CURVE25519:=*){4K#QI5wZ%O(@j0`iAkro>1S?Pqb{xmvU0CvI'
-		out['crencrypt.private'] = r'CURVE25519:ERVnHdigS`!**&~aX#SmS9PIeFc7S?<ya9e9TgF>'
+		out['sign.public'] = 'ED25519:' + skey.verify_key.encode(Base85Encoder).decode()
+		out['sign.private'] = 'ED25519:' + skey.encode(Base85Encoder).decode()
+		out['crsign.public'] = 'ED25519:' + crskey.verify_key.encode(Base85Encoder).decode()
+		out['crsign.private'] = 'ED25519:' + crskey.encode(Base85Encoder).decode()
+		out['crencrypt.public'] = 'CURVE25519:' + crekey.public_key.encode(Base85Encoder).decode()
+		out['crencrypt.private'] = 'CURVE25519:' + crekey.encode(Base85Encoder).decode()
 		
 		new_entry.fields['Contact-Request-Signing-Key'] = out['crsign.public']
 		new_entry.fields['Contact-Request-Encryption-Key'] = out['crencrypt.public']
 
 		if rotate_optional:
-			# ekey = nacl.public.PrivateKey.generate()
-			# out['encrypt.public'] ='CURVE25519:' +  ekey.public_key.encode(Base85Encoder).decode()
-			# out['encrypt.private'] = 'CURVE25519:' + ekey.encode(Base85Encoder).decode()
+			ekey = nacl.public.PrivateKey.generate()
+			out['encrypt.public'] ='CURVE25519:' +  ekey.public_key.encode(Base85Encoder).decode()
+			out['encrypt.private'] = 'CURVE25519:' + ekey.encode(Base85Encoder).decode()
 
-			# aekey = nacl.public.PrivateKey.generate()
-			# out['altencrypt.public'] = 'CURVE25519:' + aekey.public_key.encode(Base85Encoder).decode()
-			# out['altencrypt.private'] = 'CURVE25519:' + aekey.encode(Base85Encoder).decode()
+			aekey = nacl.public.PrivateKey.generate()
+			out['altencrypt.public'] = 'CURVE25519:' + aekey.public_key.encode(Base85Encoder).decode()
+			out['altencrypt.private'] = 'CURVE25519:' + aekey.encode(Base85Encoder).decode()
 			
-			# FIXME: DEBUG CODE
-			out['encrypt.public'] = r'CURVE25519:79lGj@uRt;6`=%cMRigHJVFhW^Sf5B{m1iGN!z_F'
-			out['encrypt.private'] = r'CURVE25519:auK!_XV*JZXluSsbEVS6rPxzx+Dc!|Oh`&XYmZUs'
-			out['altencrypt.public'] = r'CURVE25519:Op-YT!>jd|!N#*->Xtuz-<w0Use2yjt;bh3s112X'
-			out['altencrypt.private'] = r'CURVE25519:myAz%GPjSjBUzPm@B6~4N?0i#>=C4ztXkzAxcdId'
-
 			new_entry.fields['Public-Encryption-Key'] = out['encrypt.public']
 			new_entry.fields['Alternate-Encryption-Key'] = out['altencrypt.public']
 		else:

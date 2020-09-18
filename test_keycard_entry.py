@@ -512,5 +512,4 @@ def test_keycard_chain_verify():
 
 
 if __name__ == '__main__':
-	#test_user_chaining()
-	test_sign()
+	test_keycard_chain_verify()
