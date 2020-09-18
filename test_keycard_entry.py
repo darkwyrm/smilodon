@@ -447,7 +447,7 @@ def test_user_chaining():
 	'''Tests chaining of user entries and verification thereof'''
 	userentry = make_test_userentry()
 
-	# User contact request signing and verification keys
+	# User contact request signing key
 	crskeystring = AlgoString('ED25519:ip52{ps^jH)t$k-9bc_RzkegpIW?}FFe~BX&<V}9') 
 
 	# Organization signing key
@@ -487,10 +487,13 @@ def test_keycard_chain_verify():
 	'''Tests entry rotation of a keycard'''
 	userentry = make_test_userentry()
 
+	# User contact request signing and verification keys
+	crskeystring = AlgoString('ED25519:ip52{ps^jH)t$k-9bc_RzkegpIW?}FFe~BX&<V}9') 
+	
 	card = keycard.Keycard()
 	card.entries.append(userentry)
 
-	chaindata = card.chain(True)
+	chaindata = card.chain(crskeystring, True)
 	assert not chaindata.error(), f'keycard chain failed: {chaindata}'
 
 	new_entry = chaindata['entry']
@@ -508,6 +511,8 @@ def test_keycard_chain_verify():
 
 	card.entries[-1] = new_entry
 	status = card.verify()
+	
+	# FIXME: Enable when verify() is implemented
 	# assert not status.error(), f'keycard failed to verify: {status}'
 
 

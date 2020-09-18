@@ -532,7 +532,7 @@ class Keycard:
 		self.type = cardtype
 		self.entries = list()
 	
-	def chain(self, rotate_optional = True) -> RetVal:
+	def chain(self, key: AlgoString, rotate_optional: bool) -> RetVal:
 		'''Appends a new entry to the chain, optionally rotating keys which aren't required to be 
 		changed. This method requires that the root entry already exist. Note that user cards will 
 		not have all the required signatures when the call returns'''
@@ -544,7 +544,7 @@ class Keycard:
 		if not chain_method or not callable(chain_method):
 			return RetVal(FeatureNotAvailable, "entry doesn't support chaining")
 		
-		chaindata = self.entries[-1].chain(rotate_optional)
+		chaindata = self.entries[-1].chain(key, rotate_optional)
 		if chaindata.error():
 			return chaindata
 		
