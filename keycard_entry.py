@@ -280,7 +280,8 @@ class EntryBase:
 			if clear_sig:
 				self.signatures[name] = ''
 
-		signed = key.sign(self.make_bytestring(sigtype_index + 1), Base85Encoder)
+		data = self.make_bytestring(sigtype_index + 1)
+		signed = key.sign(data, Base85Encoder)
 		self.signatures[sigtype] = 'ED25519:' + signed.signature.decode()
 		return RetVal()
 
@@ -456,7 +457,7 @@ class UserEntry(EntryBase):
 		they can be rotated on a different schedule from the other keys. These fields are only 
 		returned if there are no errors.
 		'''
-		print('\n-----------------------------------------\n\tEntry.Chain() Start\n')
+
 		if key.prefix != 'ED25519':
 			return RetVal(BadParameterValue, f'wrong key type {key.prefix}')
 		
@@ -465,12 +466,10 @@ class UserEntry(EntryBase):
 			return status
 		
 		new_entry = UserEntry()
-		new_entry.fields = self.fields
+		new_entry.fields = self.fields.copy()
 
 		out = RetVal()
 
-		print("Old entry data:\n" + self.__str__())
-		print("New entry data, pre-chaining:\n" + str(new_entry))
 		# skey = nacl.signing.SigningKey.generate()
 		# crskey = nacl.signing.SigningKey.generate()
 		# crekey = nacl.public.PrivateKey.generate()
@@ -486,7 +485,7 @@ class UserEntry(EntryBase):
 		out['sign.public'] = r'ED25519:uCTjK$=B#R0g9rp=Vf32oyKqq@>qbrWkvPk-s*vc'
 		out['sign.private'] = r'ED25519:h*KRbZ^q8ttgCfyuTqtYY{1(z%sH!W8s}#mCy<BM'
 		out['crsign.public'] = r'ED25519:@YvR2n9>H4NMVB@Xo>4<<Uf|+#P@Y?C1Cvt3V#5)'
-		out['crsign.private'] = r'ED25519mMB11cW=W^lhfTd19v=D(q3-S9l!dY*wkdIb>{v0'
+		out['crsign.private'] = r'ED25519:mMB11cW=W^lhfTd19v=D(q3-S9l!dY*wkdIb>{v0'
 		out['crencrypt.public'] = r'CURVE25519:=*){4K#QI5wZ%O(@j0`iAkro>1S?Pqb{xmvU0CvI'
 		out['crencrypt.private'] = r'CURVE25519:ERVnHdigS`!**&~aX#SmS9PIeFc7S?<ya9e9TgF>'
 		
@@ -516,13 +515,11 @@ class UserEntry(EntryBase):
 			out['altencrypt.public'] = ''
 			out['altencrypt.private'] = ''
 
-		print("Chained entry data:\n" + str(new_entry))
 		status = new_entry.sign(key, 'Custody')
 		if status.error():
 			return status
 
 		out['entry'] = new_entry
-		print('\n-----------------------------------------\n\tEntry.Chain() End\n')
 		return out
 		
 	def verify_chain(self, previous: EntryBase) -> RetVal:

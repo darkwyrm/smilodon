@@ -10,6 +10,18 @@ import nacl.signing
 import keycard_entry as keycard
 from keycard_entry import AlgoString, Base85Encoder
 
+# Keys used in the various tests
+
+# User Signing Key: p;XXU0XF#UO^}vKbC-wS(#5W6=OEIFmR2z`rS1j+
+# User Verification Key: 6|HBWrxMY6-?r&Sm)_^PLPerpqOj#b&x#N_#C3}p
+
+# User Contact Request Signing Key: ip52{ps^jH)t$k-9bc_RzkegpIW?}FFe~BX&<V}9
+# User Contact Request Verification Key: d0-oQb;{QxwnO{=!|^62+E=UYk2Y3mr2?XKScF4D
+
+# Organization Signing Key: msvXw(nII<Qm6oBHc+92xwRI3>VFF-RcZ=7DEu3|
+# Organization Verification Key: )8id(gE02^S<{3H>9B;X4{DuYcb`%wo^mC&1lN88
+
+
 # Pylint doesn't detect the use of this import:
 from retval import RetVal # pylint: disable=unused-import
 
@@ -34,12 +46,12 @@ def make_test_userentry() -> keycard.UserEntry:
 	'''Generates a user entry for testing purposes'''
 
 	# User signing key
-	skey = nacl.signing.SigningKey(b'{Ue^0)?k`s(>pNG&Wg9f5b;VHN1^PC*c4-($G#>}', Base85Encoder)
+	skey = nacl.signing.SigningKey(b'p;XXU0XF#UO^}vKbC-wS(#5W6=OEIFmR2z`rS1j+', Base85Encoder)
 
 	# Organization signing key
-	oskey = nacl.signing.SigningKey(b'GS30y3fdJX0H7t&p(!m3oXqlZI1ghz+o!B7Y92Y%', Base85Encoder)
+	oskey = nacl.signing.SigningKey(b'msvXw(nII<Qm6oBHc+92xwRI3>VFF-RcZ=7DEu3|', Base85Encoder)
 
-	# crskey = nacl.signing.SigningKey(b'GS30y3fdJX0H7t&p(!m3oXqlZI1ghz+o!B7Y92Y%', Base85Encoder)
+	# crskey = nacl.signing.SigningKey(b'ip52{ps^jH)t$k-9bc_RzkegpIW?}FFe~BX&<V}9', Base85Encoder)
 	# crekey = nacl.public.PrivateKey(b'VyFX5PC~?eL5)>q|6W7ciRrOJw$etlej<tY$f+t_', Base85Encoder)
 	# ekey = nacl.public.PrivateKey(b'Wsx6BC(HP~goS-C_`K=6Daqr97kapfc=vQUzi?KI', Base85Encoder)
 
@@ -49,7 +61,7 @@ def make_test_userentry() -> keycard.UserEntry:
 		'Workspace-ID':'4418bf6c-000b-4bb3-8111-316e72030468',
 		'User-ID':'csimons',
 		'Domain':'example.com',
-		'Contact-Request-Signing-Key':'ED25519:7dfD==!Jmt4cDtQDBxYa7(dV|N$}8mYwe$=RZuW|',
+		'Contact-Request-Signing-Key':'ED25519:d0-oQb;{QxwnO{=!|^62+E=UYk2Y3mr2?XKScF4D',
 		'Contact-Request-Encryption-Key':'CURVE25519:yBZ0{1fE9{2<b~#i^R+JT-yh-y5M(Wyw_)}_SZOn',
 		'Public-Encryption-Key':'CURVE25519:_`UC|vltn_%P5}~vwV^)oY){#uvQSSy(dOD_l(yE'
 	})
@@ -105,10 +117,10 @@ def make_test_orgentry() -> keycard.OrgEntry:
 	'''Generates an organizational entry for testing purposes'''
 
 	# Primary signing key
-	pskey = nacl.signing.SigningKey(b'GS30y3fdJX0H7t&p(!m3oXqlZI1ghz+o!B7Y92Y%', Base85Encoder)
+	pskey = nacl.signing.SigningKey(b'msvXw(nII<Qm6oBHc+92xwRI3>VFF-RcZ=7DEu3|', Base85Encoder)
 	
 	# Secondary signing key
-	sskey = nacl.signing.SigningKey(b'GS30y3fdJX0H7t&p(!m3oXqlZI1ghz+o!B7Y92Y%', Base85Encoder)
+	sskey = nacl.signing.SigningKey(b'msvXw(nII<Qm6oBHc+92xwRI3>VFF-RcZ=7DEu3|', Base85Encoder)
 	
 	# Encryption key
 	ekey = nacl.public.PrivateKey(b'Wsx6BC(HP~goS-C_`K=6Daqr97kapfc=vQUzi?KI', Base85Encoder)
@@ -242,8 +254,8 @@ def test_set_expiration():
 
 def test_sign():
 	'''Tests signing of a keycard entry'''
-	skey = nacl.signing.SigningKey(b'{Ue^0)?k`s(>pNG&Wg9f5b;VHN1^PC*c4-($G#>}', Base85Encoder)
-	# crskey = nacl.signing.SigningKey(b'GS30y3fdJX0H7t&p(!m3oXqlZI1ghz+o!B7Y92Y%', Base85Encoder)
+	skey = nacl.signing.SigningKey(b'p;XXU0XF#UO^}vKbC-wS(#5W6=OEIFmR2z`rS1j+', Base85Encoder)
+	# crskey = nacl.signing.SigningKey(b'msvXw(nII<Qm6oBHc+92xwRI3>VFF-RcZ=7DEu3|', Base85Encoder)
 	# crekey = nacl.public.PrivateKey(b'VyFX5PC~?eL5)>q|6W7ciRrOJw$etlej<tY$f+t_', Base85Encoder)
 	# ekey = nacl.public.PrivateKey(b'Wsx6BC(HP~goS-C_`K=6Daqr97kapfc=vQUzi?KI', Base85Encoder)
 
@@ -279,7 +291,7 @@ def test_sign():
 	assert basecard.signatures['User'], 'entry failed to user sign'
 	
 	expected_sig = \
-		'ED25519:&7=iP?(=08IB44fog$pB7C*4(s9+7DRe=p(+1Mnoh{|avuYNAFDHG-H%0dFmYmyQL3DtPhup-*n?doI+'
+		'ED25519:Ied3Gcl&O6DeK7zk<l;brbZ$BCFwB4?mh1GJI=&Cc`nGV?owKG#tupX`igeH%~pfV)a*Kd9IJ5m0c9=<'
 	assert basecard.signatures['User'] == expected_sig, "entry did not yield the expected signature"
 
 
@@ -290,10 +302,10 @@ def test_verify_signature():
 	# signatures. This test is also only intended to confirm success states of the method.
 
 	# User signing key
-	skey = nacl.signing.SigningKey(b'{Ue^0)?k`s(>pNG&Wg9f5b;VHN1^PC*c4-($G#>}', Base85Encoder)
+	skey = nacl.signing.SigningKey(b'p;XXU0XF#UO^}vKbC-wS(#5W6=OEIFmR2z`rS1j+', Base85Encoder)
 
 	# Organization signing key
-	oskey = nacl.signing.SigningKey(b'GS30y3fdJX0H7t&p(!m3oXqlZI1ghz+o!B7Y92Y%', Base85Encoder)
+	oskey = nacl.signing.SigningKey(b'msvXw(nII<Qm6oBHc+92xwRI3>VFF-RcZ=7DEu3|', Base85Encoder)
 
 	# crekey = nacl.public.PrivateKey(b'VyFX5PC~?eL5)>q|6W7ciRrOJw$etlej<tY$f+t_', Base85Encoder)
 	# ekey = nacl.public.PrivateKey(b'Wsx6BC(HP~goS-C_`K=6Daqr97kapfc=vQUzi?KI', Base85Encoder)
@@ -306,7 +318,7 @@ def test_verify_signature():
 		'Name':'Corbin Simons',
 		'Workspace-ID':'4418bf6c-000b-4bb3-8111-316e72030468',
 		'Domain':'example.com',
-		'Contact-Request-Signing-Key':'ED25519:7dfD==!Jmt4cDtQDBxYa7(dV|N$}8mYwe$=RZuW|',
+		'Contact-Request-Signing-Key':'ED25519:d0-oQb;{QxwnO{=!|^62+E=UYk2Y3mr2?XKScF4D',
 		'Contact-Request-Encryption-Key':'CURVE25519:yBZ0{1fE9{2<b~#i^R+JT-yh-y5M(Wyw_)}_SZOn',
 		'Public-Encryption-Key':'CURVE25519:_`UC|vltn_%P5}~vwV^)oY){#uvQSSy(dOD_l(yE',
 		'Expires':'20201002',
@@ -332,7 +344,7 @@ def test_verify_signature():
 	assert basecard.signatures['User'], 'entry failed to user sign'
 	
 	expected_sig = \
-		'ED25519:&7=iP?(=08IB44fog$pB7C*4(s9+7DRe=p(+1Mnoh{|avuYNAFDHG-H%0dFmYmyQL3DtPhup-*n?doI+'
+		'ED25519:4cs`6#B*J*45pbNfb&x$A6`l7hDnQgi9Du~HpFSaMTRZLwbwovsgUR|e+y#!|J!r5hDcmwc*DrBn1gW('
 	assert basecard.signatures['User'] == expected_sig, \
 			"entry did not yield the expected user signature"
 
@@ -353,7 +365,7 @@ def test_verify_signature():
 	assert basecard.signatures['Organization'], 'entry failed to user sign'
 
 	expected_sig = \
-		'ED25519:1k*c9Ij~7~!LTKVi%03t>lNWyu;z&HstS*_w{vLuWY`b=)wxQDqQqryUoR#=u<GKg+8pGgH7e!#0>%IX'
+		'ED25519:wU20HwC`n=hT#&5BP0)HaT+o+Dzx@m(M@v4!QY|kJe~lh!LXGF+Lqqsv%PLu&3Lp#4Bp7P@$2)%zK;z9'
 	assert basecard.signatures['Organization'] == expected_sig, \
 			"entry did not yield the expected org signature"
 	
@@ -373,7 +385,7 @@ def test_verify_signature():
 	assert basecard.signatures['Entry'], 'entry failed to entry sign'
 	
 	expected_sig = \
-		'ED25519:oXQvALV4gf2pn|IQhf2^KKBoL`8w7n{Q(Du{W2X05>WY{hVEeMoM|9NGUpKkjIutFlp$y8(E(EdzTx)<'
+		'ED25519:N%^Q{>17RWzMR>L;-xzP`eg#Uz~-yvlg1c*BG_=GpfYee91!LZuH8+D^dbDzr8OJ~9UQnDUA?cAxKZf>'
 	assert basecard.signatures['Entry'] == expected_sig, \
 			"entry did not yield the expected entry signature"
 
@@ -399,7 +411,7 @@ def test_is_compliant_org():
 	'''Tests compliance testing for the OrgEntry class'''
 
 	# Organization signing key
-	oskey = nacl.signing.SigningKey(b'GS30y3fdJX0H7t&p(!m3oXqlZI1ghz+o!B7Y92Y%', Base85Encoder)
+	oskey = nacl.signing.SigningKey(b'msvXw(nII<Qm6oBHc+92xwRI3>VFF-RcZ=7DEu3|', Base85Encoder)
 
 	orgcard = keycard.OrgEntry()
 	orgcard.set_fields({
@@ -435,13 +447,13 @@ def test_user_chaining():
 	'''Tests chaining of user entries and verification thereof'''
 	userentry = make_test_userentry()
 
-	# User signing key
-	skeystring = AlgoString('ED25519:{Ue^0)?k`s(>pNG&Wg9f5b;VHN1^PC*c4-($G#>}')
+	# User contact request signing and verification keys
+	crskeystring = AlgoString('ED25519:ip52{ps^jH)t$k-9bc_RzkegpIW?}FFe~BX&<V}9') 
 
 	# Organization signing key
-	oskeystring = AlgoString('ED25519:GS30y3fdJX0H7t&p(!m3oXqlZI1ghz+o!B7Y92Y%')
+	oskeystring = AlgoString('ED25519:msvXw(nII<Qm6oBHc+92xwRI3>VFF-RcZ=7DEu3|')
 	
-	chaindata = userentry.chain(skeystring, True)
+	chaindata = userentry.chain(crskeystring, True)
 	assert not chaindata.error(), f'userentry.chain returned an error: {chaindata.error()}'
 
 	new_entry = chaindata['entry']
@@ -450,16 +462,17 @@ def test_user_chaining():
 	# signatures needed to be compliant and then verify the whole thing.
 
 	# The signing key is replaced during chain()
-	status = skeystring.set(chaindata['sign.private'])
+	new_crskeystring = AlgoString()
+	status = new_crskeystring.set(chaindata['crsign.private'])
 	assert not status.error(), 'test_user_chain: new signing key has bad format'
 	
-	status = new_entry.sign(skeystring, 'User')
+	status = new_entry.sign(new_crskeystring, 'User')
 	assert not status.error(), f'new entry failed to user sign: {status}'
 
 	status = new_entry.sign(oskeystring, 'Organization')
 	assert not status.error(), f'new entry failed to org sign: {status}'
 
-	status = new_entry.sign(skeystring, 'Entry')
+	status = new_entry.sign(new_crskeystring, 'Entry')
 	assert not status.error(), f'new entry failed to entry sign: {status}'
 
 	status = new_entry.is_compliant()
@@ -481,7 +494,7 @@ def test_keycard_chain_verify():
 	assert not chaindata.error(), f'keycard chain failed: {chaindata}'
 
 	new_entry = chaindata['entry']
-	oskeystring = AlgoString('ED25519:GS30y3fdJX0H7t&p(!m3oXqlZI1ghz+o!B7Y92Y%')
+	oskeystring = AlgoString('ED25519:msvXw(nII<Qm6oBHc+92xwRI3>VFF-RcZ=7DEu3|')
 
 	skeystring = AlgoString(chaindata['sign.private'])
 	status = new_entry.sign(skeystring, 'User')
@@ -499,4 +512,5 @@ def test_keycard_chain_verify():
 
 
 if __name__ == '__main__':
-	test_user_chaining()
+	#test_user_chaining()
+	test_sign()
