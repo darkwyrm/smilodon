@@ -355,7 +355,7 @@ class OrgEntry(EntryBase):
 		self.fields['Time-To-Live'] = '30'
 		self.set_expiration()
 
-	def chain(self, rotate_optional: bool) -> RetVal:
+	def chain(self, key: AlgoString, rotate_optional: bool) -> RetVal:
 		'''Creates a new OrgEntry object with new keys and a custody signature. The keys are 
 		returned in AlgoString format using the following fields:
 		entry
@@ -368,12 +368,15 @@ class OrgEntry(EntryBase):
 		which is recommended only in instances of revocation, the secondary key is removed. Only 
 		when rotate_optional is True is the field altsign.private returned.
 		'''
+		if key.prefix != 'ED25519':
+			return RetVal(BadParameterValue, f'wrong key type {key.prefix}')
+		
 		status = self.is_compliant()
 		if status.error():
 			return status
 		
 		new_entry = OrgEntry()
-		new_entry.fields = self.fields
+		new_entry.fields = self.fields.copy()
 
 		out = RetVal()
 
@@ -393,7 +396,7 @@ class OrgEntry(EntryBase):
 			out['altsign.public'] = self.fields['Primary-Signing-Key']
 			out['altsign.private'] = ''
 
-		status = new_entry.sign(AlgoString(self.fields['Contact-Request-Signing-Key']), 'Custody')
+		status = new_entry.sign(key, 'Custody')
 		if status.error():
 			return status
 
@@ -402,8 +405,20 @@ class OrgEntry(EntryBase):
 	
 	def verify_chain(self, previous: EntryBase) -> RetVal:
 		'''Verifies the chain of custody between the provided previous entry and the current one.'''
-		# TODO: Implement OrgEntry.verify_chain()
-		return RetVal(Unimplemented)
+
+		if previous.type != 'Organization':
+			return RetVal(BadParameterValue, 'entry type mismatch')
+		
+		if 'Custody' not in self.signatures or not self.signatures['Custody']:
+			return RetVal(ResourceNotFound, 'custody signature missing')
+		
+		if 'Primary-Signing-Key' not in previous.fields or \
+				not previous.fields['Primary-Signing-Key']:
+			return RetVal(ResourceNotFound, 'signing key missing')
+		
+		status = self.verify_signature(AlgoString(previous.fields['Primary-Signing-Key']),
+				'Custody')
+		return status
 
 
 class UserEntry(EntryBase):

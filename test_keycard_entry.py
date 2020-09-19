@@ -18,8 +18,11 @@ from keycard_entry import AlgoString, Base85Encoder
 # User Contact Request Signing Key: ip52{ps^jH)t$k-9bc_RzkegpIW?}FFe~BX&<V}9
 # User Contact Request Verification Key: d0-oQb;{QxwnO{=!|^62+E=UYk2Y3mr2?XKScF4D
 
-# Organization Signing Key: msvXw(nII<Qm6oBHc+92xwRI3>VFF-RcZ=7DEu3|
-# Organization Verification Key: )8id(gE02^S<{3H>9B;X4{DuYcb`%wo^mC&1lN88
+# Organization Primary Signing Key: msvXw(nII<Qm6oBHc+92xwRI3>VFF-RcZ=7DEu3|
+# Organization Primary Verification Key: )8id(gE02^S<{3H>9B;X4{DuYcb`%wo^mC&1lN88
+
+# Organization Encryption Key: @b?cjpeY;<&y+LSOA&yUQ&ZIrp(JGt{W$*V>ATLG
+# Organization Decryption Key: nQxAR1Rh{F4gKR<KZz)*)7}5s_^!`!eb!sod0<aT
 
 
 # Pylint doesn't detect the use of this import:
@@ -119,22 +122,14 @@ def make_test_orgentry() -> keycard.OrgEntry:
 	# Primary signing key
 	pskey = nacl.signing.SigningKey(b'msvXw(nII<Qm6oBHc+92xwRI3>VFF-RcZ=7DEu3|', Base85Encoder)
 	
-	# Secondary signing key
-	sskey = nacl.signing.SigningKey(b'msvXw(nII<Qm6oBHc+92xwRI3>VFF-RcZ=7DEu3|', Base85Encoder)
-	
-	# Encryption key
-	ekey = nacl.public.PrivateKey(b'Wsx6BC(HP~goS-C_`K=6Daqr97kapfc=vQUzi?KI', Base85Encoder)
-
-	# TODO: Rework fields into org card
 	orgcard = keycard.OrgEntry()
 	orgcard.set_fields({
-		'Name':'Corbin Simons',
-		'Workspace-ID':'4418bf6c-000b-4bb3-8111-316e72030468',
-		'User-ID':'csimons',
-		'Domain':'example.com',
-		'Contact-Request-Signing-Key':'ED25519:7dfD==!Jmt4cDtQDBxYa7(dV|N$}8mYwe$=RZuW|',
-		'Contact-Request-Encryption-Key':'CURVE25519:yBZ0{1fE9{2<b~#i^R+JT-yh-y5M(Wyw_)}_SZOn',
-		'Public-Encryption-Key':'CURVE25519:_`UC|vltn_%P5}~vwV^)oY){#uvQSSy(dOD_l(yE'
+		'Name':'Acme Widgets, Inc.',
+		'Contact-Admin':'c590b44c-798d-4055-8d72-725a7942f3f6/acme.com',
+		'Language':'en',
+		'Domain':'acme.com',
+		'Primary-Signing-Key':'ED25519:)8id(gE02^S<{3H>9B;X4{DuYcb`%wo^mC&1lN88',
+		'Encryption-Key':'CURVE25519:@b?cjpeY;<&y+LSOA&yUQ&ZIrp(JGt{W$*V>ATLG'
 	})
 
 	# Organization sign and verify
@@ -441,6 +436,37 @@ def test_is_compliant_org():
 
 	status = orgcard.is_compliant()
 	assert not status.error(), "OrgEntry wasn't compliant"
+
+
+def test_org_chaining():
+	'''Tests chaining of organization entries and verification thereof'''
+	orgentry = make_test_orgentry()
+
+	# Organization signing key
+	pskeystring = AlgoString('ED25519:msvXw(nII<Qm6oBHc+92xwRI3>VFF-RcZ=7DEu3|')
+	
+	chaindata = orgentry.chain(pskeystring, True)
+	assert not chaindata.error(), f'orgentry.chain returned an error: {chaindata.error()}'
+
+	new_entry = chaindata['entry']
+
+	# Now that we have a new entry, it only has a valid custody signature. Add all the other 
+	# signatures needed to be compliant and then verify the whole thing.
+
+	# The signing key is replaced during chain()
+	new_pskeystring = AlgoString()
+	status = new_pskeystring.set(chaindata['sign.private'])
+	assert not status.error(), 'test_org_chain: new signing key has bad format'
+	
+	status = new_entry.sign(new_pskeystring, 'Organization')
+	assert not status.error(), f'new entry failed to org sign: {status}'
+
+	status = new_entry.is_compliant()
+	assert not status.error(), f'new entry failed compliance check: {status}'
+
+	# Testing of chain() is complete. Now test verify_chain()
+	status = new_entry.verify_chain(orgentry)
+	assert not status.error(), f'chain of custody verification failed: {status}'
 
 
 def test_user_chaining():
