@@ -107,13 +107,13 @@ def generate_org_card(userdata: list, path: str):
 	ekey.save(os.path.join(path, 'org_encryption_keypair.jk'))
 	print("Saved encryption key to org_encryption_keypair.jk")
 
-	card = keycard.OrgCard()
+	card = keycard.OrgEntry()
 	for item in userdata:
 		card.set_field(item[0], item[1])
 	card.set_field("Primary-Signing-Key", 'ED25519:' + skey.get_public_key85())
 	card.set_field("Encryption-Key", 'CURVE25519:' + ekey.get_public_key85())
 	
-	status = card.sign(skey.get_private_key())
+	status = card.sign(skey.get_private_key(), 'Organization')
 	if status.error():
 		if status.info():
 			print("Org card signature failure: %s" % status.info())
@@ -127,7 +127,7 @@ def generate_org_card(userdata: list, path: str):
 		else:
 			print("Org card not compliant: %s" % status.error())
 	
-	card.save(os.path.join(path, 'org.keycard'), True)
+	card.save(os.path.join(path, 'org.kc'), True)
 	
 
 def get_user_info():
@@ -171,7 +171,7 @@ def generate_user_card(userdata: list, path: str):
 	crekey.save(os.path.join(path, 'user_crencryption_keypair.jk'))
 	print("Saved contact request key to user_crencryption_keypair.jk")
 
-	card = keycard.UserCard()
+	card = keycard.UserEntry()
 	for item in userdata:
 		card.set_field(item[0], item[1])
 	card.set_fields({
@@ -182,7 +182,14 @@ def generate_user_card(userdata: list, path: str):
 		"Public-Encryption-Key" : ekey.enc_type.upper() + ':' + ekey.get_public_key85()
 	})
 	
-	card.save(os.path.join(path, 'user.keycard'), True)
+	status = card.sign(skey.get_private_key(), 'User')
+	if status.error():
+		if status.info():
+			print("User card signature failure: %s" % status.info())
+		else:
+			print("User card signature failure: %s" % status.error())
+	
+	card.save(os.path.join(path, 'user.kc'), True)
 
 
 debug_app = False
