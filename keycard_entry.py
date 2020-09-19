@@ -9,7 +9,7 @@ import nacl.public
 import nacl.signing
 
 from retval import RetVal, BadData, BadParameterValue, ExceptionThrown, ResourceExists, \
-		ResourceNotFound, Unimplemented
+		ResourceNotFound
 
 FeatureNotAvailable = 'FeatureNotAvailable'
 UnsupportedKeycardType = 'UnsupportedKeycardType'
@@ -218,7 +218,7 @@ class EntryBase:
 				return RetVal(BadData, line)
 			
 			if parts[0] == 'Type':
-				if parts[0] != self.type:
+				if parts[1] != self.type:
 					return RetVal(BadData, "can't use %s data on a %s entry" % (parts[0], self.type))
 			
 			elif parts[0].endswith('Signature'):
@@ -580,8 +580,73 @@ class Keycard:
 	
 	def load(self, path: str) -> RetVal:
 		'''Loads a keycard from a file'''
-		# TODO: Implement load()
-		return RetVal(Unimplemented)
+		if not path:
+			return RetVal(BadParameterValue, 'path may not be empty')
+		
+		if not os.path.exists(path):
+			return RetVal(ResourceNotFound)
+		
+		# Although we care very much about saving keycards with the Windows-style line endings,
+		# we actually want the line endings to get stripped on load because the fields aren't
+		# stored with line endings
+		try:
+			with open(path, 'r') as f:
+				card_type = ''
+				accumulator = list()
+				line_index = 1
+				entry_index = 1
+				rawline = f.readline()
+
+				while rawline:
+					line = rawline.strip()
+					if not line:
+						line_index = line_index + 1
+						continue
+					
+					if line == '----- BEGIN ENTRY -----':
+						accumulator.clear()
+					elif line == '----- END ENTRY -----':
+						
+						entry = None
+						if card_type == 'User':
+							entry = UserEntry()
+						elif card_type == 'Organization':
+							entry = OrgEntry()
+						else:
+							return RetVal(UnsupportedKeycardType,
+									f'entry {entry_index} has invalid type')
+
+						status = entry.set(b'\r\n'.join(accumulator))
+						if status.error():
+							status.info = f'keycard entry {entry_index}: {status.info}'
+							return status
+						self.entries.append(entry)
+						entry_index = entry_index + 1
+					else:
+						parts = line.split(':', 1)
+						if len(parts) != 2:
+							return RetVal(BadData, f'invalid line {line_index}')
+						
+						if parts[0] == 'Type':
+							if card_type:
+								if card_type != parts[1]:
+									return RetVal(BadData, 'entry type does not match keycard')
+							else:
+								card_type = parts[1]
+
+						accumulator.append(line.encode())
+					
+					line_index = line_index + 1
+					rawline = f.readline()
+
+		
+		except Exception as e:
+			return RetVal(ExceptionThrown, str(e))
+
+
+
+
+		return RetVal()
 
 	def save(self, path: str, clobber: bool) -> RetVal:
 		'''Saves a keycard to a file'''

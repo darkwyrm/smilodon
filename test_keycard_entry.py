@@ -509,7 +509,7 @@ def test_user_chaining():
 	assert not status.error(), f'chain of custody verification failed: {status}'
 
 
-def test_keycard_chain_verify():
+def test_keycard_chain_verify_load_save():
 	'''Tests entry rotation of a keycard'''
 	userentry = make_test_userentry()
 
@@ -539,6 +539,15 @@ def test_keycard_chain_verify():
 	status = card.verify()
 	assert not status.error(), f'keycard failed to verify: {status}'
 
+	# Although it doesn't make a lot of initial sense to group saving and loading tests with 
+	# code that handles chaining and verification, it saves on a lot of duplicate test code
+	test_folder = setup_test('keycard_save')
+	status = card.save(os.path.join(test_folder,'user_save_test_keycard.kc'), True)
+	assert not status.error(), f'keycard failed to save: {status}'
+
+	newcard = keycard.Keycard()
+	status = newcard.load(os.path.join(test_folder,'user_save_test_keycard.kc'))
+	assert not status.error(), f'keycard failed to load: {status}'
 
 if __name__ == '__main__':
-	test_keycard_chain_verify()
+	test_keycard_chain_verify_load_save()
