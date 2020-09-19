@@ -537,9 +537,7 @@ def test_keycard_chain_verify():
 
 	card.entries[-1] = new_entry
 	status = card.verify()
-	
-	# FIXME: Enable when verify() is implemented
-	# assert not status.error(), f'keycard failed to verify: {status}'
+	assert not status.error(), f'keycard failed to verify: {status}'
 
 
 if __name__ == '__main__':

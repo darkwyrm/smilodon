@@ -605,8 +605,19 @@ class Keycard:
 	
 	def verify(self) -> RetVal:
 		'''Verifies the card's entire chain of entries'''
-		# TODO: Implement verify()
-		return RetVal(Unimplemented)
+		
+		if len(self.entries) == 0:
+			return RetVal(ResourceNotFound, 'keycard contains no entries')
+		
+		if len(self.entries) == 1:
+			return RetVal()
+		
+		for i in range(len(self.entries) - 1):
+			status = self.entries[i + 1].verify_chain(self.entries[i])
+			if status.error():
+				return status
+
+		return RetVal()
 
 
 class Base85Encoder:
