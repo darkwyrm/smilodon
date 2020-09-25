@@ -87,7 +87,7 @@ def make_test_userentry() -> keycard.UserEntry:
 
 	# Add the hash
 
-	rv = usercard.generate_hash('BLAKE3-512')
+	rv = usercard.generate_hash('BLAKE3-256')
 	assert not rv.error(), 'entry failed to hash'
 
 	# User sign and verify
@@ -106,6 +106,9 @@ def make_test_userentry() -> keycard.UserEntry:
 	rv = usercard.verify_signature(vkeystring, 'User')
 	assert not rv.error(), 'entry failed to user verify'
 
+	status = usercard.is_compliant()
+	assert not status.error(), f"UserEntry wasn't compliant: {str(status)}"
+	
 	return usercard
 
 
@@ -138,11 +141,14 @@ def make_test_orgentry() -> keycard.OrgEntry:
 	ovkeystring.prefix = 'ED25519'
 	ovkeystring.data = base64.b85encode(ovkey.encode()).decode()
 
-	rv = orgcard.generate_hash('BLAKE3-512')
+	rv = orgcard.generate_hash('BLAKE3-256')
 	assert not rv.error(), 'entry failed to hash'
 
 	rv = orgcard.verify_signature(ovkeystring, 'Organization')
 	assert not rv.error(), 'org entry failed to verify'
+
+	status = orgcard.is_compliant()
+	assert not status.error(), f"OrgEntry wasn't compliant: {str(status)}"
 
 	return orgcard
 
@@ -279,7 +285,7 @@ def test_sign():
 	assert not rv.error(), 'Unexpected RetVal error %s' % rv.error()
 	assert basecard.signatures['Organization'], 'entry failed to org sign'
 
-	rv = basecard.generate_hash('BLAKE3-512')
+	rv = basecard.generate_hash('BLAKE3-256')
 	assert not rv.error(), 'Unexpected RetVal error %s' % rv.error()
 	
 	expected_sig = \
@@ -352,18 +358,14 @@ def test_verify_signature():
 
 	# Set up the hashes
 	basecard.prev_hash = '1234567890'
-	rv = basecard.generate_hash('BLAKE3-512')
+	rv = basecard.generate_hash('BLAKE3-256')
 	assert not rv.error(), 'entry failed to BLAKE3 hash'
 
 	expected_hash = \
-		r'BLAKE3-512:1qTf`Hq*rSrlHM=x7E_r%}n8R#hpd3l(26c%A6p@djSv$c2+wU29J?&hs$~LbyOWaKM>Xk<LsA{J' \
+		r'BLAKE3-256:1qTf`Hq*rSrlHM=x7E_r%}n8R#hpd3l(26c%A6p@djSv$c2+wU29J?&hs$~LbyOWaKM>Xk<LsA{J' \
 		r'A(><Dw*k!BCD*6mAe6uJjYOG>u^j3_C>epRftL0LNs)g8JBw*0c#l_bF^fgr`U%saoQ)Eu$PFM5KsB+#ltJnCoP' \
 		r'F5#Xr3J5`@;vl#}ffw?@6s=E4dVxY8{jr0S7&T16qZ#EbW^k~R~SkG6IdA#{uq#`4AmIj0MMIKZ&7!{vv;*JK@V' \
-		r'p1;e^1f1d;_<z?H^3?StbaetVp4e!T5UKOn2BW31Xc$=e*gjksd5WT{3%ME)EZv7&h8qIN$2px(0g*s^zd*Kwo3' \
-		r'Fz@{yP){@lLltp(JAt$|oPg&3bXOU?K*Lgzy3=?J_kW5f;6@rb^C*4>Y}0iDr&JASU_4#`l$iTH&Sc@?f$8J<JI' \
-		r'np0v&6RpY1m)FeKN&dIq=(Gsu&tsFs^M@N<mbdb;I8rYP+7e5++!D<L%mK1s5JB4R@XFAcCC!p`k7DiN!nkrh`t' \
-		r'hqyhBXu}wwL*r*ie{r0UDXttGe3$N?;)p**>BeZ(YN13&>OUUp0zoMF6p1gXoeyO`dHs4&&(aH%5SIq(t7GH5yl' \
-		r'!5S&rrU-me?pr&}sg1<o1epP*V#z(nS9S!aW|oGS?O'
+		r'p1;e^1f1d;_<z?H^3?StbaetVp4e!T5UKOn2BW31Xc$=e*gjksd5WT{3%ME)EZv7&h8qIN'
 	assert basecard.hash == expected_hash, "entry did not yield the expected hash"
 	
 	# User sign and verify
@@ -375,7 +377,7 @@ def test_verify_signature():
 	assert basecard.signatures['User'], 'entry failed to user sign'
 	
 	expected_sig = \
-		'ED25519:MFGN>u=oswij--OD6xpQ47K*9a^1O2_&c3eUO-IrG?EZD<N47iP3P{`)oi3VCG>P#B^`*RM9v0#j-M<6'
+		'ED25519:SUhk+<+KWMkN*R$DCr&TOW^9^0)F`LO&sbK9P>$A^ta|WeBYlU7yoWXBmxb`SO=49erV?@jF?A~Vn!AS'
 	assert basecard.signatures['User'] == expected_sig, \
 			"entry did not yield the expected user signature"
 
@@ -434,7 +436,7 @@ def test_is_compliant_org():
 	rv = orgcard.verify_signature(ovkeystring, 'Organization')
 	assert not rv.error(), 'entry failed to org verify'
 
-	rv = orgcard.generate_hash('BLAKE3-512')
+	rv = orgcard.generate_hash('BLAKE3-256')
 	assert not rv.error(), 'entry failed to hash'
 
 	status = orgcard.is_compliant()
@@ -465,7 +467,7 @@ def test_org_chaining():
 	assert not status.error(), f'new entry failed to org sign: {status}'
 	
 	new_entry.prev_hash = orgentry.hash
-	status = new_entry.generate_hash('BLAKE3-512')
+	status = new_entry.generate_hash('BLAKE3-256')
 	assert not status.error(), f'new entry failed to hash: {status}'
 	
 	status = new_entry.is_compliant()
@@ -503,7 +505,7 @@ def test_user_chaining():
 	assert not status.error(), f'new entry failed to org sign: {status}'
 
 	new_entry.prev_hash = userentry.hash
-	status = new_entry.generate_hash('BLAKE3-512')
+	status = new_entry.generate_hash('BLAKE3-256')
 	assert not status.error(), f'new entry failed to hash: {status}'
 
 	status = new_entry.sign(new_crskeystring, 'User')
@@ -515,6 +517,16 @@ def test_user_chaining():
 	# Testing of chain() is complete. Now test verify_chain()
 	status = new_entry.verify_chain(userentry)
 	assert not status.error(), f'chain of custody verification failed: {status}'
+
+
+def test_hashing():
+	'''Confirms that all supported algorithms work as expected'''
+	userentry = make_test_userentry()
+
+	algolist = [ 'BLAKE2', 'SHA-256', 'SHA3-256' ]
+	for algorithm in algolist:
+		status = userentry.generate_hash(algorithm)
+		assert not status.error(), f'hash test for {algorithm} failed'
 
 
 def test_keycard_chain_verify_load_save():
@@ -537,7 +549,7 @@ def test_keycard_chain_verify_load_save():
 	assert not status.error(), f'chained entry failed to org sign: {status}'
 
 	new_entry.prev_hash = userentry.hash
-	new_entry.generate_hash('BLAKE3-512')
+	new_entry.generate_hash('BLAKE3-256')
 	assert not status.error(), f'chained entry failed to hash: {status}'
 
 	skeystring = AlgoString(chaindata['sign.private'])
@@ -559,4 +571,5 @@ def test_keycard_chain_verify_load_save():
 	assert not status.error(), f'keycard failed to load: {status}'
 
 if __name__ == '__main__':
-	test_keycard_chain_verify_load_save()
+	test_verify_signature()
+	# test_keycard_chain_verify_load_save()

@@ -94,6 +94,21 @@ class EntryBase:
 		self.prev_hash = ''
 		self.hash = ''
 	
+	def __contains__(self, key):
+		return key in self.fields
+
+	def __delitem__(self, key):
+		del self.fields[key]
+
+	def __getitem__(self, key):
+		return self.fields[key]
+	
+	def __iter__(self):
+		return self.fields.__iter__()
+	
+	def __setitem__(self, key, value):
+		self.fields[key] = value
+	
 	def __str__(self):
 		return self.make_bytestring(-1).decode()
 	
@@ -170,7 +185,7 @@ class EntryBase:
 				if self.prev_hash:
 					lines.append(b'Previous-Hash:%s' % self.prev_hash.encode())
 				if self.hash:
-					lines.append(b'Hash:%s' % self.prev_hash.encode())
+					lines.append(b'Hash:%s' % self.hash.encode())
 			elif name in self.signatures and self.signatures[name]:
 				lines.append(b''.join([name.encode() + b'-Signature:',
 								self.signatures[name].encode()]))
@@ -306,12 +321,9 @@ class EntryBase:
 
 	def generate_hash(self, algorithm: str) -> RetVal:
 		'''Generates a hash containing the expected signatures and the previous hash, if it exists. 
-		The supported hash algorithms are 'BLAKE3-512', 'BLAKE2-512', 'SHA-512', and 'SHA3-512'.'''  
-		algomap = {
-			'BLAKE2-512':'blake2b',
-			'SHA-512':'sha512',
-			'SHA3-512':'sha3_512'
-		}
+		The supported hash algorithms are 'BLAKE3-256', 'BLAKE2-512', 'SHA-512', and 'SHA3-512'.'''  
+		if algorithm not in ['BLAKE3-256','BLAKE2','SHA-256','SHA3-256']:
+			return RetVal(UnsupportedHashType, f'{algorithm} not a support hash algorithm')
 		
 		hash_string = AlgoString()
 		hash_level = -1
@@ -321,16 +333,21 @@ class EntryBase:
 				break
 		assert hash_level > 0, "BUG: signature_info missing hash entry"
 		
-		hasher = None
-		if algorithm == 'BLAKE3-512':
+		if algorithm == 'BLAKE3-256':
 			hasher = blake3.blake3() # pylint: disable=c-extension-no-member
-		elif algorithm in algomap:
-			hasher = hashlib.new(algomap[algorithm])
+			hasher.update(self.make_bytestring(hash_level))
+			hash_string.data = base64.b85encode(hasher.digest(length=256)).decode()
 		else:
-			return RetVal(UnsupportedHashType)
+			hasher = None
+			if algorithm == 'BLAKE2':
+				hasher = hashlib.blake2b()
+			elif algorithm == 'SHA-256':
+				hasher = hashlib.sha256()
+			else:
+				hasher = hashlib.sha3_256()
+			hasher.update(self.make_bytestring(hash_level))
+			hash_string.data = base64.b85encode(hasher.digest()).decode()
 		
-		hasher.update(self.make_bytestring(hash_level))
-		hash_string.data = base64.b85encode(hasher.digest(length=512)).decode()
 		hash_string.prefix = algorithm
 		self.hash = str(hash_string)
 		
@@ -378,6 +395,7 @@ class OrgEntry(EntryBase):
 		super().__init__()
 		self.type = 'Organization'
 		self.field_names = [
+			'Index',
 			'Name',
 			'Contact-Admin',
 			'Contact-Abuse',
@@ -391,6 +409,7 @@ class OrgEntry(EntryBase):
 			'Hash-ID'
 		]
 		self.required_fields = [
+			'Index',
 			'Name',
 			'Contact-Admin',
 			'Primary-Signing-Key',
@@ -404,6 +423,7 @@ class OrgEntry(EntryBase):
 			{ 'name' : 'Hashes', 'level' : 3, 'optional' : False, 'type' : SIGINFO_HASH }
 		]
 		
+		self.fields['Index'] = '1'
 		self.fields['Time-To-Live'] = '30'
 		self.set_expiration()
 
@@ -430,6 +450,12 @@ class OrgEntry(EntryBase):
 		new_entry = OrgEntry()
 		new_entry.fields = self.fields.copy()
 
+		try:
+			index = int(new_entry.fields['Index'])
+			new_entry.fields['Index'] = str(index + 1)
+		except Exception:
+			return RetVal(BadData, 'invalid entry index')
+		
 		out = RetVal()
 
 		skey = nacl.signing.SigningKey.generate()
@@ -479,6 +505,7 @@ class UserEntry(EntryBase):
 		super().__init__()
 		self.type = 'User'
 		self.field_names = [
+			'Index',
 			'Name',
 			'Workspace-ID',
 			'User-ID',
@@ -491,6 +518,7 @@ class UserEntry(EntryBase):
 			'Expires'
 		]
 		self.required_fields = [
+			'Index',
 			'Workspace-ID',
 			'Domain',
 			'Contact-Request-Signing-Key',
@@ -506,6 +534,7 @@ class UserEntry(EntryBase):
 			{ 'name' : 'User', 'level' : 4, 'optional' : False, 'type' : SIGINFO_SIGNATURE }
 		]
 		
+		self.fields['Index'] = '1'
 		self.fields['Time-To-Live'] = '7'
 		self.set_expiration()
 	
@@ -534,6 +563,11 @@ class UserEntry(EntryBase):
 		
 		new_entry = UserEntry()
 		new_entry.fields = self.fields.copy()
+		try:
+			index = int(new_entry.fields['Index'])
+			new_entry.fields['Index'] = str(index + 1)
+		except Exception:
+			return RetVal(BadData, 'invalid entry index')
 
 		out = RetVal()
 
