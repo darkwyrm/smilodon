@@ -494,6 +494,19 @@ class OrgEntry(EntryBase):
 				not previous.fields['Primary-Signing-Key']:
 			return RetVal(ResourceNotFound, 'signing key missing')
 		
+		try:
+			prev_index = int(previous['Index'])
+		except:
+			return RetVal(BadData, 'previous entry has a bad index')
+		
+		try:
+			index = int(self['Index'])
+		except:
+			return RetVal(BadData, 'current entry has a bad index')
+		
+		if index != prev_index + 1:
+			return RetVal(InvalidKeycard, 'entry index compliance failure')
+
 		status = self.verify_signature(AlgoString(previous.fields['Primary-Signing-Key']),
 				'Custody')
 		return status
