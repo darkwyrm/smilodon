@@ -7,8 +7,8 @@ import time
 
 import nacl.signing
 
-import keycard_entry as keycard
-from keycard_entry import AlgoString, Base85Encoder
+import keycard
+from keycard import AlgoString, Base85Encoder, SIGINFO_HASH, SIGINFO_SIGNATURE
 
 # Keys used in the various tests
 
@@ -69,22 +69,6 @@ def make_test_userentry() -> keycard.UserEntry:
 		'Public-Encryption-Key':'CURVE25519:_`UC|vltn_%P5}~vwV^)oY){#uvQSSy(dOD_l(yE'
 	})
 
-	# User sign and verify
-
-	keystring = AlgoString()
-	keystring.set('ED25519:' + base64.b85encode(skey.encode()).decode())
-	rv = usercard.sign(keystring, 'User')
-	assert not rv.error(), 'Unexpected RetVal error %s / %s' % (rv.error(), rv.info())
-	assert usercard.signatures['User'], 'entry failed to user sign'
-	
-	vkey = nacl.signing.VerifyKey(skey.verify_key.encode())
-	vkeystring = AlgoString()
-	vkeystring.prefix = 'ED25519'
-	vkeystring.data = base64.b85encode(vkey.encode()).decode()
-
-	rv = usercard.verify_signature(vkeystring, 'User')
-	assert not rv.error(), 'entry failed to user verify'
-
 	# Organization sign and verify
 
 	okeystring = AlgoString()
@@ -101,17 +85,26 @@ def make_test_userentry() -> keycard.UserEntry:
 	rv = usercard.verify_signature(ovkeystring, 'Organization')
 	assert not rv.error(), 'entry failed to org verify'
 
-	# Entry sign and verify
+	# Add the hash
 
-	rv = usercard.sign(keystring, 'Entry')
-	assert not rv.error(), 'Unexpected RetVal error %s' % rv.error()
-	assert usercard.signatures['Entry'], 'entry failed to entry sign'
+	rv = usercard.generate_hash('BLAKE3-512')
+	assert not rv.error(), 'entry failed to hash'
+
+	# User sign and verify
+
+	keystring = AlgoString()
+	keystring.set('ED25519:' + base64.b85encode(skey.encode()).decode())
+	rv = usercard.sign(keystring, 'User')
+	assert not rv.error(), 'Unexpected RetVal error %s / %s' % (rv.error(), rv.info())
+	assert usercard.signatures['User'], 'entry failed to user sign'
 	
-	rv = usercard.verify_signature(vkeystring, 'Entry')
-	assert not rv.error(), 'entry failed to entry verify'
+	vkey = nacl.signing.VerifyKey(skey.verify_key.encode())
+	vkeystring = AlgoString()
+	vkeystring.prefix = 'ED25519'
+	vkeystring.data = base64.b85encode(vkey.encode()).decode()
 
-	status = usercard.is_compliant()
-	assert not status.error(), "UserEntry wasn't compliant"
+	rv = usercard.verify_signature(vkeystring, 'User')
+	assert not rv.error(), 'entry failed to user verify'
 
 	return usercard
 
@@ -132,7 +125,7 @@ def make_test_orgentry() -> keycard.OrgEntry:
 		'Encryption-Key':'CURVE25519:@b?cjpeY;<&y+LSOA&yUQ&ZIrp(JGt{W$*V>ATLG'
 	})
 
-	# Organization sign and verify
+	# Organization sign, hash, and verify
 
 	pskeystring = AlgoString()
 	pskeystring.set('ED25519:' + base64.b85encode(pskey.encode()).decode())
@@ -144,6 +137,9 @@ def make_test_orgentry() -> keycard.OrgEntry:
 	ovkeystring = AlgoString()
 	ovkeystring.prefix = 'ED25519'
 	ovkeystring.data = base64.b85encode(ovkey.encode()).decode()
+
+	rv = orgcard.generate_hash('BLAKE3-512')
+	assert not rv.error(), 'entry failed to hash'
 
 	rv = orgcard.verify_signature(ovkeystring, 'Organization')
 	assert not rv.error(), 'org entry failed to verify'
@@ -202,10 +198,10 @@ def test_make_bytestring():
 	basecard.type = "Test"
 	basecard.field_names = [ 'Name', 'User-ID', 'Workspace-ID', 'Domain', 'Time-To-Live', 'Expires']
 	basecard.signature_info = [
-		{ 'name' : 'Custody', 'level' : 1, 'optional' : True },
-		{ 'name' : 'User', 'level' : 2, 'optional' : False },
-		{ 'name' : 'Organization', 'level' : 3, 'optional' : False },
-		{ 'name' : 'Entry', 'level' : 4, 'optional' : False }
+		{ 'name' : 'Custody', 'level' : 1, 'optional' : True, 'type' : SIGINFO_SIGNATURE },
+		{ 'name' : 'Organization', 'level' : 2, 'optional' : False, 'type' : SIGINFO_SIGNATURE },
+		{ 'name' : 'Hashes', 'level' : 3, 'optional' : False, 'type' : SIGINFO_HASH },
+		{ 'name' : 'User', 'level' : 4, 'optional' : False, 'type' : SIGINFO_SIGNATURE }
 	]
 
 	basecard.set_fields({
@@ -216,9 +212,8 @@ def test_make_bytestring():
 		'Time-To-Live':'7',
 		'Expires':'20201002',
 		'Custody-Signature':'0000000000',
-		'User-Signature':'1111111111',
 		'Organization-Signature':'2222222222',
-		'Entry-Signature':'3333333333'
+		'User-Signature':'1111111111',
 	})
 
 	expected_out = \
@@ -230,9 +225,8 @@ def test_make_bytestring():
 		b'Time-To-Live:7\r\n' \
 		b'Expires:20201002\r\n' \
 		b'Custody-Signature:0000000000\r\n' \
-		b'User-Signature:1111111111\r\n' \
 		b'Organization-Signature:2222222222\r\n' \
-		b'Entry-Signature:3333333333\r\n'
+		b'User-Signature:1111111111\r\n' \
 	
 	actual_out = basecard.make_bytestring(-1)
 	assert actual_out == expected_out, "user byte string didn't match"
@@ -273,21 +267,25 @@ def test_sign():
 		'Entry-Signature':'3333333333'
 	})
 	basecard.signature_info = [
-		{ 'name':'Custody', 'optional':True },
-		{ 'name':'User', 'optional':False },
-		{ 'name':'Organization', 'optional':False },
-		{ 'name':'Entry', 'optional':False }
+		{ 'name' : 'Custody', 'level' : 1, 'optional' : True, 'type' : SIGINFO_SIGNATURE },
+		{ 'name' : 'Organization', 'level' : 2, 'optional' : False, 'type' : SIGINFO_SIGNATURE },
+		{ 'name' : 'Hashes', 'level' : 3, 'optional' : False, 'type' : SIGINFO_HASH },
+		{ 'name' : 'User', 'level' : 4, 'optional' : False, 'type' : SIGINFO_SIGNATURE }
 	]
 
 	keystring = AlgoString()
 	keystring.set('ED25519:' + base64.b85encode(skey.encode()).decode())
-	rv = basecard.sign(keystring, 'User')
+	rv = basecard.sign(keystring, 'Organization')
 	assert not rv.error(), 'Unexpected RetVal error %s' % rv.error()
-	assert basecard.signatures['User'], 'entry failed to user sign'
+	assert basecard.signatures['Organization'], 'entry failed to org sign'
+
+	rv = basecard.generate_hash('BLAKE3-512')
+	assert not rv.error(), 'Unexpected RetVal error %s' % rv.error()
 	
 	expected_sig = \
 		'ED25519:Ied3Gcl&O6DeK7zk<l;brbZ$BCFwB4?mh1GJI=&Cc`nGV?owKG#tupX`igeH%~pfV)a*Kd9IJ5m0c9=<'
-	assert basecard.signatures['User'] == expected_sig, "entry did not yield the expected signature"
+	assert basecard.signatures['Organization'] == expected_sig, \
+			"entry did not yield the expected signature"
 
 
 def test_verify_signature():
@@ -324,32 +322,11 @@ def test_verify_signature():
 		'Entry-Signature':'3333333333'
 	})
 	basecard.signature_info = [
-		{ 'name':'Custody', 'optional':True },
-		{ 'name':'User', 'optional':False },
-		{ 'name':'Organization', 'optional':False },
-		{ 'name':'Entry', 'optional':False }
+		{ 'name' : 'Custody', 'level' : 1, 'optional' : True, 'type' : SIGINFO_SIGNATURE },
+		{ 'name' : 'Organization', 'level' : 2, 'optional' : False, 'type' : SIGINFO_SIGNATURE },
+		{ 'name' : 'Hashes', 'level' : 3, 'optional' : False, 'type' : SIGINFO_HASH },
+		{ 'name' : 'User', 'level' : 4, 'optional' : False, 'type' : SIGINFO_SIGNATURE }
 	]
-
-	# User sign and verify
-
-	keystring = AlgoString()
-	keystring.set('ED25519:' + base64.b85encode(skey.encode()).decode())
-	rv = basecard.sign(keystring, 'User')
-	assert not rv.error(), 'Unexpected RetVal error %s' % rv.error()
-	assert basecard.signatures['User'], 'entry failed to user sign'
-	
-	expected_sig = \
-		'ED25519:4cs`6#B*J*45pbNfb&x$A6`l7hDnQgi9Du~HpFSaMTRZLwbwovsgUR|e+y#!|J!r5hDcmwc*DrBn1gW('
-	assert basecard.signatures['User'] == expected_sig, \
-			"entry did not yield the expected user signature"
-
-	vkey = nacl.signing.VerifyKey(skey.verify_key.encode())
-	vkeystring = AlgoString()
-	vkeystring.prefix = 'ED25519'
-	vkeystring.data = base64.b85encode(vkey.encode()).decode()
-
-	rv = basecard.verify_signature(vkeystring, 'User')
-	assert not rv.error(), 'entry failed to user verify'
 
 	# Organization sign and verify
 
@@ -360,7 +337,7 @@ def test_verify_signature():
 	assert basecard.signatures['Organization'], 'entry failed to user sign'
 
 	expected_sig = \
-		'ED25519:wU20HwC`n=hT#&5BP0)HaT+o+Dzx@m(M@v4!QY|kJe~lh!LXGF+Lqqsv%PLu&3Lp#4Bp7P@$2)%zK;z9'
+		'ED25519:+k1r8iJ`;ol+sIJ*Yc*9Q*%SExR=vE0C99zRUC3JXOYWzS;HW?(idJ89Oal7y*iAQjZC!Wsdx+EQs2P?'
 	assert basecard.signatures['Organization'] == expected_sig, \
 			"entry did not yield the expected org signature"
 	
@@ -373,19 +350,42 @@ def test_verify_signature():
 	rv = basecard.verify_signature(ovkeystring, 'Organization')
 	assert not rv.error(), 'entry failed to org verify'
 
-	# Entry sign and verify
+	# Set up the hashes
+	basecard.prev_hash = '1234567890'
+	rv = basecard.generate_hash('BLAKE3-512')
+	assert not rv.error(), 'entry failed to BLAKE3 hash'
 
-	rv = basecard.sign(keystring, 'Entry')
+	expected_hash = \
+		r'BLAKE3-512:1qTf`Hq*rSrlHM=x7E_r%}n8R#hpd3l(26c%A6p@djSv$c2+wU29J?&hs$~LbyOWaKM>Xk<LsA{J' \
+		r'A(><Dw*k!BCD*6mAe6uJjYOG>u^j3_C>epRftL0LNs)g8JBw*0c#l_bF^fgr`U%saoQ)Eu$PFM5KsB+#ltJnCoP' \
+		r'F5#Xr3J5`@;vl#}ffw?@6s=E4dVxY8{jr0S7&T16qZ#EbW^k~R~SkG6IdA#{uq#`4AmIj0MMIKZ&7!{vv;*JK@V' \
+		r'p1;e^1f1d;_<z?H^3?StbaetVp4e!T5UKOn2BW31Xc$=e*gjksd5WT{3%ME)EZv7&h8qIN$2px(0g*s^zd*Kwo3' \
+		r'Fz@{yP){@lLltp(JAt$|oPg&3bXOU?K*Lgzy3=?J_kW5f;6@rb^C*4>Y}0iDr&JASU_4#`l$iTH&Sc@?f$8J<JI' \
+		r'np0v&6RpY1m)FeKN&dIq=(Gsu&tsFs^M@N<mbdb;I8rYP+7e5++!D<L%mK1s5JB4R@XFAcCC!p`k7DiN!nkrh`t' \
+		r'hqyhBXu}wwL*r*ie{r0UDXttGe3$N?;)p**>BeZ(YN13&>OUUp0zoMF6p1gXoeyO`dHs4&&(aH%5SIq(t7GH5yl' \
+		r'!5S&rrU-me?pr&}sg1<o1epP*V#z(nS9S!aW|oGS?O'
+	assert basecard.hash == expected_hash, "entry did not yield the expected hash"
+	
+	# User sign and verify
+
+	keystring = AlgoString()
+	keystring.set('ED25519:' + base64.b85encode(skey.encode()).decode())
+	rv = basecard.sign(keystring, 'User')
 	assert not rv.error(), 'Unexpected RetVal error %s' % rv.error()
-	assert basecard.signatures['Entry'], 'entry failed to entry sign'
+	assert basecard.signatures['User'], 'entry failed to user sign'
 	
 	expected_sig = \
-		'ED25519:N%^Q{>17RWzMR>L;-xzP`eg#Uz~-yvlg1c*BG_=GpfYee91!LZuH8+D^dbDzr8OJ~9UQnDUA?cAxKZf>'
-	assert basecard.signatures['Entry'] == expected_sig, \
-			"entry did not yield the expected entry signature"
+		'ED25519:MFGN>u=oswij--OD6xpQ47K*9a^1O2_&c3eUO-IrG?EZD<N47iP3P{`)oi3VCG>P#B^`*RM9v0#j-M<6'
+	assert basecard.signatures['User'] == expected_sig, \
+			"entry did not yield the expected user signature"
 
-	rv = basecard.verify_signature(vkeystring, 'Entry')
-	assert not rv.error(), 'entry failed to entry verify'
+	vkey = nacl.signing.VerifyKey(skey.verify_key.encode())
+	vkeystring = AlgoString()
+	vkeystring.prefix = 'ED25519'
+	vkeystring.data = base64.b85encode(vkey.encode()).decode()
+
+	rv = basecard.verify_signature(vkeystring, 'User')
+	assert not rv.error(), 'entry failed to user verify'
 
 
 def test_base_is_compliant():
@@ -434,8 +434,11 @@ def test_is_compliant_org():
 	rv = orgcard.verify_signature(ovkeystring, 'Organization')
 	assert not rv.error(), 'entry failed to org verify'
 
+	rv = orgcard.generate_hash('BLAKE3-512')
+	assert not rv.error(), 'entry failed to hash'
+
 	status = orgcard.is_compliant()
-	assert not status.error(), "OrgEntry wasn't compliant"
+	assert not status.error(), f"OrgEntry wasn't compliant: {str(status)}"
 
 
 def test_org_chaining():
@@ -460,7 +463,11 @@ def test_org_chaining():
 	
 	status = new_entry.sign(new_pskeystring, 'Organization')
 	assert not status.error(), f'new entry failed to org sign: {status}'
-
+	
+	new_entry.prev_hash = orgentry.hash
+	status = new_entry.generate_hash('BLAKE3-512')
+	assert not status.error(), f'new entry failed to hash: {status}'
+	
 	status = new_entry.is_compliant()
 	assert not status.error(), f'new entry failed compliance check: {status}'
 
@@ -492,14 +499,15 @@ def test_user_chaining():
 	status = new_crskeystring.set(chaindata['crsign.private'])
 	assert not status.error(), 'test_user_chain: new signing key has bad format'
 	
-	status = new_entry.sign(new_crskeystring, 'User')
-	assert not status.error(), f'new entry failed to user sign: {status}'
-
 	status = new_entry.sign(oskeystring, 'Organization')
 	assert not status.error(), f'new entry failed to org sign: {status}'
 
-	status = new_entry.sign(new_crskeystring, 'Entry')
-	assert not status.error(), f'new entry failed to entry sign: {status}'
+	new_entry.prev_hash = userentry.hash
+	status = new_entry.generate_hash('BLAKE3-512')
+	assert not status.error(), f'new entry failed to hash: {status}'
+
+	status = new_entry.sign(new_crskeystring, 'User')
+	assert not status.error(), f'new entry failed to user sign: {status}'
 
 	status = new_entry.is_compliant()
 	assert not status.error(), f'new entry failed compliance check: {status}'
@@ -525,15 +533,16 @@ def test_keycard_chain_verify_load_save():
 	new_entry = chaindata['entry']
 	oskeystring = AlgoString('ED25519:msvXw(nII<Qm6oBHc+92xwRI3>VFF-RcZ=7DEu3|')
 
-	skeystring = AlgoString(chaindata['sign.private'])
-	status = new_entry.sign(skeystring, 'User')
-	assert not status.error(), f'chained entry failed to user sign: {status}'
-
 	status = new_entry.sign(oskeystring, 'Organization')
 	assert not status.error(), f'chained entry failed to org sign: {status}'
 
-	status = new_entry.sign(skeystring, 'Entry')
-	assert not status.error(), f'chained entry failed to entry sign: {status}'
+	new_entry.prev_hash = userentry.hash
+	new_entry.generate_hash('BLAKE3-512')
+	assert not status.error(), f'chained entry failed to hash: {status}'
+
+	skeystring = AlgoString(chaindata['sign.private'])
+	status = new_entry.sign(skeystring, 'User')
+	assert not status.error(), f'chained entry failed to user sign: {status}'
 
 	card.entries[-1] = new_entry
 	status = card.verify()

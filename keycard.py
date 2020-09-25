@@ -3,8 +3,10 @@ representing the entry blocks which are chained together in a keycard.'''
 
 import base64
 import datetime
+import hashlib
 import os
 
+import blake3
 import nacl.public
 import nacl.signing
 
@@ -13,6 +15,7 @@ from retval import RetVal, BadData, BadParameterValue, ExceptionThrown, Resource
 
 FeatureNotAvailable = 'FeatureNotAvailable'
 UnsupportedKeycardType = 'UnsupportedKeycardType'
+UnsupportedHashType = 'UnsupportedHashType'
 UnsupportedEncryptionType = 'UnsupportedEncryptionType'
 InvalidKeycard = 'InvalidKeycard'
 InvalidEntry = 'InvalidEntry'
@@ -22,6 +25,9 @@ InvalidEntry = 'InvalidEntry'
 NotCompliant = 'NotCompliant'
 RequiredFieldMissing = 'RequiredFieldMissing'
 SignatureMissing = 'SignatureMissing'
+
+SIGINFO_HASH = 1
+SIGINFO_SIGNATURE = 2
 
 class ComplianceException(Exception):
 	'''Custom exception for spec compliance failures'''
@@ -85,6 +91,8 @@ class EntryBase:
 		self.type = ''
 		self.signatures = dict()
 		self.signature_info = list()
+		self.prev_hash = ''
+		self.hash = ''
 	
 	def __str__(self):
 		return self.make_bytestring(-1).decode()
@@ -103,6 +111,12 @@ class EntryBase:
 		
 		# Ensure signature compliance
 		for info in self.signature_info:
+			if info['type'] == SIGINFO_HASH:
+				if not self.hash:
+					return RetVal(SignatureMissing, 'Hash')
+				else:
+					continue
+			
 			if info['optional']:
 				# Optional signatures, if present, may not be empty
 				if info['name'] in self.signatures and not self.signatures[info['name']]:
@@ -123,12 +137,12 @@ class EntryBase:
 
 		parts = self.signatures[sigtype].split(':')
 		if len(parts) == 1:
-			return RetVal().set_value('signature', parts[0])
+			return RetVal().set_value(SIGINFO_SIGNATURE, parts[0])
 		
 		if len(parts) == 2:
 			return RetVal().set_values({
 				'algorithm' : parts[0],
-				'signature' : parts[1]
+				SIGINFO_SIGNATURE : parts[1]
 			})
 		
 		return RetVal(BadData, self.signatures[sigtype])
@@ -152,7 +166,12 @@ class EntryBase:
 		sig_names = [x['name'] for x in self.signature_info]
 		for i in range(signature_level):
 			name = sig_names[i]
-			if name in self.signatures and self.signatures[name]:
+			if self.signature_info[i]['type'] == SIGINFO_HASH:
+				if self.prev_hash:
+					lines.append(b'Previous-Hash:%s' % self.prev_hash.encode())
+				if self.hash:
+					lines.append(b'Hash:%s' % self.prev_hash.encode())
+			elif name in self.signatures and self.signatures[name]:
 				lines.append(b''.join([name.encode() + b'-Signature:',
 								self.signatures[name].encode()]))
 
@@ -285,6 +304,38 @@ class EntryBase:
 		self.signatures[sigtype] = 'ED25519:' + signed.signature.decode()
 		return RetVal()
 
+	def generate_hash(self, algorithm: str) -> RetVal:
+		'''Generates a hash containing the expected signatures and the previous hash, if it exists. 
+		The supported hash algorithms are 'BLAKE3-512', 'BLAKE2-512', 'SHA-512', and 'SHA3-512'.'''  
+		algomap = {
+			'BLAKE2-512':'blake2b',
+			'SHA-512':'sha512',
+			'SHA3-512':'sha3_512'
+		}
+		
+		hash_string = AlgoString()
+		hash_level = -1
+		for sig in self.signature_info:
+			if sig['type'] == SIGINFO_HASH:
+				hash_level = sig['level']
+				break
+		assert hash_level > 0, "BUG: signature_info missing hash entry"
+		
+		hasher = None
+		if algorithm == 'BLAKE3-512':
+			hasher = blake3.blake3() # pylint: disable=c-extension-no-member
+		elif algorithm in algomap:
+			hasher = hashlib.new(algomap[algorithm])
+		else:
+			return RetVal(UnsupportedHashType)
+		
+		hasher.update(self.make_bytestring(hash_level))
+		hash_string.data = base64.b85encode(hasher.digest(length=512)).decode()
+		hash_string.prefix = algorithm
+		self.hash = str(hash_string)
+		
+		return RetVal().set_value('hash',self.hash)
+
 	def verify_signature(self, verify_key: AlgoString, sigtype: str) -> RetVal:
 		'''Verifies a signature, given a verification key'''
 	
@@ -348,8 +399,9 @@ class OrgEntry(EntryBase):
 			'Expires'
 		]
 		self.signature_info = [ 
-			{ 'name' : 'Custody', 'level' : 1, 'optional' : True },
-			{ 'name' : 'Organization', 'level' : 2, 'optional' : False }
+			{ 'name' : 'Custody', 'level' : 1, 'optional' : True, 'type' : SIGINFO_SIGNATURE },
+			{ 'name' : 'Organization', 'level' : 2, 'optional' : False, 'type' : SIGINFO_SIGNATURE },
+			{ 'name' : 'Hashes', 'level' : 3, 'optional' : False, 'type' : SIGINFO_HASH }
 		]
 		
 		self.fields['Time-To-Live'] = '30'
@@ -448,10 +500,10 @@ class UserEntry(EntryBase):
 			'Expires'
 		]
 		self.signature_info = [ 
-			{ 'name' : 'Custody', 'level' : 1, 'optional' : True },
-			{ 'name' : 'User', 'level' : 2, 'optional' : False },
-			{ 'name' : 'Organization', 'level' : 3, 'optional' : False },
-			{ 'name' : 'Entry', 'level' : 4, 'optional' : False }
+			{ 'name' : 'Custody', 'level' : 1, 'optional' : True, 'type' : SIGINFO_SIGNATURE },
+			{ 'name' : 'Organization', 'level' : 2, 'optional' : False, 'type' : SIGINFO_SIGNATURE },
+			{ 'name' : 'Hashes', 'level' : 3, 'optional' : False, 'type' : SIGINFO_HASH },
+			{ 'name' : 'User', 'level' : 4, 'optional' : False, 'type' : SIGINFO_SIGNATURE }
 		]
 		
 		self.fields['Time-To-Live'] = '7'
