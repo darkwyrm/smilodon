@@ -217,12 +217,16 @@ class EntryBase:
 		of the official spec is assigned but otherwise ignored.'''
 		self.fields[field_name] = field_value
 		
-		# Any kind of editing invalidates the signatures
+		# Any kind of editing invalidates the signatures and hash
 		self.signatures = dict()
+		self.hash = ''
 
 	def set_fields(self, fields: dict) -> RetVal:
 		'''Takes a dictionary of fields to be assigned to the object. Any field which is not part 
 		of the official spec is assigned but otherwise ignored.'''
+		self.signatures = dict()
+		self.hash = ''
+
 		for k,v in fields.items():
 			if k.endswith('Signature'):
 				sigparts = k.split('-', 1)
