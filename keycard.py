@@ -271,9 +271,7 @@ class EntryBase:
 		return RetVal()
 
 	def set_expiration(self, numdays=-1) -> RetVal:
-		'''Sets the expiration field using the specific form of ISO8601 format recommended. 
-		If not specified, organizational keycards expire 1 year from the present time and user 
-		keycards expire after 90 days. Other types of keycards return an error.'''
+		'''Sets the expiration field to the number of days specified after the current date'''
 		if numdays < 0:
 			if self.type == 'Organization':
 				numdays = 365
@@ -281,6 +279,10 @@ class EntryBase:
 				numdays = 90
 			else:
 				return RetVal(UnsupportedKeycardType)
+		
+		# An expiration date can be no longer than 3 years
+		if numdays > 1095:
+			numdays = 1095
 		
 		expiration = datetime.datetime.utcnow() + datetime.timedelta(numdays)
 		self.fields['Expires'] = expiration.strftime("%Y%m%d")
