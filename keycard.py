@@ -362,8 +362,8 @@ class EntryBase:
 	def verify_signature(self, verify_key: AlgoString, sigtype: str) -> RetVal:
 		'''Verifies a signature, given a verification key'''
 	
-		if not verify_key:
-			return RetVal(BadParameterValue, 'missing verify key')
+		if not verify_key.is_valid():
+			return RetVal(BadParameterValue, 'bad verify key')
 		
 		sig_names = [x['name'] for x in self.signature_info]
 		if sigtype not in sig_names:
