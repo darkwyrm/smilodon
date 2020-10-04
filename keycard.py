@@ -411,8 +411,7 @@ class OrgEntry(EntryBase):
 			'Secondary-Signing-Key',
 			'Encryption-Key',
 			'Time-To-Live',
-			'Expires',
-			'Hash-ID'
+			'Expires'
 		]
 		self.required_fields = [
 			'Index',
