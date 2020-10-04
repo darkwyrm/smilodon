@@ -464,17 +464,17 @@ class OrgEntry(EntryBase):
 		out = RetVal()
 
 		skey = nacl.signing.SigningKey.generate()
-		crskey = nacl.signing.SigningKey.generate()
-		crekey = nacl.public.PrivateKey.generate()
+		ekey = nacl.public.PrivateKey.generate()
 
 		out['sign.public'] = 'ED25519:' + skey.verify_key.encode(Base85Encoder).decode()
 		out['sign.private'] = 'ED25519:' + skey.encode(Base85Encoder).decode()
-		out['encrypt.public'] = 'CURVE25519:' + crekey.public_key.encode(Base85Encoder).decode()
-		out['encrypt.private'] = 'CURVE25519:' + crekey.encode(Base85Encoder).decode()
+		out['encrypt.public'] = 'CURVE25519:' + ekey.public_key.encode(Base85Encoder).decode()
+		out['encrypt.private'] = 'CURVE25519:' + ekey.encode(Base85Encoder).decode()
 		
 		if rotate_optional:
-			out['altsign.public'] = 'ED25519:' + crskey.verify_key.encode(Base85Encoder).decode()
-			out['altsign.private'] = 'ED25519:' + crskey.encode(Base85Encoder).decode()
+			altskey = nacl.signing.SigningKey.generate()
+			out['altsign.public'] = 'ED25519:' + altskey.verify_key.encode(Base85Encoder).decode()
+			out['altsign.private'] = 'ED25519:' + altskey.encode(Base85Encoder).decode()
 		else:
 			out['altsign.public'] = self.fields['Primary-Signing-Key']
 			out['altsign.private'] = ''
