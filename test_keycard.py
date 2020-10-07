@@ -64,7 +64,7 @@ def make_test_userentry() -> keycard.UserEntry:
 		'Workspace-ID':'4418bf6c-000b-4bb3-8111-316e72030468',
 		'User-ID':'csimons',
 		'Domain':'example.com',
-		'Contact-Request-Signing-Key':'ED25519:d0-oQb;{QxwnO{=!|^62+E=UYk2Y3mr2?XKScF4D',
+		'Contact-Request-Verification-Key':'ED25519:d0-oQb;{QxwnO{=!|^62+E=UYk2Y3mr2?XKScF4D',
 		'Contact-Request-Encryption-Key':'CURVE25519:yBZ0{1fE9{2<b~#i^R+JT-yh-y5M(Wyw_)}_SZOn',
 		'Public-Encryption-Key':'CURVE25519:_`UC|vltn_%P5}~vwV^)oY){#uvQSSy(dOD_l(yE'
 	})
@@ -124,7 +124,7 @@ def make_test_orgentry() -> keycard.OrgEntry:
 		'Contact-Admin':'c590b44c-798d-4055-8d72-725a7942f3f6/acme.com',
 		'Language':'en',
 		'Domain':'acme.com',
-		'Primary-Signing-Key':'ED25519:)8id(gE02^S<{3H>9B;X4{DuYcb`%wo^mC&1lN88',
+		'Primary-Verification-Key':'ED25519:)8id(gE02^S<{3H>9B;X4{DuYcb`%wo^mC&1lN88',
 		'Encryption-Key':'CURVE25519:@b?cjpeY;<&y+LSOA&yUQ&ZIrp(JGt{W$*V>ATLG'
 	})
 
@@ -182,7 +182,7 @@ def test_set():
 		b'Name:Acme, Inc.\r\n' \
 		b'Contact-Admin:admin/acme.com\r\n' \
 		b'Language:en\r\n' \
-		b'Primary-Signing-Key:ED25519:&JEq)5Ktu@jfM+Sa@+1GU6E&Ct2*<2ZYXh#l0FxP\r\n' \
+		b'Primary-Verification-Key:ED25519:&JEq)5Ktu@jfM+Sa@+1GU6E&Ct2*<2ZYXh#l0FxP\r\n' \
 		b'Encryption-Key:CURVE25519:^fI7bdC(IEwC#(nG8Em-;nx98TcH<TnfvajjjDV@\r\n' \
 		b'Time-To-Live:14\r\n' \
 		b'Expires:730\r\n' \
@@ -256,13 +256,13 @@ def test_sign():
 
 	basecard = keycard.EntryBase()
 	basecard.type = "Test"
-	basecard.field_names = [ 'Name', 'Workspace-ID', 'Domain', 'Contact-Request-Signing-Key',
+	basecard.field_names = [ 'Name', 'Workspace-ID', 'Domain', 'Contact-Request-Verification-Key',
 			'Contact-Request-Encryption-Key', 'Public-Encryption-Key', 'Expires']
 	basecard.set_fields({
 		'Name':'Corbin Simons',
 		'Workspace-ID':'4418bf6c-000b-4bb3-8111-316e72030468',
 		'Domain':'example.com',
-		'Contact-Request-Signing-Key':'ED25519:7dfD==!Jmt4cDtQDBxYa7(dV|N$}8mYwe$=RZuW|',
+		'Contact-Request-Verification-Key':'ED25519:7dfD==!Jmt4cDtQDBxYa7(dV|N$}8mYwe$=RZuW|',
 		'Contact-Request-Encryption-Key':'CURVE25519:yBZ0{1fE9{2<b~#i^R+JT-yh-y5M(Wyw_)}_SZOn',
 		'Public-Encryption-Key':'CURVE25519:_`UC|vltn_%P5}~vwV^)oY){#uvQSSy(dOD_l(yE',
 		'Expires':'20201002',
@@ -289,7 +289,7 @@ def test_sign():
 	assert not rv.error(), 'Unexpected RetVal error %s' % rv.error()
 	
 	expected_sig = \
-		'ED25519:Ied3Gcl&O6DeK7zk<l;brbZ$BCFwB4?mh1GJI=&Cc`nGV?owKG#tupX`igeH%~pfV)a*Kd9IJ5m0c9=<'
+		'ED25519:N~nZ1#wE%i`sO?wZ%b4;zrEk4D-rd{!oY=C26w0GepfvnArTHlw*HeIZB|oHZke`T*eGbw>GvYD8YQR)'
 	assert basecard.signatures['Organization'] == expected_sig, \
 			"entry did not yield the expected signature"
 
@@ -311,13 +311,13 @@ def test_verify_signature():
 
 	basecard = keycard.EntryBase()
 	basecard.type = "Test"
-	basecard.field_names = [ 'Name', 'Workspace-ID', 'Domain', 'Contact-Request-Signing-Key',
+	basecard.field_names = [ 'Name', 'Workspace-ID', 'Domain', 'Contact-Request-Verification-Key',
 			'Contact-Request-Encryption-Key', 'Public-Encryption-Key', 'Expires']
 	basecard.set_fields({
 		'Name':'Corbin Simons',
 		'Workspace-ID':'4418bf6c-000b-4bb3-8111-316e72030468',
 		'Domain':'example.com',
-		'Contact-Request-Signing-Key':'ED25519:d0-oQb;{QxwnO{=!|^62+E=UYk2Y3mr2?XKScF4D',
+		'Contact-Request-Verification-Key':'ED25519:d0-oQb;{QxwnO{=!|^62+E=UYk2Y3mr2?XKScF4D',
 		'Contact-Request-Encryption-Key':'CURVE25519:yBZ0{1fE9{2<b~#i^R+JT-yh-y5M(Wyw_)}_SZOn',
 		'Public-Encryption-Key':'CURVE25519:_`UC|vltn_%P5}~vwV^)oY){#uvQSSy(dOD_l(yE',
 		'Expires':'20201002',
@@ -343,7 +343,7 @@ def test_verify_signature():
 	assert basecard.signatures['Organization'], 'entry failed to user sign'
 
 	expected_sig = \
-		'ED25519:+k1r8iJ`;ol+sIJ*Yc*9Q*%SExR=vE0C99zRUC3JXOYWzS;HW?(idJ89Oal7y*iAQjZC!Wsdx+EQs2P?'
+		'ED25519:>>6(c|MBt?66%ywF=2yw4k}%;-8J)218?T=4XtV**m9S4Wzo@%E0Xme7@op7Vky?>VnCb?h(%WGO9(g!'
 	assert basecard.signatures['Organization'] == expected_sig, \
 			"entry did not yield the expected org signature"
 	
@@ -362,10 +362,10 @@ def test_verify_signature():
 	assert not rv.error(), 'entry failed to BLAKE3 hash'
 
 	expected_hash = \
-		r'BLAKE3-256:1qTf`Hq*rSrlHM=x7E_r%}n8R#hpd3l(26c%A6p@djSv$c2+wU29J?&hs$~LbyOWaKM>Xk<LsA{J' \
-		r'A(><Dw*k!BCD*6mAe6uJjYOG>u^j3_C>epRftL0LNs)g8JBw*0c#l_bF^fgr`U%saoQ)Eu$PFM5KsB+#ltJnCoP' \
-		r'F5#Xr3J5`@;vl#}ffw?@6s=E4dVxY8{jr0S7&T16qZ#EbW^k~R~SkG6IdA#{uq#`4AmIj0MMIKZ&7!{vv;*JK@V' \
-		r'p1;e^1f1d;_<z?H^3?StbaetVp4e!T5UKOn2BW31Xc$=e*gjksd5WT{3%ME)EZv7&h8qIN'
+		r'BLAKE3-256:d0;tNM(8Q1dRN|}7`g8dH#fxYK(WHKiFX`bcHLkUG3+BMFmNht6Qg9yQ*;VAE!QdCgM%D>bTXG$8' \
+		r'qm`7!z2_Y;R=ox&{Z57ryXRf<Br+Dw$^D^@4+I$mpHhTu6>o2-xd$s<dT71)v`QDj6J1s?MbLQmN}&HHxVWHsOj' \
+		r'NC;x1W<_gmHQDJk-!(%{MdC(!j0=<P+(HtavCqQ{LiQRNK*Op9n^U~HntVN>#BeKrgt<O6Ui+f`d$_~eUW*E}&w' \
+		r'YcW#ERZ(E}geS}XngGZ!-L!uvmRuLE|8ds{0L9r1<x$Y3UJsQQDHo{}L2Ji~VfebS_Uv?p'
 	assert basecard.hash == expected_hash, "entry did not yield the expected hash"
 	
 	# User sign and verify
@@ -377,7 +377,7 @@ def test_verify_signature():
 	assert basecard.signatures['User'], 'entry failed to user sign'
 	
 	expected_sig = \
-		'ED25519:SUhk+<+KWMkN*R$DCr&TOW^9^0)F`LO&sbK9P>$A^ta|WeBYlU7yoWXBmxb`SO=49erV?@jF?A~Vn!AS'
+		'ED25519:n23~;I*EX`aX00YRu}Q}J=;4~0{Bt@WtE--Ve>zT!gf5E(+IH8Crv~TRRZZ$wFuTOw+Hj-7+`HcVozfR'
 	assert basecard.signatures['User'] == expected_sig, \
 			"entry did not yield the expected user signature"
 
@@ -416,7 +416,7 @@ def test_is_compliant_org():
 		'Contact-Admin':'admin/example.com',
 		'Contact-Abuse':'abuse/example.com',
 		'Language':'en',
-		'Primary-Signing-Key':'ED25519:7dfD==!Jmt4cDtQDBxYa7(dV|N$}8mYwe$=RZuW|',
+		'Primary-Verification-Key':'ED25519:7dfD==!Jmt4cDtQDBxYa7(dV|N$}8mYwe$=RZuW|',
 		'Encryption-Key':'CURVE25519:_`UC|vltn_%P5}~vwV^)oY){#uvQSSy(dOD_l(yE'
 	})
 
@@ -571,5 +571,6 @@ def test_keycard_chain_verify_load_save():
 	assert not status.error(), f'keycard failed to load: {status}'
 
 if __name__ == '__main__':
+	test_sign()
 	test_verify_signature()
 	# test_keycard_chain_verify_load_save()
