@@ -407,8 +407,8 @@ class OrgEntry(EntryBase):
 			'Contact-Abuse',
 			'Contact-Support',
 			'Language',
-			'Primary-Signing-Key',
-			'Secondary-Signing-Key',
+			'Primary-Verification-Key',
+			'Secondary-Verification-Key',
 			'Encryption-Key',
 			'Time-To-Live',
 			'Expires'
@@ -417,7 +417,7 @@ class OrgEntry(EntryBase):
 			'Index',
 			'Name',
 			'Contact-Admin',
-			'Primary-Signing-Key',
+			'Primary-Verification-Key',
 			'Encryption-Key',
 			'Time-To-Live',
 			'Expires'
@@ -476,7 +476,7 @@ class OrgEntry(EntryBase):
 			out['altsign.public'] = 'ED25519:' + altskey.verify_key.encode(Base85Encoder).decode()
 			out['altsign.private'] = 'ED25519:' + altskey.encode(Base85Encoder).decode()
 		else:
-			out['altsign.public'] = self.fields['Primary-Signing-Key']
+			out['altsign.public'] = self.fields['Primary-Verification-Key']
 			out['altsign.private'] = ''
 
 		status = new_entry.sign(key, 'Custody')
@@ -495,8 +495,8 @@ class OrgEntry(EntryBase):
 		if 'Custody' not in self.signatures or not self.signatures['Custody']:
 			return RetVal(ResourceNotFound, 'custody signature missing')
 		
-		if 'Primary-Signing-Key' not in previous.fields or \
-				not previous.fields['Primary-Signing-Key']:
+		if 'Primary-Verification-Key' not in previous.fields or \
+				not previous.fields['Primary-Verification-Key']:
 			return RetVal(ResourceNotFound, 'signing key missing')
 		
 		try:
@@ -512,7 +512,7 @@ class OrgEntry(EntryBase):
 		if index != prev_index + 1:
 			return RetVal(InvalidKeycard, 'entry index compliance failure')
 
-		status = self.verify_signature(AlgoString(previous.fields['Primary-Signing-Key']),
+		status = self.verify_signature(AlgoString(previous.fields['Primary-Verification-Key']),
 				'Custody')
 		return status
 
@@ -528,7 +528,7 @@ class UserEntry(EntryBase):
 			'Workspace-ID',
 			'User-ID',
 			'Domain',
-			'Contact-Request-Signing-Key',
+			'Contact-Request-Verification-Key',
 			'Contact-Request-Encryption-Key',
 			'Public-Encryption-Key',
 			'Alternate-Encryption-Key',
@@ -539,7 +539,7 @@ class UserEntry(EntryBase):
 			'Index',
 			'Workspace-ID',
 			'Domain',
-			'Contact-Request-Signing-Key',
+			'Contact-Request-Verification-Key',
 			'Contact-Request-Encryption-Key',
 			'Public-Encryption-Key',
 			'Time-To-Live',
@@ -600,7 +600,7 @@ class UserEntry(EntryBase):
 		out['crencrypt.public'] = 'CURVE25519:' + crekey.public_key.encode(Base85Encoder).decode()
 		out['crencrypt.private'] = 'CURVE25519:' + crekey.encode(Base85Encoder).decode()
 		
-		new_entry.fields['Contact-Request-Signing-Key'] = out['crsign.public']
+		new_entry.fields['Contact-Request-Verification-Key'] = out['crsign.public']
 		new_entry.fields['Contact-Request-Encryption-Key'] = out['crencrypt.public']
 
 		if rotate_optional:
@@ -636,11 +636,11 @@ class UserEntry(EntryBase):
 		if 'Custody' not in self.signatures or not self.signatures['Custody']:
 			return RetVal(ResourceNotFound, 'custody signature missing')
 		
-		if 'Contact-Request-Signing-Key' not in previous.fields or \
-				not previous.fields['Contact-Request-Signing-Key']:
+		if 'Contact-Request-Verification-Key' not in previous.fields or \
+				not previous.fields['Contact-Request-Verification-Key']:
 			return RetVal(ResourceNotFound, 'signing key missing')
 		
-		status = self.verify_signature(AlgoString(previous.fields['Contact-Request-Signing-Key']),
+		status = self.verify_signature(AlgoString(previous.fields['Contact-Request-Verification-Key']),
 				'Custody')
 		return status
 
