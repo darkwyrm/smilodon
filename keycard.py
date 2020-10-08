@@ -251,7 +251,11 @@ class EntryBase:
 			if not line:
 				continue
 
-			parts = line.strip().split(':', 1)
+			stripped = line.strip()
+			if not stripped:
+				continue
+
+			parts = stripped.split(':', 1)
 			if len(parts) != 2:
 				return RetVal(BadData, line)
 			
