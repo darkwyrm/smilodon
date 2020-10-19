@@ -361,11 +361,7 @@ def test_verify_signature():
 	rv = basecard.generate_hash('BLAKE3-256')
 	assert not rv.error(), 'entry failed to BLAKE3 hash'
 
-	expected_hash = \
-		r'BLAKE3-256:d0;tNM(8Q1dRN|}7`g8dH#fxYK(WHKiFX`bcHLkUG3+BMFmNht6Qg9yQ*;VAE!QdCgM%D>bTXG$8' \
-		r'qm`7!z2_Y;R=ox&{Z57ryXRf<Br+Dw$^D^@4+I$mpHhTu6>o2-xd$s<dT71)v`QDj6J1s?MbLQmN}&HHxVWHsOj' \
-		r'NC;x1W<_gmHQDJk-!(%{MdC(!j0=<P+(HtavCqQ{LiQRNK*Op9n^U~HntVN>#BeKrgt<O6Ui+f`d$_~eUW*E}&w' \
-		r'YcW#ERZ(E}geS}XngGZ!-L!uvmRuLE|8ds{0L9r1<x$Y3UJsQQDHo{}L2Ji~VfebS_Uv?p'
+	expected_hash = r'BLAKE3-256:d0;tNM(8Q1dRN|}7`g8dH#fxYK(WHKiFX`bcHLkU'
 	assert basecard.hash == expected_hash, "entry did not yield the expected hash"
 	
 	# User sign and verify
@@ -377,7 +373,7 @@ def test_verify_signature():
 	assert basecard.signatures['User'], 'entry failed to user sign'
 	
 	expected_sig = \
-		'ED25519:n23~;I*EX`aX00YRu}Q}J=;4~0{Bt@WtE--Ve>zT!gf5E(+IH8Crv~TRRZZ$wFuTOw+Hj-7+`HcVozfR'
+		'ED25519:5-rx$ZL(JwP2ux-8BnTMw*PYQ6w@VovVj6<kF*q+CM80zeHP9C;u!tLlhU&CiiE74lvjy};;9sy2G+m;'
 	assert basecard.signatures['User'] == expected_sig, \
 			"entry did not yield the expected user signature"
 
