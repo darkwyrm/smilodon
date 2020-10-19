@@ -346,7 +346,7 @@ class EntryBase:
 		if algorithm == 'BLAKE3-256':
 			hasher = blake3.blake3() # pylint: disable=c-extension-no-member
 			hasher.update(self.make_bytestring(hash_level))
-			hash_string.data = base64.b85encode(hasher.digest(length=256)).decode()
+			hash_string.data = base64.b85encode(hasher.digest()).decode()
 		else:
 			hasher = None
 			if algorithm == 'BLAKE2':
