@@ -1,6 +1,6 @@
 # smilodon
 
-A text-based client for the [Anselus](https://anselus.org) platform written in Python released under the GPLv3 license.
+A text-based client for the [Anselus](https://anselus.org) platform written in Python released under the MIT license.
 
 ## Description
 
