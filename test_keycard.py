@@ -572,7 +572,26 @@ def test_keycard_chain_verify_load_save():
 	status = newcard.load(os.path.join(test_folder,'user_save_test_keycard.kc'))
 	assert not status.error(), f'keycard failed to load: {status}'
 
+
+def bench_hashers():
+	'''Quick benchmark for the different hash algorithms'''
+	entry = make_test_userentry()
+
+	# Clear the User signature to avoid skewing the results
+	entry.generate_hash('BLAKE2-256')
+
+	iterations = 25000
+	print(f'Times for {iterations} iterations of each hash algorithm:')
+	for hasher in ['BLAKE2-256', 'BLAKE3-256', 'SHA-256', 'SHA3-256']:
+		start = time.time()
+		for _ in range(iterations):
+			entry.generate_hash(hasher)
+		stop = time.time()
+		print(f'{hasher}:\t{stop-start}')
+
 if __name__ == '__main__':
-	test_sign()
-	test_verify_signature()
+	# test_sign()
+	# test_verify_signature()
 	# test_keycard_chain_verify_load_save()
+	bench_hashers()
+
