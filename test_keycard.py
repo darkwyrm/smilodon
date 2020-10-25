@@ -8,7 +8,7 @@ import time
 import nacl.signing
 
 import keycard
-from keycard import AlgoString, Base85Encoder, SIGINFO_HASH, SIGINFO_SIGNATURE
+from keycard import EncodedString, Base85Encoder, SIGINFO_HASH, SIGINFO_SIGNATURE
 
 # Keys used in the various tests
 
@@ -77,14 +77,14 @@ def make_test_userentry() -> keycard.UserEntry:
 
 	# Organization sign and verify
 
-	okeystring = AlgoString()
+	okeystring = EncodedString()
 	okeystring.set('ED25519:' + base64.b85encode(oskey.encode()).decode())
 	rv = usercard.sign(okeystring, 'Organization')
 	assert not rv.error(), 'Unexpected RetVal error %s' % rv.error()
 	assert usercard.signatures['Organization'], 'entry failed to user sign'
 
 	ovkey = nacl.signing.VerifyKey(oskey.verify_key.encode())
-	ovkeystring = AlgoString()
+	ovkeystring = EncodedString()
 	ovkeystring.prefix = 'ED25519'
 	ovkeystring.data = base64.b85encode(ovkey.encode()).decode()
 
@@ -98,14 +98,14 @@ def make_test_userentry() -> keycard.UserEntry:
 
 	# User sign and verify
 
-	keystring = AlgoString()
+	keystring = EncodedString()
 	keystring.set('ED25519:' + base64.b85encode(skey.encode()).decode())
 	rv = usercard.sign(keystring, 'User')
 	assert not rv.error(), 'Unexpected RetVal error %s / %s' % (rv.error(), rv.info())
 	assert usercard.signatures['User'], 'entry failed to user sign'
 	
 	vkey = nacl.signing.VerifyKey(skey.verify_key.encode())
-	vkeystring = AlgoString()
+	vkeystring = EncodedString()
 	vkeystring.prefix = 'ED25519'
 	vkeystring.data = base64.b85encode(vkey.encode()).decode()
 
@@ -136,14 +136,14 @@ def make_test_orgentry() -> keycard.OrgEntry:
 
 	# Organization sign, hash, and verify
 
-	pskeystring = AlgoString()
+	pskeystring = EncodedString()
 	pskeystring.set('ED25519:' + base64.b85encode(pskey.encode()).decode())
 	rv = orgcard.sign(pskeystring, 'Organization')
 	assert not rv.error(), 'Unexpected RetVal error %s' % rv.error()
 	assert orgcard.signatures['Organization'], 'entry failed to user sign'
 
 	ovkey = nacl.signing.VerifyKey(pskey.verify_key.encode())
-	ovkeystring = AlgoString()
+	ovkeystring = EncodedString()
 	ovkeystring.prefix = 'ED25519'
 	ovkeystring.data = base64.b85encode(ovkey.encode()).decode()
 
@@ -285,7 +285,7 @@ def test_sign():
 		{ 'name' : 'User', 'level' : 4, 'optional' : False, 'type' : SIGINFO_SIGNATURE }
 	]
 
-	keystring = AlgoString()
+	keystring = EncodedString()
 	keystring.set('ED25519:' + base64.b85encode(skey.encode()).decode())
 	rv = basecard.sign(keystring, 'Organization')
 	assert not rv.error(), 'Unexpected RetVal error %s' % rv.error()
@@ -342,7 +342,7 @@ def test_verify_signature():
 
 	# Organization sign and verify
 
-	okeystring = AlgoString()
+	okeystring = EncodedString()
 	okeystring.set('ED25519:' + base64.b85encode(oskey.encode()).decode())
 	rv = basecard.sign(okeystring, 'Organization')
 	assert not rv.error(), 'Unexpected RetVal error %s' % rv.error()
@@ -355,7 +355,7 @@ def test_verify_signature():
 	
 
 	ovkey = nacl.signing.VerifyKey(oskey.verify_key.encode())
-	ovkeystring = AlgoString()
+	ovkeystring = EncodedString()
 	ovkeystring.prefix = 'ED25519'
 	ovkeystring.data = base64.b85encode(ovkey.encode()).decode()
 
@@ -372,7 +372,7 @@ def test_verify_signature():
 	
 	# User sign and verify
 
-	keystring = AlgoString()
+	keystring = EncodedString()
 	keystring.set('ED25519:' + base64.b85encode(skey.encode()).decode())
 	rv = basecard.sign(keystring, 'User')
 	assert not rv.error(), 'Unexpected RetVal error %s' % rv.error()
@@ -384,7 +384,7 @@ def test_verify_signature():
 			"entry did not yield the expected user signature"
 
 	vkey = nacl.signing.VerifyKey(skey.verify_key.encode())
-	vkeystring = AlgoString()
+	vkeystring = EncodedString()
 	vkeystring.prefix = 'ED25519'
 	vkeystring.data = base64.b85encode(vkey.encode()).decode()
 
@@ -424,14 +424,14 @@ def test_is_compliant_org():
 
 	# sign and verify
 
-	okeystring = AlgoString()
+	okeystring = EncodedString()
 	okeystring.set('ED25519:' + base64.b85encode(oskey.encode()).decode())
 	rv = orgcard.sign(okeystring, 'Organization')
 	assert not rv.error(), 'Unexpected RetVal error %s' % rv.error()
 	assert orgcard.signatures['Organization'], 'entry failed to user sign'
 
 	ovkey = nacl.signing.VerifyKey(oskey.verify_key.encode())
-	ovkeystring = AlgoString()
+	ovkeystring = EncodedString()
 	ovkeystring.prefix = 'ED25519'
 	ovkeystring.data = base64.b85encode(ovkey.encode()).decode()
 
@@ -450,7 +450,7 @@ def test_org_chaining():
 	orgentry = make_test_orgentry()
 
 	# Organization signing key
-	pskeystring = AlgoString('ED25519:msvXw(nII<Qm6oBHc+92xwRI3>VFF-RcZ=7DEu3|')
+	pskeystring = EncodedString('ED25519:msvXw(nII<Qm6oBHc+92xwRI3>VFF-RcZ=7DEu3|')
 	
 	chaindata = orgentry.chain(pskeystring, True)
 	assert not chaindata.error(), f'orgentry.chain returned an error: {chaindata.error()}'
@@ -461,7 +461,7 @@ def test_org_chaining():
 	# signatures needed to be compliant and then verify the whole thing.
 
 	# The signing key is replaced during chain()
-	new_pskeystring = AlgoString()
+	new_pskeystring = EncodedString()
 	status = new_pskeystring.set(chaindata['sign.private'])
 	assert not status.error(), 'test_org_chain: new signing key has bad format'
 	
@@ -485,10 +485,10 @@ def test_user_chaining():
 	userentry = make_test_userentry()
 
 	# User contact request signing key
-	crskeystring = AlgoString('ED25519:ip52{ps^jH)t$k-9bc_RzkegpIW?}FFe~BX&<V}9') 
+	crskeystring = EncodedString('ED25519:ip52{ps^jH)t$k-9bc_RzkegpIW?}FFe~BX&<V}9') 
 
 	# Organization signing key
-	oskeystring = AlgoString('ED25519:msvXw(nII<Qm6oBHc+92xwRI3>VFF-RcZ=7DEu3|')
+	oskeystring = EncodedString('ED25519:msvXw(nII<Qm6oBHc+92xwRI3>VFF-RcZ=7DEu3|')
 	
 	chaindata = userentry.chain(crskeystring, True)
 	assert not chaindata.error(), f'userentry.chain returned an error: {chaindata.error()}'
@@ -499,7 +499,7 @@ def test_user_chaining():
 	# signatures needed to be compliant and then verify the whole thing.
 
 	# The signing key is replaced during chain()
-	new_crskeystring = AlgoString()
+	new_crskeystring = EncodedString()
 	status = new_crskeystring.set(chaindata['crsign.private'])
 	assert not status.error(), 'test_user_chain: new signing key has bad format'
 	
@@ -536,7 +536,7 @@ def test_keycard_chain_verify_load_save():
 	userentry = make_test_userentry()
 
 	# User contact request signing and verification keys
-	crskeystring = AlgoString('ED25519:ip52{ps^jH)t$k-9bc_RzkegpIW?}FFe~BX&<V}9') 
+	crskeystring = EncodedString('ED25519:ip52{ps^jH)t$k-9bc_RzkegpIW?}FFe~BX&<V}9') 
 	
 	card = keycard.Keycard()
 	card.entries.append(userentry)
@@ -545,7 +545,7 @@ def test_keycard_chain_verify_load_save():
 	assert not chaindata.error(), f'keycard chain failed: {chaindata}'
 
 	new_entry = chaindata['entry']
-	oskeystring = AlgoString('ED25519:msvXw(nII<Qm6oBHc+92xwRI3>VFF-RcZ=7DEu3|')
+	oskeystring = EncodedString('ED25519:msvXw(nII<Qm6oBHc+92xwRI3>VFF-RcZ=7DEu3|')
 
 	status = new_entry.sign(oskeystring, 'Organization')
 	assert not status.error(), f'chained entry failed to org sign: {status}'
@@ -554,7 +554,7 @@ def test_keycard_chain_verify_load_save():
 	new_entry.generate_hash('BLAKE3-256')
 	assert not status.error(), f'chained entry failed to hash: {status}'
 
-	skeystring = AlgoString(chaindata['sign.private'])
+	skeystring = EncodedString(chaindata['sign.private'])
 	status = new_entry.sign(skeystring, 'User')
 	assert not status.error(), f'chained entry failed to user sign: {status}'
 

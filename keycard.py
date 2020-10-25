@@ -32,7 +32,7 @@ SIGINFO_SIGNATURE = 2
 class ComplianceException(Exception):
 	'''Custom exception for spec compliance failures'''
 
-class AlgoString:
+class EncodedString:
 	'''This class encapsulates code for working with strings associated with an algorithm. This 
 	includes hashes and encryption keys.'''
 	def __init__(self, data=''):
@@ -292,7 +292,7 @@ class EntryBase:
 		self.fields['Expires'] = expiration.strftime("%Y%m%d")
 		return RetVal()
 
-	def sign(self, signing_key: AlgoString, sigtype: str) -> RetVal:
+	def sign(self, signing_key: EncodedString, sigtype: str) -> RetVal:
 		'''Adds a signature to the  Note that for any change in the keycard fields, this 
 		call must be made afterward. Note that successive signatures are deleted, such that 
 		updating a User signature will delete the Organization signature which depends on it. The 
@@ -335,7 +335,7 @@ class EntryBase:
 		if algorithm not in ['BLAKE3-256','BLAKE2','SHA-256','SHA3-256']:
 			return RetVal(UnsupportedHashType, f'{algorithm} not a support hash algorithm')
 		
-		hash_string = AlgoString()
+		hash_string = EncodedString()
 		hash_level = -1
 		for sig in self.signature_info:
 			if sig['type'] == SIGINFO_HASH:
@@ -363,7 +363,7 @@ class EntryBase:
 		
 		return RetVal().set_value('hash',self.hash)
 
-	def verify_signature(self, verify_key: AlgoString, sigtype: str) -> RetVal:
+	def verify_signature(self, verify_key: EncodedString, sigtype: str) -> RetVal:
 		'''Verifies a signature, given a verification key'''
 	
 		if not verify_key.is_valid():
@@ -379,7 +379,7 @@ class EntryBase:
 		if sigtype in self.signatures and not self.signatures[sigtype]:
 			return RetVal(NotCompliant, 'empty signature ' + sigtype)
 		
-		sig = AlgoString()
+		sig = EncodedString()
 		status = sig.set(self.signatures[sigtype])
 		if status.error():
 			return status
@@ -436,9 +436,9 @@ class OrgEntry(EntryBase):
 		self.fields['Time-To-Live'] = '30'
 		self.set_expiration()
 
-	def chain(self, key: AlgoString, rotate_optional: bool) -> RetVal:
+	def chain(self, key: EncodedString, rotate_optional: bool) -> RetVal:
 		'''Creates a new OrgEntry object with new keys and a custody signature. The keys are 
-		returned in AlgoString format using the following fields:
+		returned in EncodedString format using the following fields:
 		entry
 		sign.public / sign.private -- primary signing keypair
 		altsign.public / crsign.private -- contact request signing keypair
@@ -516,7 +516,7 @@ class OrgEntry(EntryBase):
 		if index != prev_index + 1:
 			return RetVal(InvalidKeycard, 'entry index compliance failure')
 
-		status = self.verify_signature(AlgoString(previous.fields['Primary-Verification-Key']),
+		status = self.verify_signature(EncodedString(previous.fields['Primary-Verification-Key']),
 				'Custody')
 		return status
 
@@ -560,10 +560,10 @@ class UserEntry(EntryBase):
 		self.fields['Time-To-Live'] = '7'
 		self.set_expiration()
 	
-	def chain(self, key: AlgoString, rotate_optional: bool) -> RetVal:
+	def chain(self, key: EncodedString, rotate_optional: bool) -> RetVal:
 		'''Creates a new UserEntry object with new keys and a custody signature. It requires the 
-		previous contact request signing key passed as an AlgoString. The new keys are returned in 
-		AlgoString format using the following fields:
+		previous contact request signing key passed as an EncodedString. The new keys are returned in 
+		EncodedString format using the following fields:
 		entry
 		sign.public / sign.private -- primary signing keypair
 		crsign.public / crsign.private -- contact request signing keypair
@@ -644,7 +644,7 @@ class UserEntry(EntryBase):
 				not previous.fields['Contact-Request-Verification-Key']:
 			return RetVal(ResourceNotFound, 'signing key missing')
 		
-		status = self.verify_signature(AlgoString(previous.fields['Contact-Request-Verification-Key']),
+		status = self.verify_signature(EncodedString(previous.fields['Contact-Request-Verification-Key']),
 				'Custody')
 		return status
 
@@ -655,7 +655,7 @@ class Keycard:
 		self.type = cardtype
 		self.entries = list()
 	
-	def chain(self, key: AlgoString, rotate_optional: bool) -> RetVal:
+	def chain(self, key: EncodedString, rotate_optional: bool) -> RetVal:
 		'''Appends a new entry to the chain, optionally rotating keys which aren't required to be 
 		changed. This method requires that the root entry already exist. Note that user cards will 
 		not have all the required signatures when the call returns'''
@@ -673,7 +673,7 @@ class Keycard:
 		
 		new_entry = chaindata['entry']
 
-		skeystring = AlgoString()
+		skeystring = EncodedString()
 		status = skeystring.set(chaindata['sign.private'])
 		if status.error():
 			return status
