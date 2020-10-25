@@ -525,7 +525,7 @@ def test_hashing():
 	'''Confirms that all supported algorithms work as expected'''
 	userentry = make_test_userentry()
 
-	algolist = [ 'BLAKE2', 'SHA-256', 'SHA3-256' ]
+	algolist = [ 'BLAKE2B-256', 'BLAKE3-256', 'SHA-256', 'SHA3-256' ]
 	for algorithm in algolist:
 		status = userentry.generate_hash(algorithm)
 		assert not status.error(), f'hash test for {algorithm} failed'

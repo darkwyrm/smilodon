@@ -331,8 +331,8 @@ class EntryBase:
 
 	def generate_hash(self, algorithm: str) -> RetVal:
 		'''Generates a hash containing the expected signatures and the previous hash, if it exists. 
-		The supported hash algorithms are 'BLAKE3-256', 'BLAKE2-512', 'SHA-512', and 'SHA3-512'.'''  
-		if algorithm not in ['BLAKE3-256','BLAKE2','SHA-256','SHA3-256']:
+		The supported hash algorithms are 'BLAKE2-256', 'BLAKE3-256', 'SHA-256', and 'SHA3-256'.'''  
+		if algorithm not in ['BLAKE3-256','BLAKE2B-256','SHA-256','SHA3-256']:
 			return RetVal(UnsupportedHashType, f'{algorithm} not a support hash algorithm')
 		
 		hash_string = EncodedString()
@@ -349,8 +349,8 @@ class EntryBase:
 			hash_string.data = base64.b85encode(hasher.digest()).decode()
 		else:
 			hasher = None
-			if algorithm == 'BLAKE2':
-				hasher = hashlib.blake2b()
+			if algorithm == 'BLAKE2B-256':
+				hasher = hashlib.blake2b(digest_size=32)
 			elif algorithm == 'SHA-256':
 				hasher = hashlib.sha256()
 			else:
