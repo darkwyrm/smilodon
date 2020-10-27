@@ -5,7 +5,7 @@ import sys
 import uuid
 
 from encryption import KeyPair, SigningPair
-import keycard
+import keycard as keycard
 
 def create_org_entry():
 	'''Creates a basic org root entry'''
