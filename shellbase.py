@@ -5,7 +5,7 @@ from glob import glob
 import os
 import re
 
-from client import AnselusClient
+from pyanselus.client import AnselusClient
 
 # This global is needed for meta commands, such as Help. Do not access
 # this list directly unless there is literally no other option.

@@ -5,10 +5,10 @@ import os
 import sys
 import uuid
 
-import encryption
-import keycard
+import pyanselus.encryption as encryption
+import pyanselus.keycard as keycard
 # Pylint doesn't detect the RetVal usage for whatever reason
-import retval	# pylint: disable=unused-import
+import pyanselus.retval as retval	# pylint: disable=unused-import
 
 class Validator:
 	'''Abstract class for validating input from the user.'''

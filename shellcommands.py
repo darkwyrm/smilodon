@@ -10,7 +10,7 @@ import sys
 
 from prompt_toolkit import print_formatted_text, HTML
 
-from encryption import check_password_complexity
+from pyanselus.encryption import check_password_complexity
 import helptext
 from shellbase import BaseCommand, gShellCommands, ShellState
 

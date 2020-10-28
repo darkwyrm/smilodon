@@ -4,8 +4,8 @@ import secrets
 import sys
 import uuid
 
-from encryption import KeyPair, SigningPair
-import keycard as keycard
+from pyanselus.encryption import KeyPair, SigningPair
+import pyanselus.keycard as keycard
 
 def create_org_entry():
 	'''Creates a basic org root entry'''
